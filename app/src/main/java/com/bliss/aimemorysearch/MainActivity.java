@@ -20,6 +20,8 @@ import androidx.work.WorkInfo;
 import androidx.work.WorkManager;
 
 import com.bliss.aimemorysearch.ai.ChunkSemanticSearchEngine;
+import com.bliss.aimemorysearch.ai.E5EmbeddingEngine;
+import com.bliss.aimemorysearch.ai.E5SentencePieceNative;
 import com.bliss.aimemorysearch.ai.EmbeddingEngine;
 
 import androidx.activity.EdgeToEdge;
@@ -43,6 +45,11 @@ import com.bliss.aimemorysearch.ai.MiniLMTokenizer;
 import com.bliss.aimemorysearch.ai.VectorUtils;
 import com.bliss.aimemorysearch.ai.QueryUnderstandingEngine;
 import com.github.ybq.android.spinkit.SpinKitView;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.util.Arrays;
 
 public class MainActivity extends AppCompatActivity {
     private static final int STORAGE_PERMISSION_CODE = 100;
@@ -87,7 +94,9 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 //====================================================================================================
-        
+         validateSentencePiece();
+//====================================================================================================
+        new E5EmbeddingEngine(this).selfTest();
 //====================================================================================================
         ConceptSimilarityTest.run(this);
         Intent liveService =
@@ -228,7 +237,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         btnNoExit.setOnClickListener(v -> {
-
             hideExitDialog();
         });
         btnYesExit.setOnClickListener(v -> {
@@ -313,6 +321,127 @@ public class MainActivity extends AppCompatActivity {
                         R.id.liveIndexingText
                 );
 
+    }
+    private void validateSentencePiece() {
+
+        new Thread(() -> {
+
+            try {
+
+                File modelDir =
+                        new File(
+                                getFilesDir(),
+                                "models/e5"
+                        );
+
+                if (!modelDir.exists()) {
+                    modelDir.mkdirs();
+                }
+
+                File modelFile =
+                        new File(
+                                modelDir,
+                                "sentencepiece.bpe.model"
+                        );
+
+                if (
+                        !modelFile.exists()
+                                ||
+                                modelFile.length() == 0
+                ) {
+
+                    try (
+                            InputStream inputStream =
+                                    getAssets()
+                                            .open(
+                                                    "models/e5/sentencepiece.bpe.model"
+                                            );
+                            FileOutputStream outputStream =
+                                    new FileOutputStream(
+                                            modelFile
+                                    )
+                    ) {
+
+                        byte[] buffer =
+                                new byte[16 * 1024];
+
+                        int read;
+
+                        while (
+                                (read = inputStream.read(buffer))
+                                        != -1
+                        ) {
+                            outputStream.write(
+                                    buffer,
+                                    0,
+                                    read
+                            );
+                        }
+                    }
+                }
+
+                boolean loaded =
+                        E5SentencePieceNative.loadModel(
+                                modelFile.getAbsolutePath()
+                        );
+
+                if (loaded) {
+
+                    android.util.Log.d(
+                            "SP_VALIDATION",
+                            "MODEL LOAD OK"
+                    );
+
+                    logSentencePieceTokens(
+                            "dog"
+                    );
+                    logSentencePieceTokens(
+                            "caine"
+                    );
+                    logSentencePieceTokens(
+                            "Hund"
+                    );
+                    logSentencePieceTokens(
+                            "chien"
+                    );
+                    logSentencePieceTokens(
+                            "perro"
+                    );
+
+                } else {
+
+                    android.util.Log.d(
+                            "SP_VALIDATION",
+                            "MODEL LOAD FAILED"
+                    );
+                }
+
+            } catch (Exception e) {
+
+                android.util.Log.e(
+                        "SP_VALIDATION",
+                        "MODEL LOAD FAILED",
+                        e
+                );
+            }
+
+        }).start();
+    }
+    private void logSentencePieceTokens(
+            String text
+    ) {
+
+        int[] tokens =
+                E5SentencePieceNative.encode(
+                        text
+                );
+
+        android.util.Log.d(
+                "SP_VALIDATION",
+                text
+                        + " = "
+                        + Arrays.toString(tokens)
+        );
     }
     private void observeIndexStats() {
 
