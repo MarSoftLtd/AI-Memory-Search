@@ -22,12 +22,20 @@ public class E5EmbeddingEngine {
     private static final String TAG = "E5_EMBEDDING";
     private static final String MODEL_ASSET_PATH =
             "models/e5/model.onnx";
+    private static final String SENTENCEPIECE_ASSET_PATH =
+            "models/e5/sentencepiece.bpe.model";
     private static final String LOCAL_MODEL_DIR =
             "models/e5";
     private static final String LOCAL_MODEL_NAME =
             "model.onnx";
     private static final String LOCAL_SENTENCEPIECE_NAME =
             "sentencepiece.bpe.model";
+    private static final int MAX_SEQUENCE_LENGTH =
+            512;
+    private static final int XLM_ROBERTA_CLS_ID =
+            0;
+    private static final int XLM_ROBERTA_SEP_ID =
+            2;
 
     private static final Object INIT_LOCK =
             new Object();
@@ -68,12 +76,8 @@ public class E5EmbeddingEngine {
                             true;
 
                     File sentencePieceFile =
-                            new File(
-                                    new File(
-                                            appContext.getFilesDir(),
-                                            LOCAL_MODEL_DIR
-                                    ),
-                                    LOCAL_SENTENCEPIECE_NAME
+                            copyAssetSentencePieceToInternalFile(
+                                    appContext
                             );
 
                     sentencePieceLoaded =
@@ -500,6 +504,64 @@ public class E5EmbeddingEngine {
         return modelFile;
     }
 
+    private File copyAssetSentencePieceToInternalFile(
+            Context context
+    ) throws Exception {
+
+        File modelDir =
+                new File(
+                        context.getFilesDir(),
+                        LOCAL_MODEL_DIR
+                );
+
+        if (!modelDir.exists()) {
+            modelDir.mkdirs();
+        }
+
+        File sentencePieceFile =
+                new File(
+                        modelDir,
+                        LOCAL_SENTENCEPIECE_NAME
+                );
+
+        if (
+                sentencePieceFile.exists()
+                        &&
+                        sentencePieceFile.length() > 0
+        ) {
+            return sentencePieceFile;
+        }
+
+        try (
+                InputStream inputStream =
+                        context.getAssets()
+                                .open(SENTENCEPIECE_ASSET_PATH);
+                FileOutputStream outputStream =
+                        new FileOutputStream(
+                                sentencePieceFile
+                        )
+        ) {
+
+            byte[] buffer =
+                    new byte[16 * 1024];
+
+            int read;
+
+            while (
+                    (read = inputStream.read(buffer))
+                            != -1
+            ) {
+                outputStream.write(
+                        buffer,
+                        0,
+                        read
+                );
+            }
+        }
+
+        return sentencePieceFile;
+    }
+
     private void validateRequiredInputs() {
 
         Set<String> inputNames =
@@ -666,14 +728,17 @@ public class E5EmbeddingEngine {
             return new int[0];
         }
 
-        int CLS = 101;
-        int SEP = 102;
+        int usableTokenCount =
+                Math.min(
+                        tokens.length,
+                        MAX_SEQUENCE_LENGTH - 2
+                );
 
-        int[] out = new int[tokens.length + 2];
+        int[] out = new int[usableTokenCount + 2];
 
-        out[0] = CLS;
-        System.arraycopy(tokens, 0, out, 1, tokens.length);
-        out[out.length - 1] = SEP;
+        out[0] = XLM_ROBERTA_CLS_ID;
+        System.arraycopy(tokens, 0, out, 1, usableTokenCount);
+        out[out.length - 1] = XLM_ROBERTA_SEP_ID;
 
         return out;
     }

@@ -94,7 +94,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 //====================================================================================================
-         validateSentencePiece();
+        // validateSentencePiece();
 //====================================================================================================
         new E5EmbeddingEngine(this).selfTest();
 //====================================================================================================
