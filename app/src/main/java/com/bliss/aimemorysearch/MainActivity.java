@@ -88,7 +88,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
 //====================================================================================================
         
-//=========================================================
+//====================================================================================================
         ConceptSimilarityTest.run(this);
         Intent liveService =
                 new Intent(
@@ -113,7 +113,6 @@ public class MainActivity extends AppCompatActivity {
             );
 
         } catch (Exception e) {
-
             android.util.Log.e(
                     "LIVE_INDEX",
                     "SERVICE START FAILED",
