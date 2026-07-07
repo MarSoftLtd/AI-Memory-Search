@@ -84,3 +84,50 @@ find_library(ATOMIC_LIB atomic)
 if (ATOMIC_LIB)
     target_link_libraries(e5_sentencepiece_jni PRIVATE ${ATOMIC_LIB})
 endif ()
+# ================================
+# CTranslate2 JNI
+# ================================
+
+add_library(
+        ctranslate2_jni
+        SHARED
+        ctranslate2_jni.cpp
+)
+
+
+add_library(
+        ctranslate2
+        SHARED
+        IMPORTED
+)
+
+
+set_target_properties(
+        ctranslate2
+        PROPERTIES
+        IMPORTED_LOCATION
+        ${CMAKE_CURRENT_SOURCE_DIR}/../jniLibs/${ANDROID_ABI}/libctranslate2.so
+)
+
+
+target_include_directories(
+        ctranslate2_jni
+        PRIVATE
+        ${SENTENCEPIECE_SRC_DIR}
+        ${SENTENCEPIECE_SRC_DIR}/builtin_pb
+        ${SENTENCEPIECE_DIR}
+        ${SENTENCEPIECE_DIR}/third_party
+        ${SENTENCEPIECE_PROTOBUF_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/half/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/nlohmann/include
+)
+
+
+target_link_libraries(
+        ctranslate2_jni
+        PRIVATE
+        e5_sentencepiece_jni
+        ctranslate2
+        ${LOG_LIB}
+)
