@@ -17,7 +17,9 @@ public final class TranslationEngine {
             File modelDirectory =
                     TranslationModelManager
                             .getInstance(context)
-                            .getRomanceModelDirectory();
+                            .getModelDirectory(
+                                    TranslationModelId.ROMANCE
+                            );
 
             translator =
                     RomanceTranslator.getInstance(

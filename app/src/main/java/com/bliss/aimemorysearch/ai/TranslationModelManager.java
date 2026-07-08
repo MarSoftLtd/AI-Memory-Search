@@ -34,11 +34,13 @@ public final class TranslationModelManager {
         return instance;
     }
 
-    public File getRomanceModelDirectory() throws IOException {
+    public File getModelDirectory(
+            TranslationModelId modelId
+    ) throws IOException {
 
         TranslationModelInfo modelInfo =
                 TranslationModelRegistry.getModel(
-                        TranslationModelId.ROMANCE
+                        modelId
                 );
 
         File modelDirectory =
