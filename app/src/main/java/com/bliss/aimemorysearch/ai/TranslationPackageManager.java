@@ -6,9 +6,6 @@ import java.io.File;
 
 public final class TranslationPackageManager {
 
-    private static final String MANIFEST_FILE_NAME =
-            "manifest.json";
-
     private static volatile TranslationPackageManager instance;
 
     private final ModelStorageManager storageManager;
@@ -51,10 +48,9 @@ public final class TranslationPackageManager {
                         modelId
                 );
 
-        File manifestFile =
-                new File(
-                        directory,
-                        MANIFEST_FILE_NAME
+        TranslationPackageLayout layout =
+                new TranslationPackageLayout(
+                        directory
                 );
 
         boolean installed =
@@ -64,8 +60,8 @@ public final class TranslationPackageManager {
 
         return new TranslationPackage(
                 modelId,
-                directory,
-                manifestFile,
+                layout.getRootDirectory(),
+                null,
                 installed
         );
     }

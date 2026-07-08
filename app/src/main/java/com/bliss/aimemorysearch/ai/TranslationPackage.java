@@ -6,21 +6,21 @@ public final class TranslationPackage {
 
     private final TranslationModelId modelId;
     private final File directory;
-    private final File manifestFile;
+    private final TranslationPackageManifest manifest;
     private final boolean installed;
 
     public TranslationPackage(
             TranslationModelId modelId,
             File directory,
-            File manifestFile,
+            TranslationPackageManifest manifest,
             boolean installed
     ) {
         this.modelId =
                 modelId;
         this.directory =
                 directory;
-        this.manifestFile =
-                manifestFile;
+        this.manifest =
+                manifest;
         this.installed =
                 installed;
     }
@@ -33,8 +33,8 @@ public final class TranslationPackage {
         return directory;
     }
 
-    public File getManifestFile() {
-        return manifestFile;
+    public TranslationPackageManifest getManifest() {
+        return manifest;
     }
 
     public boolean isInstalled() {

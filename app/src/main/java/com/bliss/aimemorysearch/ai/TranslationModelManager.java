@@ -13,12 +13,17 @@ public final class TranslationModelManager {
     private static volatile TranslationModelManager instance;
 
     private final Context context;
+    private final ModelStorageManager storageManager;
 
     private TranslationModelManager(
             Context context
     ) {
         this.context =
                 context.getApplicationContext();
+        storageManager =
+                ModelStorageManager.getInstance(
+                        this.context
+                );
     }
 
     public static synchronized TranslationModelManager getInstance(
@@ -44,9 +49,8 @@ public final class TranslationModelManager {
                 );
 
         File modelDirectory =
-                new File(
-                        context.getFilesDir(),
-                        modelInfo.getInternalDirectory()
+                storageManager.getModelDirectory(
+                        modelId
                 );
 
         copyAssetDirectory(
@@ -80,19 +84,19 @@ public final class TranslationModelManager {
 
         validateModelFile(
                 modelDirectory,
-                "source.spm"
+                ManifestFileNames.SOURCE_TOKENIZER
         );
         validateModelFile(
                 modelDirectory,
-                "target.spm"
+                ManifestFileNames.TARGET_TOKENIZER
         );
         validateModelFile(
                 modelDirectory,
-                "model.bin"
+                ManifestFileNames.MODEL
         );
         validateModelFile(
                 modelDirectory,
-                "config.json"
+                ManifestFileNames.CONFIG
         );
     }
 
