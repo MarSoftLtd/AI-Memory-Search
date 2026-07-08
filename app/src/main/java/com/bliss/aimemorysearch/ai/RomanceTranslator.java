@@ -1,6 +1,6 @@
 package com.bliss.aimemorysearch.ai;
 
-import android.content.Context;
+import java.io.File;
 
 public final class RomanceTranslator {
 
@@ -9,7 +9,7 @@ public final class RomanceTranslator {
     private final CTranslate2Native nativeTranslator;
 
     private RomanceTranslator(
-            Context context
+            File modelDirectory
     ) {
 
         nativeTranslator =
@@ -17,7 +17,7 @@ public final class RomanceTranslator {
 
         try {
             nativeTranslator.init(
-                    context.getApplicationContext()
+                    modelDirectory
             );
         } catch (Exception e) {
             throw new IllegalStateException(
@@ -28,13 +28,13 @@ public final class RomanceTranslator {
     }
 
     public static synchronized RomanceTranslator getInstance(
-            Context context
+            File modelDirectory
     ) {
 
         if (instance == null) {
             instance =
                     new RomanceTranslator(
-                            context.getApplicationContext()
+                            modelDirectory
                     );
         }
 

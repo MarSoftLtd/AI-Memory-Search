@@ -1,12 +1,6 @@
 package com.bliss.aimemorysearch.ai;
 
-import android.content.Context;
-import android.content.res.AssetManager;
-
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
 
 public class CTranslate2Native {
 
@@ -15,12 +9,6 @@ public class CTranslate2Native {
         System.loadLibrary("e5_sentencepiece_jni");
         System.loadLibrary("ctranslate2_jni");
     }
-
-    private static final String ASSET_MODEL_DIR =
-            "models/translator/romance-en";
-
-    private static final String INTERNAL_MODEL_DIR =
-            "models/translator/romance-en";
 
     private boolean initialized = false;
 
@@ -31,23 +19,23 @@ public class CTranslate2Native {
     private native void nativeClose();
 
     public void init(
-            Context context
-    ) throws IOException {
+            File modelDirectory
+    ) {
 
-        File modelDir =
-                new File(
-                        context.getFilesDir(),
-                        INTERNAL_MODEL_DIR
-                );
-
-        copyAssetDirectory(
-                context.getAssets(),
-                ASSET_MODEL_DIR,
-                modelDir
-        );
+        if (
+                modelDirectory == null
+                        ||
+                        !modelDirectory.exists()
+                        ||
+                        !modelDirectory.isDirectory()
+        ) {
+            throw new IllegalArgumentException(
+                    "Invalid CTranslate2 model directory"
+            );
+        }
 
         nativeInit(
-                modelDir.getAbsolutePath()
+                modelDirectory.getAbsolutePath()
         );
 
         initialized = true;
@@ -70,88 +58,5 @@ public class CTranslate2Native {
 
         nativeClose();
         initialized = false;
-    }
-
-    private static void copyAssetDirectory(
-            AssetManager assetManager,
-            String assetPath,
-            File outputDir
-    ) throws IOException {
-
-        String[] children =
-                assetManager.list(assetPath);
-
-        if (
-                children == null
-                        || children.length == 0
-        ) {
-            copyAssetFile(
-                    assetManager,
-                    assetPath,
-                    outputDir
-            );
-            return;
-        }
-
-        if (!outputDir.exists()) {
-            outputDir.mkdirs();
-        }
-
-        for (String child : children) {
-            copyAssetDirectory(
-                    assetManager,
-                    assetPath + "/" + child,
-                    new File(
-                            outputDir,
-                            child
-                    )
-            );
-        }
-    }
-
-    private static void copyAssetFile(
-            AssetManager assetManager,
-            String assetPath,
-            File outputFile
-    ) throws IOException {
-
-        if (
-                outputFile.exists()
-                        && outputFile.length() > 0
-        ) {
-            return;
-        }
-
-        File parent =
-                outputFile.getParentFile();
-
-        if (
-                parent != null
-                        && !parent.exists()
-        ) {
-            parent.mkdirs();
-        }
-
-        try (
-                InputStream inputStream =
-                        assetManager.open(assetPath);
-                FileOutputStream outputStream =
-                        new FileOutputStream(outputFile)
-        ) {
-
-            byte[] buffer =
-                    new byte[8192];
-            int read;
-
-            while (
-                    (read = inputStream.read(buffer)) != -1
-            ) {
-                outputStream.write(
-                        buffer,
-                        0,
-                        read
-                );
-            }
-        }
     }
 }

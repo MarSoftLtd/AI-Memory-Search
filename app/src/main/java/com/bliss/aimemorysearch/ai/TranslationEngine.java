@@ -2,6 +2,8 @@ package com.bliss.aimemorysearch.ai;
 
 import android.content.Context;
 
+import java.io.File;
+
 public final class TranslationEngine {
 
     private static volatile TranslationEngine instance;
@@ -11,10 +13,22 @@ public final class TranslationEngine {
     private TranslationEngine(
             Context context
     ) {
-        translator =
-                RomanceTranslator.getInstance(
-                        context.getApplicationContext()
-                );
+        try {
+            File modelDirectory =
+                    TranslationModelManager
+                            .getInstance(context)
+                            .getRomanceModelDirectory();
+
+            translator =
+                    RomanceTranslator.getInstance(
+                            modelDirectory
+                    );
+        } catch (Exception e) {
+            throw new IllegalStateException(
+                    "Failed to initialize offline translation engine",
+                    e
+            );
+        }
     }
 
     public static synchronized TranslationEngine getInstance(
