@@ -7,6 +7,7 @@ public final class ModelInstallationManager {
     private static volatile ModelInstallationManager instance;
 
     private final ModelStorageManager storageManager;
+    private final TranslationPackageValidator packageValidator;
 
     private ModelInstallationManager(
             Context context
@@ -15,6 +16,8 @@ public final class ModelInstallationManager {
                 ModelStorageManager.getInstance(
                         context.getApplicationContext()
                 );
+        packageValidator =
+                new TranslationPackageValidator();
     }
 
     public static synchronized ModelInstallationManager getInstance(
@@ -33,10 +36,15 @@ public final class ModelInstallationManager {
     public boolean isInstalled(
             TranslationModelId modelId
     ) {
-        return storageManager
-                .getModelDirectory(
-                        modelId
-                )
-                .isDirectory();
+        TranslationPackageLayout layout =
+                new TranslationPackageLayout(
+                        storageManager.getModelDirectory(
+                                modelId
+                        )
+                );
+
+        return packageValidator.isValid(
+                layout
+        );
     }
 }
