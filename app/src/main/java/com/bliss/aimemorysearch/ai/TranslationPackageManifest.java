@@ -6,7 +6,7 @@ import java.util.List;
 
 public final class TranslationPackageManifest {
 
-    private final TranslationModelId id;
+    private final String packageId;
     private final String displayName;
     private final String family;
     private final String version;
@@ -17,7 +17,7 @@ public final class TranslationPackageManifest {
     private final List<String> supportedLanguages;
 
     public TranslationPackageManifest(
-            TranslationModelId id,
+            String packageId,
             String displayName,
             String family,
             String version,
@@ -27,8 +27,8 @@ public final class TranslationPackageManifest {
             String tokenizer,
             List<String> supportedLanguages
     ) {
-        this.id =
-                id;
+        this.packageId =
+                packageId;
         this.displayName =
                 displayName;
         this.family =
@@ -51,8 +51,8 @@ public final class TranslationPackageManifest {
                 );
     }
 
-    public TranslationModelId getId() {
-        return id;
+    public String getPackageId() {
+        return packageId;
     }
 
     public String getDisplayName() {

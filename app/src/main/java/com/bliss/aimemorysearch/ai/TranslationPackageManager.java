@@ -10,6 +10,7 @@ public final class TranslationPackageManager {
 
     private final ModelStorageManager storageManager;
     private final ModelInstallationManager installationManager;
+    private final TranslationPackageManifestReader manifestReader;
 
     private TranslationPackageManager(
             Context context
@@ -25,6 +26,8 @@ public final class TranslationPackageManager {
                 ModelInstallationManager.getInstance(
                         applicationContext
                 );
+        manifestReader =
+                new TranslationPackageManifestReader();
     }
 
     public static synchronized TranslationPackageManager getInstance(
@@ -58,11 +61,28 @@ public final class TranslationPackageManager {
                         modelId
                 );
 
+        TranslationPackageManifest manifest =
+                readManifest(
+                        layout
+                );
+
         return new TranslationPackage(
                 modelId,
                 layout.getRootDirectory(),
-                null,
+                manifest,
                 installed
         );
+    }
+
+    private TranslationPackageManifest readManifest(
+            TranslationPackageLayout layout
+    ) {
+        try {
+            return manifestReader.read(
+                    layout
+            );
+        } catch (Exception e) {
+            return null;
+        }
     }
 }
