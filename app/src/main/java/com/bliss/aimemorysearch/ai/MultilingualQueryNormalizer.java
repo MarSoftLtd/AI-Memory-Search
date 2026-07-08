@@ -48,7 +48,7 @@ public class MultilingualQueryNormalizer {
         try {
 
             englishQuery =
-                    RomanceTranslator
+                    TranslationEngine
                             .getInstance(context)
                             .translate(query);
 
