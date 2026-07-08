@@ -769,6 +769,17 @@ public class MainActivity extends AppCompatActivity {
                 e.printStackTrace();
             }
 
+            QueryUnderstandingEngine.QueryContext
+                    imageQueryContext =
+                    QueryUnderstandingEngine.analyze(
+                            clipQueryHolder[0]
+                    );
+
+            boolean imagePrefixDocumentCandidate =
+                    hasStrongVocabularyPrefixExpansion(
+                            imageQueryContext
+                    );
+
             float[] imageQueryEmbedding =
                     com.bliss.aimemorysearch.ai
                             .MobileClipTextEmbeddingEngine
@@ -968,12 +979,12 @@ public class MainActivity extends AppCompatActivity {
 
                 if (
                         (
-                                queryContext.documentIntent
+                                imageQueryContext.documentIntent
                                         &&
-                                        !queryContext.imageIntent
+                                        !imageQueryContext.imageIntent
                         )
                                 ||
-                                prefixDocumentCandidate
+                                imagePrefixDocumentCandidate
                 )
                 {
                     String searchableText =
@@ -993,9 +1004,9 @@ public class MainActivity extends AppCompatActivity {
                             "TOKEN_CHECK",
                             result.file.name
                                     + " | TOKENS="
-                                    + queryContext.tokens
+                                    + imageQueryContext.tokens
                     );
-                    for (String token : queryContext.tokens)
+                    for (String token : imageQueryContext.tokens)
                     {
                         if (
                                 token == null
@@ -1051,9 +1062,9 @@ public class MainActivity extends AppCompatActivity {
                     imageScore = result.score * 12f;
                 }
                 else if (
-                        queryContext.imageIntent
+                        imageQueryContext.imageIntent
                                 &&
-                                !queryContext.documentIntent
+                                !imageQueryContext.documentIntent
                 )
                 {
                     imageScore =

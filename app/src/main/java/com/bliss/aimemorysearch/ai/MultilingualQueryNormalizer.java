@@ -14,7 +14,11 @@ public class MultilingualQueryNormalizer {
 
     private static MultilingualQueryNormalizer instance;
 
+    private final Context context;
+
     private MultilingualQueryNormalizer(Context context) {
+        this.context =
+                context.getApplicationContext();
     }
 
     public static synchronized MultilingualQueryNormalizer getInstance(Context context) {
@@ -38,9 +42,33 @@ public class MultilingualQueryNormalizer {
             return;
         }
 
+        String englishQuery =
+                query.trim();
+
+        try {
+
+            englishQuery =
+                    RomanceTranslator
+                            .getInstance(context)
+                            .translate(query);
+
+            if (
+                    englishQuery == null
+                            ||
+                            englishQuery.trim().isEmpty()
+            ) {
+                englishQuery =
+                        query.trim();
+            }
+
+        } catch (Exception e) {
+            englishQuery =
+                    query.trim();
+        }
+
         callback.onReady(
                 query,
-                query.trim()
+                englishQuery
         );
     }
 
