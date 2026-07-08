@@ -10,12 +10,6 @@ import java.io.InputStream;
 
 public final class TranslationModelManager {
 
-    private static final String ROMANCE_ASSET_MODEL_DIR =
-            "models/translator/romance-en";
-
-    private static final String ROMANCE_INTERNAL_MODEL_DIR =
-            "models/translator/romance-en";
-
     private static volatile TranslationModelManager instance;
 
     private final Context context;
@@ -42,15 +36,20 @@ public final class TranslationModelManager {
 
     public File getRomanceModelDirectory() throws IOException {
 
+        TranslationModelInfo modelInfo =
+                TranslationModelRegistry.getModel(
+                        TranslationModelId.ROMANCE
+                );
+
         File modelDirectory =
                 new File(
                         context.getFilesDir(),
-                        ROMANCE_INTERNAL_MODEL_DIR
+                        modelInfo.getInternalDirectory()
                 );
 
         copyAssetDirectory(
                 context.getAssets(),
-                ROMANCE_ASSET_MODEL_DIR,
+                modelInfo.getAssetDirectory(),
                 modelDirectory
         );
 
