@@ -35,8 +35,8 @@ public final class SemanticReasoningResult {
         return reasoningSteps;
     }
 
-    public List<SemanticConcept> getExpandedConcepts() {
-        Map<String, SemanticConcept> concepts =
+    public List<SemanticExpansion> getExpansions() {
+        Map<String, SemanticExpansion> expansions =
                 new LinkedHashMap<>();
 
         if (
@@ -44,30 +44,88 @@ public final class SemanticReasoningResult {
                         &&
                         originalConcept != null
         ) {
-            concepts.put(
+            expansions.put(
                     originalConcept.getId(),
-                    originalConcept
+                    new SemanticExpansion(
+                            originalConcept,
+                            SemanticExpansionOrigin.USER,
+                            0
+                    )
             );
         }
 
         for (ReasoningStep step : reasoningSteps) {
             if (
-                    step != null
-                            &&
-                            step.getTargetConcept() != null
+                    step == null
+                            ||
+                            step.getTargetConcept() == null
             ) {
-                concepts.put(
-                        step.getTargetConcept().getId(),
-                        step.getTargetConcept()
+                continue;
+            }
+
+            expansions.put(
+                    step.getTargetConcept().getId(),
+                    new SemanticExpansion(
+                            step.getTargetConcept(),
+                            originFromRelation(
+                                    step.getRelation()
+                            ),
+                            step.getDepth()
+                    )
+            );
+        }
+
+        return Collections.unmodifiableList(
+                new ArrayList<>(
+                        expansions.values()
+                )
+        );
+    }
+
+    public List<SemanticConcept> getExpandedConcepts() {
+        List<SemanticConcept> concepts =
+                new ArrayList<>();
+
+        for (SemanticExpansion expansion : getExpansions()) {
+            if (
+                    expansion != null
+                            &&
+                            expansion.getConcept() != null
+            ) {
+                concepts.add(
+                        expansion.getConcept()
                 );
             }
         }
 
         return Collections.unmodifiableList(
-                new ArrayList<>(
-                        concepts.values()
-                )
+                concepts
         );
+    }
+
+    private static SemanticExpansionOrigin originFromRelation(
+            SemanticRelation relation
+    ) {
+        if (
+                relation == null
+                        ||
+                        relation.getType() == null
+        ) {
+            return SemanticExpansionOrigin.RELATED;
+        }
+
+        switch (relation.getType()) {
+            case SAME_AS:
+                return SemanticExpansionOrigin.SAME_AS;
+            case PARENT:
+                return SemanticExpansionOrigin.PARENT;
+            case CHILD:
+                return SemanticExpansionOrigin.CHILD;
+            case RELATED:
+                return SemanticExpansionOrigin.RELATED;
+            default:
+                return SemanticExpansionOrigin.RELATED;
+        }
     }
 
     private static List<ReasoningStep> immutableList(
