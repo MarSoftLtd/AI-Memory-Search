@@ -1,0 +1,146 @@
+{
+  "documentTypes": [
+    {
+      "id": "invoice",
+      "canonicalValue": "invoice",
+      "labels": {
+        "en": [
+          "invoice",
+          "bill"
+        ],
+        "ro": [
+          "factura",
+          "factură",
+          "facturi"
+        ]
+      }
+    },
+    {
+      "id": "receipt",
+      "canonicalValue": "receipt",
+      "labels": {
+        "en": [
+          "receipt"
+        ],
+        "ro": [
+          "chitanta",
+          "chitanță"
+        ]
+      }
+    },
+    {
+      "id": "contract",
+      "canonicalValue": "contract",
+      "labels": {
+        "en": [
+          "contract"
+        ],
+        "ro": [
+          "contract"
+        ]
+      }
+    },
+    {
+      "id": "identity_card",
+      "canonicalValue": "identity_card",
+      "labels": {
+        "en": [
+          "identity card",
+          "id card"
+        ],
+        "ro": [
+          "carte de identitate",
+          "buletin"
+        ]
+      }
+    },
+    {
+      "id": "passport",
+      "canonicalValue": "passport",
+      "labels": {
+        "en": [
+          "passport"
+        ],
+        "ro": [
+          "pasaport",
+          "pașaport"
+        ]
+      }
+    },
+    {
+      "id": "driver_license",
+      "canonicalValue": "driver_license",
+      "labels": {
+        "en": [
+          "driver license"
+        ],
+        "ro": [
+          "permis",
+          "permis de conducere"
+        ]
+      }
+    },
+    {
+      "id": "certificate",
+      "canonicalValue": "certificate",
+      "labels": {
+        "en": [
+          "certificate"
+        ],
+        "ro": [
+          "certificat"
+        ]
+      }
+    },
+    {
+      "id": "bank_statement",
+      "canonicalValue": "bank_statement",
+      "labels": {
+        "en": [
+          "bank statement"
+        ],
+        "ro": [
+          "extras bancar"
+        ]
+      }
+    },
+    {
+      "id": "insurance",
+      "canonicalValue": "insurance",
+      "labels": {
+        "en": [
+          "insurance"
+        ],
+        "ro": [
+          "asigurare"
+        ]
+      }
+    },
+    {
+      "id": "prescription",
+      "canonicalValue": "prescription",
+      "labels": {
+        "en": [
+          "prescription"
+        ],
+        "ro": [
+          "reteta",
+          "rețetă"
+        ]
+      }
+    },
+    {
+      "id": "cv",
+      "canonicalValue": "cv",
+      "labels": {
+        "en": [
+          "cv",
+          "resume"
+        ],
+        "ro": [
+          "cv"
+        ]
+      }
+    }
+  ]
+}
