@@ -1,0 +1,33 @@
+{
+  "language": "en",
+  "concepts": [
+    {
+      "id": "dog",
+      "label": "dog",
+      "tokens": [
+        "dog",
+        "dogs",
+        "puppy"
+      ]
+    },
+    {
+      "id": "car",
+      "label": "car",
+      "tokens": [
+        "car",
+        "cars",
+        "automobile",
+        "vehicle"
+      ]
+    },
+    {
+      "id": "invoice",
+      "label": "invoice",
+      "tokens": [
+        "invoice",
+        "invoices",
+        "bill"
+      ]
+    }
+  ]
+}

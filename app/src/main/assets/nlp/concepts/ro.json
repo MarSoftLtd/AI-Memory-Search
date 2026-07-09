@@ -1,0 +1,39 @@
+{
+  "language": "ro",
+  "concepts": [
+    {
+      "id": "dog",
+      "label": "câine",
+      "tokens": [
+        "caine",
+        "câine",
+        "caini",
+        "câini",
+        "cățel",
+        "căței"
+      ]
+    },
+    {
+      "id": "car",
+      "label": "mașină",
+      "tokens": [
+        "masina",
+        "mașină",
+        "masini",
+        "mașini",
+        "automobil",
+        "vehicul"
+      ]
+    },
+    {
+      "id": "invoice",
+      "label": "factură",
+      "tokens": [
+        "factura",
+        "factură",
+        "facturi",
+        "facturi fiscale"
+      ]
+    }
+  ]
+}
