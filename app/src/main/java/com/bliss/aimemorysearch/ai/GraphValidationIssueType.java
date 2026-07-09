@@ -1,0 +1,11 @@
+package com.bliss.aimemorysearch.ai;
+
+public enum GraphValidationIssueType {
+    DUPLICATE_CONCEPT_ID,
+    DUPLICATE_TOKEN,
+    MISSING_SOURCE_CONCEPT,
+    MISSING_TARGET_CONCEPT,
+    SELF_RELATION,
+    CONCEPT_WITHOUT_TOKEN,
+    CONCEPT_WITHOUT_RELATIONS
+}
