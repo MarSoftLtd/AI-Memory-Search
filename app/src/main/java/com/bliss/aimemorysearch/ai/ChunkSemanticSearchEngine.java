@@ -21,7 +21,8 @@ public class ChunkSemanticSearchEngine {
 
     public static List<ChunkResult> search(
             Context context,
-            QueryUnderstandingEngine.QueryContext queryContext
+            SearchRequest searchRequest,
+            SearchAnalysis searchAnalysis
     ) {
 
         List<ChunkResult> results =
@@ -31,14 +32,18 @@ public class ChunkSemanticSearchEngine {
             return results;
         }
 
-        if (queryContext == null) {
+        if (
+                searchRequest == null
+                        ||
+                        searchAnalysis == null
+        ) {
             return results;
         }
 
         if (
-                queryContext.normalizedQuery == null
+                searchRequest.getNormalizedQuery() == null
                         ||
-                        queryContext.normalizedQuery.trim().isEmpty()
+                        searchRequest.getNormalizedQuery().trim().isEmpty()
         ) {
 
             return results;
@@ -49,32 +54,32 @@ public class ChunkSemanticSearchEngine {
                     System.currentTimeMillis();
             String normalizedQuery =
                     normalize(
-                            queryContext.normalizedQuery
+                            searchRequest.getNormalizedQuery()
                     );
 
             List<String> allTokens =
                     new ArrayList<>();
 
             if (
-                    queryContext.tokens != null
+                    searchRequest.getQueryTokens() != null
             ) {
 
                 allTokens.addAll(
-                        queryContext.tokens
+                        searchRequest.getQueryTokens()
                 );
             }
 
             if (
-                    queryContext.semanticTokens != null
+                    searchAnalysis.getSemanticTokens() != null
             ) {
 
                 allTokens.addAll(
-                        queryContext.semanticTokens
+                        searchAnalysis.getSemanticTokens()
                 );
             }
 
             String[] queryTokens =
-                    queryContext.tokens.toArray(
+                    searchRequest.getQueryTokens().toArray(
                             new String[0]
                     );
 
@@ -97,7 +102,7 @@ public class ChunkSemanticSearchEngine {
                             + " | EXPANDED=" + java.util.Arrays.toString(expandedTokens)
             );
             float[] queryEmbedding =
-                    queryContext.embedding;
+                    searchAnalysis.getEmbedding();
 
             boolean hasQueryEmbedding =
                     queryEmbedding != null
@@ -294,7 +299,7 @@ public class ChunkSemanticSearchEngine {
 
                 for (
                         QueryUnderstandingEngine.QueryTokenWeight tokenInfo
-                        : queryContext.tokenWeights
+                        : searchAnalysis.getTokenWeights()
                 ) {
 
                     if (

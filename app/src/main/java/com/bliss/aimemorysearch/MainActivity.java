@@ -46,7 +46,6 @@ import com.bliss.aimemorysearch.ai.VectorUtils;
 import com.bliss.aimemorysearch.ai.QueryUnderstandingEngine;
 import com.bliss.aimemorysearch.ai.SearchAnalysis;
 import com.bliss.aimemorysearch.ai.SearchRequest;
-import com.bliss.aimemorysearch.ai.SearchRequestQueryContextAdapter;
 import com.github.ybq.android.spinkit.SpinKitView;
 
 import java.io.File;
@@ -712,18 +711,12 @@ public class MainActivity extends AppCompatActivity {
                     QueryUnderstandingEngine.createSearchAnalysis(
                             queryRequest
                     );
-            QueryUnderstandingEngine.QueryContext
-                    queryContext =
-                    new SearchRequestQueryContextAdapter()
-                            .adapt(
-                                    queryRequest,
-                                    queryAnalysis
-                            );
             List<ChunkSemanticSearchEngine.ChunkResult>
                     chunkResults =
                     ChunkSemanticSearchEngine.search(
                             MainActivity.this,
-                            queryContext
+                            queryRequest,
+                            queryAnalysis
                     );
             boolean prefixDocumentCandidate =
                     hasStrongVocabularyPrefixExpansion(
