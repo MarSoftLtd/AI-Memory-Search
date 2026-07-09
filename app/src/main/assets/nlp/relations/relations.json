@@ -1,0 +1,19 @@
+{
+  "relations": [
+    {
+      "source": "dog",
+      "type": "CHILD",
+      "target": "puppy"
+    },
+    {
+      "source": "dog",
+      "type": "PARENT",
+      "target": "animal"
+    },
+    {
+      "source": "car",
+      "type": "RELATED",
+      "target": "vehicle"
+    }
+  ]
+}

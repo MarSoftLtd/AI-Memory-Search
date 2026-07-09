@@ -10,7 +10,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -20,7 +21,9 @@ public final class AssetsSemanticConceptRepository implements SemanticConceptRep
             "nlp/concepts";
 
     private final Context context;
-    private Map<String, SemanticConcept> conceptCache;
+    private Map<String, SemanticConcept> conceptsByToken;
+    private Map<String, SemanticConcept> conceptsById;
+    private List<SemanticConcept> allConcepts;
 
     public AssetsSemanticConceptRepository(
             Context context
@@ -33,24 +36,59 @@ public final class AssetsSemanticConceptRepository implements SemanticConceptRep
     public synchronized SemanticConcept findConcept(
             String token
     ) {
+        return findConceptByToken(
+                token
+        );
+    }
+
+    @Override
+    public synchronized SemanticConcept findConceptByToken(
+            String token
+    ) {
         if (token == null) {
             return null;
         }
 
         ensureLoaded();
 
-        return conceptCache.get(
+        return conceptsByToken.get(
                 token.trim()
         );
     }
 
+    @Override
+    public synchronized SemanticConcept findConceptById(
+            String conceptId
+    ) {
+        if (conceptId == null) {
+            return null;
+        }
+
+        ensureLoaded();
+
+        return conceptsById.get(
+                conceptId.trim()
+        );
+    }
+
+    @Override
+    public synchronized List<SemanticConcept> getAllConcepts() {
+        ensureLoaded();
+
+        return allConcepts;
+    }
+
     private void ensureLoaded() {
-        if (conceptCache != null) {
+        if (conceptsByToken != null) {
             return;
         }
 
-        conceptCache =
-                new HashMap<>();
+        conceptsByToken =
+                new LinkedHashMap<>();
+        conceptsById =
+                new LinkedHashMap<>();
+        allConcepts =
+                new ArrayList<>();
 
         String[] files =
                 listConceptFiles();
@@ -70,6 +108,8 @@ public final class AssetsSemanticConceptRepository implements SemanticConceptRep
                 );
             }
         }
+
+        freezeCaches();
     }
 
     private String[] listConceptFiles() {
@@ -146,9 +186,22 @@ public final class AssetsSemanticConceptRepository implements SemanticConceptRep
                                 tokens
                         );
 
+                if (!concept.getId().isEmpty()) {
+                    allConcepts.add(
+                            concept
+                    );
+
+                    if (!conceptsById.containsKey(concept.getId())) {
+                        conceptsById.put(
+                                concept.getId(),
+                                concept
+                        );
+                    }
+                }
+
                 for (String token : concept.getTokens()) {
                     if (!token.isEmpty()) {
-                        conceptCache.put(
+                        conceptsByToken.put(
                                 token,
                                 concept
                         );
@@ -158,6 +211,21 @@ public final class AssetsSemanticConceptRepository implements SemanticConceptRep
         } catch (Exception e) {
             return;
         }
+    }
+
+    private void freezeCaches() {
+        conceptsByToken =
+                Collections.unmodifiableMap(
+                        conceptsByToken
+                );
+        conceptsById =
+                Collections.unmodifiableMap(
+                        conceptsById
+                );
+        allConcepts =
+                Collections.unmodifiableList(
+                        allConcepts
+                );
     }
 
     private static List<String> readTokens(
