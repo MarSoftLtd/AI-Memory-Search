@@ -44,6 +44,9 @@ import android.content.Intent;
 import com.bliss.aimemorysearch.ai.MiniLMTokenizer;
 import com.bliss.aimemorysearch.ai.VectorUtils;
 import com.bliss.aimemorysearch.ai.QueryUnderstandingEngine;
+import com.bliss.aimemorysearch.ai.SearchAnalysis;
+import com.bliss.aimemorysearch.ai.SearchRequest;
+import com.bliss.aimemorysearch.ai.SearchRequestQueryContextAdapter;
 import com.github.ybq.android.spinkit.SpinKitView;
 
 import java.io.File;
@@ -699,11 +702,23 @@ public class MainActivity extends AppCompatActivity {
 
         new Thread(() -> {
 
-            QueryUnderstandingEngine.QueryContext
-                    queryContext =
-                    QueryUnderstandingEngine.analyze(
+            SearchRequest
+                    queryRequest =
+                    QueryUnderstandingEngine.createSearchRequest(
                             query.trim()
                     );
+            SearchAnalysis
+                    queryAnalysis =
+                    QueryUnderstandingEngine.createSearchAnalysis(
+                            queryRequest
+                    );
+            QueryUnderstandingEngine.QueryContext
+                    queryContext =
+                    new SearchRequestQueryContextAdapter()
+                            .adapt(
+                                    queryRequest,
+                                    queryAnalysis
+                            );
             List<ChunkSemanticSearchEngine.ChunkResult>
                     chunkResults =
                     ChunkSemanticSearchEngine.search(
@@ -712,13 +727,14 @@ public class MainActivity extends AppCompatActivity {
                     );
             boolean prefixDocumentCandidate =
                     hasStrongVocabularyPrefixExpansion(
-                            queryContext
+                            queryRequest,
+                            queryAnalysis
                     );
 
             if (
-                    queryContext.imageIntent
+                    queryAnalysis.isImageIntent()
                             &&
-                            !queryContext.documentIntent
+                            !queryAnalysis.isDocumentIntent()
                             &&
                             !prefixDocumentCandidate
             ) {
@@ -769,15 +785,21 @@ public class MainActivity extends AppCompatActivity {
                 e.printStackTrace();
             }
 
-            QueryUnderstandingEngine.QueryContext
-                    imageQueryContext =
-                    QueryUnderstandingEngine.analyze(
+            SearchRequest
+                    imageSearchRequest =
+                    QueryUnderstandingEngine.createSearchRequest(
                             clipQueryHolder[0]
+                    );
+            SearchAnalysis
+                    imageSearchAnalysis =
+                    QueryUnderstandingEngine.createSearchAnalysis(
+                            imageSearchRequest
                     );
 
             boolean imagePrefixDocumentCandidate =
                     hasStrongVocabularyPrefixExpansion(
-                            imageQueryContext
+                            imageSearchRequest,
+                            imageSearchAnalysis
                     );
 
             float[] imageQueryEmbedding =
@@ -979,9 +1001,9 @@ public class MainActivity extends AppCompatActivity {
 
                 if (
                         (
-                                imageQueryContext.documentIntent
+                                imageSearchAnalysis.isDocumentIntent()
                                         &&
-                                        !imageQueryContext.imageIntent
+                                        !imageSearchAnalysis.isImageIntent()
                         )
                                 ||
                                 imagePrefixDocumentCandidate
@@ -1004,9 +1026,9 @@ public class MainActivity extends AppCompatActivity {
                             "TOKEN_CHECK",
                             result.file.name
                                     + " | TOKENS="
-                                    + imageQueryContext.tokens
+                                    + imageSearchRequest.getQueryTokens()
                     );
-                    for (String token : imageQueryContext.tokens)
+                    for (String token : imageSearchRequest.getQueryTokens())
                     {
                         if (
                                 token == null
@@ -1062,9 +1084,9 @@ public class MainActivity extends AppCompatActivity {
                     imageScore = result.score * 12f;
                 }
                 else if (
-                        imageQueryContext.imageIntent
+                        imageSearchAnalysis.isImageIntent()
                                 &&
-                                !imageQueryContext.documentIntent
+                                !imageSearchAnalysis.isDocumentIntent()
                 )
                 {
                     imageScore =
@@ -1134,9 +1156,9 @@ public class MainActivity extends AppCompatActivity {
             float minAcceptedScore;
 
             if (
-                    queryContext.documentIntent
+                    queryAnalysis.isDocumentIntent()
                             &&
-                            !queryContext.imageIntent
+                            !queryAnalysis.isImageIntent()
             ) {
 
                 minAcceptedScore =
@@ -1228,20 +1250,23 @@ public class MainActivity extends AppCompatActivity {
         }).start();
     }
     private boolean hasStrongVocabularyPrefixExpansion(
-            QueryUnderstandingEngine.QueryContext queryContext
+            SearchRequest searchRequest,
+            SearchAnalysis searchAnalysis
     ) {
 
         if (
-                queryContext == null
+                searchRequest == null
                         ||
-                        queryContext.tokens == null
+                        searchAnalysis == null
                         ||
-                        queryContext.semanticTokens == null
+                        searchRequest.getQueryTokens() == null
+                        ||
+                        searchAnalysis.getSemanticTokens() == null
         ) {
             return false;
         }
 
-        for (String token : queryContext.tokens) {
+        for (String token : searchRequest.getQueryTokens()) {
 
             if (
                     token == null
@@ -1253,7 +1278,7 @@ public class MainActivity extends AppCompatActivity {
 
             int strongMatches = 0;
 
-            for (String semanticToken : queryContext.semanticTokens) {
+            for (String semanticToken : searchAnalysis.getSemanticTokens()) {
 
                 if (
                         semanticToken == null
