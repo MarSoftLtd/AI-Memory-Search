@@ -9,6 +9,7 @@ public final class NlpPipeline {
     private final QueryNormalizer queryNormalizer;
     private final QueryTokenizer queryTokenizer;
     private final StopWordFilter stopWordFilter;
+    private final ConceptExtractor conceptExtractor;
 
     public NlpPipeline() {
         this(
@@ -16,7 +17,8 @@ public final class NlpPipeline {
                 new DefaultQueryTokenizer(),
                 new DefaultStopWordFilter(
                         languageCode -> Collections.emptySet()
-                )
+                ),
+                new DefaultConceptExtractor()
         );
     }
 
@@ -30,14 +32,16 @@ public final class NlpPipeline {
                         new AssetsStopWordRepository(
                                 context
                         )
-                )
+                ),
+                new DefaultConceptExtractor()
         );
     }
 
     public NlpPipeline(
             QueryNormalizer queryNormalizer,
             QueryTokenizer queryTokenizer,
-            StopWordFilter stopWordFilter
+            StopWordFilter stopWordFilter,
+            ConceptExtractor conceptExtractor
     ) {
         this.queryNormalizer =
                 queryNormalizer;
@@ -45,6 +49,8 @@ public final class NlpPipeline {
                 queryTokenizer;
         this.stopWordFilter =
                 stopWordFilter;
+        this.conceptExtractor =
+                conceptExtractor;
     }
 
     public SearchRequest process(
@@ -66,6 +72,10 @@ public final class NlpPipeline {
         );
 
         stopWordFilter.filter(
+                searchRequest
+        );
+
+        conceptExtractor.extract(
                 searchRequest
         );
 
