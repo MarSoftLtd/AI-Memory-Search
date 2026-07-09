@@ -56,12 +56,15 @@ public final class TranslationEngine {
                             .getInstance(context)
                             .detect(text);
 
-            File modelDirectory =
+            TranslationPackage translationPackage =
                     TranslationModelManager
                             .getInstance(context)
-                            .getModelDirectory(
+                            .getOrInstall(
                                     modelId
                             );
+
+            File modelDirectory =
+                    translationPackage.getDirectory();
 
             translator =
                     RomanceTranslator.getInstance(

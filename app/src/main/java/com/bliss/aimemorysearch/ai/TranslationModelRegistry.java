@@ -5,6 +5,7 @@ public final class TranslationModelRegistry {
     private static final TranslationModelInfo ROMANCE =
             new TranslationModelInfo(
                     TranslationModelId.ROMANCE,
+                    "romance",
                     "models/translator/romance-en",
                     "models/translator/romance-en"
             );
@@ -12,6 +13,7 @@ public final class TranslationModelRegistry {
     private static final TranslationModelInfo GERMANIC =
             new TranslationModelInfo(
                     TranslationModelId.GERMANIC,
+                    "germanic",
                     "models/translator/germanic-en",
                     "models/translator/germanic-en"
             );
@@ -19,6 +21,7 @@ public final class TranslationModelRegistry {
     private static final TranslationModelInfo SLAVIC =
             new TranslationModelInfo(
                     TranslationModelId.SLAVIC,
+                    "slavic",
                     "models/translator/slavic-en",
                     "models/translator/slavic-en"
             );
@@ -26,6 +29,7 @@ public final class TranslationModelRegistry {
     private static final TranslationModelInfo GREEK =
             new TranslationModelInfo(
                     TranslationModelId.GREEK,
+                    "greek",
                     "models/translator/greek-en",
                     "models/translator/greek-en"
             );
@@ -33,6 +37,7 @@ public final class TranslationModelRegistry {
     private static final TranslationModelInfo TURKISH =
             new TranslationModelInfo(
                     TranslationModelId.TURKISH,
+                    "turkish",
                     "models/translator/turkish-en",
                     "models/translator/turkish-en"
             );

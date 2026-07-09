@@ -3,6 +3,7 @@ package com.bliss.aimemorysearch.ai;
 public final class TranslationPackageInfo {
 
     private final String packageId;
+    private final String translationFamily;
     private final String displayName;
     private final String description;
     private final String version;
@@ -14,6 +15,7 @@ public final class TranslationPackageInfo {
 
     public TranslationPackageInfo(
             String packageId,
+            String translationFamily,
             String displayName,
             String description,
             String version,
@@ -25,6 +27,8 @@ public final class TranslationPackageInfo {
     ) {
         this.packageId =
                 packageId;
+        this.translationFamily =
+                translationFamily;
         this.displayName =
                 displayName;
         this.description =
@@ -45,6 +49,10 @@ public final class TranslationPackageInfo {
 
     public String getPackageId() {
         return packageId;
+    }
+
+    public String getTranslationFamily() {
+        return translationFamily;
     }
 
     public String getDisplayName() {

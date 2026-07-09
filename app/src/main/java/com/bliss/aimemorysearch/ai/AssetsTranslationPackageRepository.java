@@ -87,6 +87,9 @@ public final class AssetsTranslationPackageRepository
                         "packageId"
                 ),
                 jsonObject.getString(
+                        "translationFamily"
+                ),
+                jsonObject.getString(
                         "displayName"
                 ),
                 jsonObject.optString(
