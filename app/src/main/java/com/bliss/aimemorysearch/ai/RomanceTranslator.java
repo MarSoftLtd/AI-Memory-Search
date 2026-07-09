@@ -60,4 +60,10 @@ public final class RomanceTranslator {
                 text
         );
     }
+
+    public synchronized void close() {
+        nativeTranslator.close();
+        instance =
+                null;
+    }
 }

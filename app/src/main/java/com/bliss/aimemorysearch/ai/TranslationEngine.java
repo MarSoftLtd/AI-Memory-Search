@@ -2,21 +2,20 @@ package com.bliss.aimemorysearch.ai;
 
 import android.content.Context;
 
-import java.io.File;
-
 public final class TranslationEngine {
 
     private static volatile TranslationEngine instance;
 
     private final Context context;
-
-    private RomanceTranslator translator;
+    private final TranslatorSessionManager sessionManager;
 
     private TranslationEngine(
             Context context
     ) {
         this.context =
                 context.getApplicationContext();
+        sessionManager =
+                TranslatorSessionManager.getInstance();
     }
 
     public static synchronized TranslationEngine getInstance(
@@ -46,10 +45,6 @@ public final class TranslationEngine {
             String text
     ) {
 
-        if (translator != null) {
-            return translator;
-        }
-
         try {
             TranslationModelId modelId =
                     LanguageDetectionEngine
@@ -63,15 +58,10 @@ public final class TranslationEngine {
                                     modelId
                             );
 
-            File modelDirectory =
-                    translationPackage.getDirectory();
-
-            translator =
-                    RomanceTranslator.getInstance(
-                            modelDirectory
-                    );
-
-            return translator;
+            return sessionManager.getTranslator(
+                    modelId,
+                    translationPackage
+            );
         } catch (Exception e) {
             throw new IllegalStateException(
                     "Failed to initialize offline translation engine",
