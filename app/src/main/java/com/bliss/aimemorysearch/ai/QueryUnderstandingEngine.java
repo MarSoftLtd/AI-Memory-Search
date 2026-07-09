@@ -58,72 +58,32 @@ public class QueryUnderstandingEngine {
             String query
     ) {
 
-        QueryContext context =
-                new QueryContext();
-
         if (query == null) {
-            return context;
+            return new QueryContext();
         }
 
-        context.originalQuery =
-                query;
-
-        context.normalizedQuery =
-                normalize(query);
-
-        context.tokens =
-                tokenize(
-                        context.normalizedQuery
+        SearchRequest request =
+                createSearchRequest(
+                        query
                 );
+
+        SearchAnalysis analysis =
+                createSearchAnalysis(
+                        request
+                );
+
+        QueryContext context =
+                new SearchRequestQueryContextAdapter()
+                        .adapt(
+                                request,
+                                analysis
+                        );
 
         context.importantTokens =
                 extractImportantTokens(
-                        context.tokens
+                        request.getQueryTokens()
                 );
 
-        try {
-
-            context.embedding =
-                    EmbeddingEngine
-                            .getInstance()
-                            .generateEmbedding(
-                                    context.normalizedQuery
-                            );
-
-        } catch (Exception e) {
-
-            e.printStackTrace();
-
-            context.embedding = null;
-        }
-
-        context.semanticTokens =
-                buildSemanticTokens(
-                        context
-                );
-        context.tokenWeights =
-                buildTokenWeights(
-                        context
-                );
-        context.documentIntent =
-                detectDocumentIntent(
-                        context
-                );
-
-        context.imageIntent =
-                detectImageIntent(
-                        context
-                );
-
-        context.personIntent =
-                detectPersonIntent(
-                        context
-                );
-
-        context.invoiceIntent =
-                detectInvoiceIntent(
-                        context
-                );
         android.util.Log.e(
                 "QUERY_DEBUG",
                 "QUERY=" + query
@@ -134,6 +94,102 @@ public class QueryUnderstandingEngine {
                         + " | INVOICE=" + context.invoiceIntent
         );
         return context;
+    }
+
+    public static SearchRequest createSearchRequest(
+            String query
+    ) {
+
+        SearchRequest request =
+                new SearchRequest();
+
+        if (query == null) {
+            return request;
+        }
+
+        request.setOriginalQuery(
+                query
+        );
+
+        request.setNormalizedQuery(
+                normalize(query)
+        );
+
+        request.setQueryTokens(
+                tokenize(
+                        request.getNormalizedQuery()
+                )
+        );
+
+        return request;
+    }
+
+    public static SearchAnalysis createSearchAnalysis(
+            SearchRequest request
+    ) {
+
+        if (request == null) {
+            request =
+                    new SearchRequest();
+        }
+
+        float[] embedding;
+
+        try {
+
+            embedding =
+                    EmbeddingEngine
+                            .getInstance()
+                            .generateEmbedding(
+                                    request.getNormalizedQuery()
+                            );
+
+        } catch (Exception e) {
+
+            e.printStackTrace();
+
+            embedding = null;
+        }
+
+        List<String> semanticTokens =
+                buildSemanticTokens(
+                        request.getQueryTokens()
+                );
+
+        List<QueryTokenWeight> tokenWeights =
+                buildTokenWeights(
+                        request.getQueryTokens()
+                );
+
+        boolean documentIntent =
+                detectDocumentIntent(
+                        request.getQueryTokens()
+                );
+
+        boolean imageIntent =
+                detectImageIntent(
+                        request.getQueryTokens()
+                );
+
+        boolean personIntent =
+                detectPersonIntent(
+                        request.getQueryTokens()
+                );
+
+        boolean invoiceIntent =
+                detectInvoiceIntent(
+                        request.getQueryTokens()
+                );
+
+        return new SearchAnalysis(
+                semanticTokens,
+                tokenWeights,
+                embedding,
+                documentIntent,
+                imageIntent,
+                personIntent,
+                invoiceIntent
+        );
     }
 
     private static String normalize(
@@ -248,14 +304,14 @@ public class QueryUnderstandingEngine {
     }
 
     private static List<String> buildSemanticTokens(
-            QueryContext context
+            List<String> tokens
     ) {
 
         List<String> semanticTokens =
                 new ArrayList<>();
 
         if (
-                context.tokens == null
+                tokens == null
         ) {
 
             return semanticTokens;
@@ -264,7 +320,7 @@ public class QueryUnderstandingEngine {
         HashSet<String> unique =
                 new HashSet<>();
 
-        for (String token : context.tokens) {
+        for (String token : tokens) {
 
             if (
                     token == null
@@ -307,17 +363,17 @@ public class QueryUnderstandingEngine {
     }
 
     private static boolean detectDocumentIntent(
-            QueryContext context
+            List<String> tokens
     ) {
 
         if (
-                context.tokens == null
+                tokens == null
         ) {
 
             return false;
         }
 
-        for (String token : context.tokens) {
+        for (String token : tokens) {
 
             if (
                     token.length() >= 5
@@ -331,24 +387,22 @@ public class QueryUnderstandingEngine {
     }
 
     private static boolean detectImageIntent(
-            QueryContext context
+            List<String> tokens
     ) {
 
         if (
-                context == null
-                        ||
-                        context.tokens == null
+                tokens == null
         ) {
             return false;
         }
 
         if (
-                context.tokens.size() == 1
+                tokens.size() == 1
         ) {
             return true;
         }
 
-        for (String token : context.tokens) {
+        for (String token : tokens) {
 
             if (
                     token.equals("photo")
@@ -370,17 +424,17 @@ public class QueryUnderstandingEngine {
     }
 
     private static boolean detectPersonIntent(
-            QueryContext context
+            List<String> tokens
     ) {
 
         if (
-                context.tokens == null
+                tokens == null
         ) {
 
             return false;
         }
 
-        for (String token : context.tokens) {
+        for (String token : tokens) {
 
             if (
                     token.length() >= 4
@@ -394,17 +448,17 @@ public class QueryUnderstandingEngine {
     }
 
     private static boolean detectInvoiceIntent(
-            QueryContext context
+            List<String> tokens
     ) {
 
         if (
-                context.tokens == null
+                tokens == null
         ) {
 
             return false;
         }
 
-        for (String token : context.tokens) {
+        for (String token : tokens) {
 
             if (
                     token.length() >= 5
@@ -417,23 +471,21 @@ public class QueryUnderstandingEngine {
         return false;
     }
     private static List<QueryTokenWeight> buildTokenWeights(
-            QueryContext context
+            List<String> tokens
     ) {
 
         List<QueryTokenWeight> weights =
                 new ArrayList<>();
 
         if (
-                context == null
-                        ||
-                        context.tokens == null
+                tokens == null
         ) {
 
             return weights;
         }
 
         int tokenCount =
-                context.tokens.size();
+                tokens.size();
 
         for (
                 int i = 0;
@@ -442,7 +494,7 @@ public class QueryUnderstandingEngine {
         ) {
 
             String token =
-                    context.tokens.get(i);
+                    tokens.get(i);
 
             if (
                     token == null
