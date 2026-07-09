@@ -13,8 +13,9 @@ public final class SearchRequest {
     private String translatedQuery;
     private String detectedLanguage;
     private String workingLanguage;
-    private List<String> tokens;
+    private List<String> queryTokens;
     private List<String> concepts;
+    private List<SemanticExpansion> semanticExpansions;
     private Set<SearchTarget> searchTargets;
 
     public SearchRequest() {
@@ -28,9 +29,11 @@ public final class SearchRequest {
                 "";
         workingLanguage =
                 "";
-        tokens =
+        queryTokens =
                 new ArrayList<>();
         concepts =
+                new ArrayList<>();
+        semanticExpansions =
                 new ArrayList<>();
         searchTargets =
                 EnumSet.noneOf(
@@ -103,15 +106,27 @@ public final class SearchRequest {
                 );
     }
 
+    public List<String> getQueryTokens() {
+        return queryTokens;
+    }
+
+    public void setQueryTokens(
+            List<String> queryTokens
+    ) {
+        this.queryTokens =
+                nonNullList(
+                        queryTokens
+                );
+    }
+
     public List<String> getTokens() {
-        return tokens;
+        return getQueryTokens();
     }
 
     public void setTokens(
             List<String> tokens
     ) {
-        this.tokens =
-                nonNullList(
+        setQueryTokens(
                         tokens
                 );
     }
@@ -126,6 +141,19 @@ public final class SearchRequest {
         this.concepts =
                 nonNullList(
                         concepts
+                );
+    }
+
+    public List<SemanticExpansion> getSemanticExpansions() {
+        return semanticExpansions;
+    }
+
+    public void setSemanticExpansions(
+            List<SemanticExpansion> semanticExpansions
+    ) {
+        this.semanticExpansions =
+                nonNullSemanticExpansionList(
+                        semanticExpansions
                 );
     }
 
@@ -152,6 +180,18 @@ public final class SearchRequest {
 
     private static List<String> nonNullList(
             List<String> values
+    ) {
+        if (values == null) {
+            return new ArrayList<>();
+        }
+
+        return new ArrayList<>(
+                values
+        );
+    }
+
+    private static List<SemanticExpansion> nonNullSemanticExpansionList(
+            List<SemanticExpansion> values
     ) {
         if (values == null) {
             return new ArrayList<>();
