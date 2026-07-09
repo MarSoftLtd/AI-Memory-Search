@@ -8,32 +8,6 @@ import java.util.Locale;
 
 public class QueryUnderstandingEngine {
 
-    public static class QueryContext {
-
-        public String originalQuery = "";
-
-        public String normalizedQuery = "";
-
-        public List<String> tokens =
-                new ArrayList<>();
-
-        public List<String> importantTokens =
-                new ArrayList<>();
-
-        public List<String> semanticTokens =
-                new ArrayList<>();
-        public List<QueryTokenWeight> tokenWeights =
-                new ArrayList<>();
-        public float[] embedding;
-
-        public boolean documentIntent;
-
-        public boolean imageIntent;
-
-        public boolean personIntent;
-
-        public boolean invoiceIntent;
-    }
     public static class QueryTokenWeight {
 
         public String token = "";
@@ -52,48 +26,6 @@ public class QueryUnderstandingEngine {
             this.weight = weight;
             this.role = role;
         }
-    }
-
-    public static QueryContext analyze(
-            String query
-    ) {
-
-        if (query == null) {
-            return new QueryContext();
-        }
-
-        SearchRequest request =
-                createSearchRequest(
-                        query
-                );
-
-        SearchAnalysis analysis =
-                createSearchAnalysis(
-                        request
-                );
-
-        QueryContext context =
-                new SearchRequestQueryContextAdapter()
-                        .adapt(
-                                request,
-                                analysis
-                        );
-
-        context.importantTokens =
-                extractImportantTokens(
-                        request.getQueryTokens()
-                );
-
-        android.util.Log.e(
-                "QUERY_DEBUG",
-                "QUERY=" + query
-                        + " | TOKENS=" + context.tokens
-                        + " | DOCUMENT=" + context.documentIntent
-                        + " | IMAGE=" + context.imageIntent
-                        + " | PERSON=" + context.personIntent
-                        + " | INVOICE=" + context.invoiceIntent
-        );
-        return context;
     }
 
     public static SearchRequest createSearchRequest(
@@ -271,36 +203,6 @@ public class QueryUnderstandingEngine {
         }
 
         return tokens;
-    }
-
-    private static List<String> extractImportantTokens(
-            List<String> tokens
-    ) {
-
-        List<String> result =
-                new ArrayList<>();
-
-        if (tokens == null) {
-            return result;
-        }
-
-        for (String token : tokens) {
-
-            if (
-                    token == null
-            ) {
-                continue;
-            }
-
-            if (
-                    token.length() >= 3
-            ) {
-
-                result.add(token);
-            }
-        }
-
-        return result;
     }
 
     private static List<String> buildSemanticTokens(
