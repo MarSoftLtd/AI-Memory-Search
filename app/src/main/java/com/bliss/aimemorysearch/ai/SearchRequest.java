@@ -15,6 +15,7 @@ public final class SearchRequest {
     private String workingLanguage;
     private List<String> queryTokens;
     private List<String> concepts;
+    private List<QueryEntity> entities;
     private List<SemanticExpansion> semanticExpansions;
     private Set<SearchTarget> searchTargets;
 
@@ -32,6 +33,8 @@ public final class SearchRequest {
         queryTokens =
                 new ArrayList<>();
         concepts =
+                new ArrayList<>();
+        entities =
                 new ArrayList<>();
         semanticExpansions =
                 new ArrayList<>();
@@ -144,6 +147,19 @@ public final class SearchRequest {
                 );
     }
 
+    public List<QueryEntity> getEntities() {
+        return entities;
+    }
+
+    public void setEntities(
+            List<QueryEntity> entities
+    ) {
+        this.entities =
+                nonNullQueryEntityList(
+                        entities
+                );
+    }
+
     public List<SemanticExpansion> getSemanticExpansions() {
         return semanticExpansions;
     }
@@ -192,6 +208,18 @@ public final class SearchRequest {
 
     private static List<SemanticExpansion> nonNullSemanticExpansionList(
             List<SemanticExpansion> values
+    ) {
+        if (values == null) {
+            return new ArrayList<>();
+        }
+
+        return new ArrayList<>(
+                values
+        );
+    }
+
+    private static List<QueryEntity> nonNullQueryEntityList(
+            List<QueryEntity> values
     ) {
         if (values == null) {
             return new ArrayList<>();
