@@ -6,11 +6,8 @@ import java.util.List;
 
 public final class TranslationPackageManifest {
 
-    private final String packageId;
-    private final String displayName;
+    private final AiPackageManifest packageManifest;
     private final String family;
-    private final String version;
-    private final String minimumAppVersion;
     private final String translatorEngine;
     private final String modelDirectory;
     private final String tokenizer;
@@ -27,16 +24,16 @@ public final class TranslationPackageManifest {
             String tokenizer,
             List<String> supportedLanguages
     ) {
-        this.packageId =
-                packageId;
-        this.displayName =
-                displayName;
+        this.packageManifest =
+                new AiPackageManifest(
+                        packageId,
+                        AiPackageType.TRANSLATION,
+                        displayName,
+                        version,
+                        minimumAppVersion
+                );
         this.family =
                 family;
-        this.version =
-                version;
-        this.minimumAppVersion =
-                minimumAppVersion;
         this.translatorEngine =
                 translatorEngine;
         this.modelDirectory =
@@ -51,12 +48,16 @@ public final class TranslationPackageManifest {
                 );
     }
 
+    public AiPackageManifest getAiPackageManifest() {
+        return packageManifest;
+    }
+
     public String getPackageId() {
-        return packageId;
+        return packageManifest.getPackageId();
     }
 
     public String getDisplayName() {
-        return displayName;
+        return packageManifest.getDisplayName();
     }
 
     public String getFamily() {
@@ -64,11 +65,11 @@ public final class TranslationPackageManifest {
     }
 
     public String getVersion() {
-        return version;
+        return packageManifest.getVersion();
     }
 
     public String getMinimumAppVersion() {
-        return minimumAppVersion;
+        return packageManifest.getMinimumAppVersion();
     }
 
     public String getTranslatorEngine() {

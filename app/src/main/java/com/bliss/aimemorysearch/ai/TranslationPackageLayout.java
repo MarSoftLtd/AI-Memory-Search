@@ -20,7 +20,7 @@ public final class TranslationPackageLayout {
         this.manifestFile =
                 new File(
                         rootDirectory,
-                        ManifestFileNames.MANIFEST
+                        AiPackageFileNames.MANIFEST
                 );
         this.configFile =
                 new File(

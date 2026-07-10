@@ -2,16 +2,8 @@ package com.bliss.aimemorysearch.ai;
 
 public final class TranslationPackageInfo {
 
-    private final String packageId;
+    private final AiPackageInfo packageInfo;
     private final String translationFamily;
-    private final String displayName;
-    private final String description;
-    private final String version;
-    private final long sizeBytes;
-    private final long requiredSpaceBytes;
-    private final String downloadUrl;
-    private final String checksumSha256;
-    private final String minAppVersion;
 
     public TranslationPackageInfo(
             String packageId,
@@ -25,30 +17,30 @@ public final class TranslationPackageInfo {
             String checksumSha256,
             String minAppVersion
     ) {
-        this.packageId =
-                packageId;
         this.translationFamily =
                 translationFamily;
-        this.displayName =
-                displayName;
-        this.description =
-                description;
-        this.version =
-                version;
-        this.sizeBytes =
-                sizeBytes;
-        this.requiredSpaceBytes =
-                requiredSpaceBytes;
-        this.downloadUrl =
-                downloadUrl;
-        this.checksumSha256 =
-                checksumSha256;
-        this.minAppVersion =
-                minAppVersion;
+        this.packageInfo =
+                new AiPackageInfo(
+                        packageId,
+                        AiPackageType.TRANSLATION,
+                        translationFamily,
+                        displayName,
+                        description,
+                        version,
+                        sizeBytes,
+                        requiredSpaceBytes,
+                        downloadUrl,
+                        checksumSha256,
+                        minAppVersion
+                );
+    }
+
+    public AiPackageInfo getAiPackageInfo() {
+        return packageInfo;
     }
 
     public String getPackageId() {
-        return packageId;
+        return packageInfo.getPackageId();
     }
 
     public String getTranslationFamily() {
@@ -56,34 +48,34 @@ public final class TranslationPackageInfo {
     }
 
     public String getDisplayName() {
-        return displayName;
+        return packageInfo.getDisplayName();
     }
 
     public String getDescription() {
-        return description;
+        return packageInfo.getDescription();
     }
 
     public String getVersion() {
-        return version;
+        return packageInfo.getVersion();
     }
 
     public long getSizeBytes() {
-        return sizeBytes;
+        return packageInfo.getSizeBytes();
     }
 
     public long getRequiredSpaceBytes() {
-        return requiredSpaceBytes;
+        return packageInfo.getRequiredSpaceBytes();
     }
 
     public String getDownloadUrl() {
-        return downloadUrl;
+        return packageInfo.getDownloadUrl();
     }
 
     public String getChecksumSha256() {
-        return checksumSha256;
+        return packageInfo.getChecksumSha256();
     }
 
     public String getMinAppVersion() {
-        return minAppVersion;
+        return packageInfo.getMinAppVersion();
     }
 }
