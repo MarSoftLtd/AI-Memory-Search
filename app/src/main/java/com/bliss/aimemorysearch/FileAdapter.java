@@ -98,7 +98,11 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.FileViewHolder
 
                     android.widget.Toast.makeText(
                             holder.itemView.getContext(),
-                            "No PDF app found",
+                            holder.itemView
+                                    .getContext()
+                                    .getString(
+                                            R.string.no_pdf_app_found
+                                    ),
                             android.widget.Toast.LENGTH_LONG
                     ).show();
                 }
@@ -132,19 +136,19 @@ public class FileAdapter extends RecyclerView.Adapter<FileAdapter.FileViewHolder
 
                 case "PDF":
                     holder.icon.setImageResource(
-                            android.R.drawable.ic_menu_save
+                            R.drawable.ic_file
                     );
                     break;
 
                 case "DOC":
                     holder.icon.setImageResource(
-                            android.R.drawable.ic_menu_edit
+                            R.drawable.ic_edit
                     );
                     break;
 
                 default:
                     holder.icon.setImageResource(
-                            android.R.drawable.ic_menu_help
+                            R.drawable.ic_help
                     );
                     break;
             }

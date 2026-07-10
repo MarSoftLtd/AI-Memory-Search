@@ -6,37 +6,37 @@
 
         <shape android:shape="rectangle">
 
-            <corners android:radius="32dp"/>
+            <corners android:radius="@dimen/radius_extra_large"/>
 
             <gradient
                 android:angle="270"
-                android:startColor="#FF425D91"
-                android:centerColor="#FF283B61"
-                android:endColor="#FF182338"/>
+                android:startColor="@color/color_modal_surface_top"
+                android:centerColor="@color/color_modal_surface_middle"
+                android:endColor="@color/color_modal_surface_bottom"/>
 
             <stroke
-                android:width="1.4dp"
-                android:color="#CCFFFFFF"/>
+                android:width="@dimen/border_width_strong"
+                android:color="@color/color_border_strong"/>
 
         </shape>
 
     </item>
 
     <item
-        android:left="1dp"
-        android:right="1dp"
-        android:top="1dp"
-        android:bottom="1dp">
+        android:left="@dimen/border_width"
+        android:right="@dimen/border_width"
+        android:top="@dimen/border_width"
+        android:bottom="@dimen/border_width">
 
         <shape android:shape="rectangle">
 
-            <corners android:radius="31dp"/>
+            <corners android:radius="@dimen/radius_extra_large"/>
 
             <gradient
                 android:angle="270"
-                android:startColor="#22FFFFFF"
-                android:centerColor="#08FFFFFF"
-                android:endColor="#00FFFFFF"/>
+                android:startColor="@color/color_surface_overlay"
+                android:centerColor="@color/color_surface_overlay"
+                android:endColor="@color/color_none"/>
 
         </shape>
 

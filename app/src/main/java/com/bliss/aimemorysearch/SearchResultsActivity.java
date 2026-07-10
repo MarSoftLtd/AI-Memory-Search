@@ -68,15 +68,19 @@ public class SearchResultsActivity
         ) {
 
             resultsCount.setText(
-                    "No memories found"
+                    getString(
+                            R.string.results_empty
+                    )
             );
 
             return;
         }
 
         resultsCount.setText(
-                currentResults.size()
-                        + " memories found"
+                getString(
+                        R.string.results_count,
+                        currentResults.size()
+                )
         );
 
         LinearLayoutManager manager =
@@ -104,9 +108,15 @@ public class SearchResultsActivity
         );
 
         resultsRecycler.setPadding(
-                90,
+                getResources()
+                        .getDimensionPixelSize(
+                                R.dimen.component_results_side_padding
+                        ),
                 0,
-                90,
+                getResources()
+                        .getDimensionPixelSize(
+                                R.dimen.component_results_side_padding
+                        ),
                 0
         );
 
@@ -270,7 +280,10 @@ public class SearchResultsActivity
                             alpha
                     )
                     .setDuration(
-                            120
+                            getResources()
+                                    .getInteger(
+                                            R.integer.duration_short
+                                    )
                     )
                     .start();
 
@@ -359,7 +372,10 @@ public class SearchResultsActivity
                         0f
                 )
                 .setDuration(
-                        180
+                        getResources()
+                                .getInteger(
+                                        R.integer.duration_background_out
+                                )
                 )
                 .withEndAction(() -> {
 
@@ -388,7 +404,10 @@ public class SearchResultsActivity
                                     0.22f
                             )
                             .setDuration(
-                                    520
+                                    getResources()
+                                            .getInteger(
+                                                    R.integer.duration_background_in
+                                            )
                             )
                             .start();
                 })

@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="@dimen/spacing_12"
+    android:elevation="@dimen/elevation_none"
+    app:cardBackgroundColor="@android:color/transparent"
+    app:cardCornerRadius="@dimen/radius_large"
+    app:cardElevation="@dimen/elevation_none">
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/bg_glossy_search" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/component_card_highlight_height"
+            android:alpha="0.45"
+            android:background="@drawable/bg_glossy_top_shine" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="@dimen/component_card_padding">
+
+            <FrameLayout
+                android:layout_width="@dimen/component_icon_button_size"
+                android:layout_height="@dimen/component_icon_button_size"
+                android:background="@drawable/bg_glossy_icon_button">
+
+                <ImageView
+                    android:id="@+id/aiPackageIcon"
+                    android:layout_width="@dimen/component_icon_size"
+                    android:layout_height="@dimen/component_icon_size"
+                    android:layout_gravity="center"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_ai_package_document" />
+            </FrameLayout>
+
+            <LinearLayout
+                android:layout_width="@dimen/spacing_0"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/spacing_16"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/aiPackageTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/color_text_primary"
+                    android:textSize="@dimen/text_body"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/aiPackageDescription"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/component_label_gap"
+                    android:textColor="@color/color_text_muted"
+                    android:textSize="@dimen/text_caption" />
+
+                <ProgressBar
+                    android:id="@+id/aiPackageProgress"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/component_progress_height"
+                    android:layout_marginTop="@dimen/spacing_12"
+                    android:indeterminate="false"
+                    android:max="100"
+                    android:progressTint="@color/color_accent"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/aiPackageStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/spacing_12"
+                android:background="@drawable/bg_glossy_icon_button"
+                android:paddingStart="@dimen/spacing_12"
+                android:paddingTop="@dimen/component_compact_gap"
+                android:paddingEnd="@dimen/spacing_12"
+                android:paddingBottom="@dimen/component_compact_gap"
+                android:textColor="@color/color_accent_soft"
+                android:textSize="@dimen/text_label"
+                android:textStyle="bold" />
+
+            <ImageView
+                android:id="@+id/aiPackageChevron"
+                android:layout_width="@dimen/component_icon_size"
+                android:layout_height="@dimen/component_icon_size"
+                android:layout_marginStart="@dimen/spacing_8"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_chevron_right" />
+        </LinearLayout>
+    </FrameLayout>
+</androidx.cardview.widget.CardView>

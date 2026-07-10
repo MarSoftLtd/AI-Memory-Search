@@ -5,20 +5,20 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#050816">
+    android:background="@color/color_background">
 
     <View
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:background="#CC050816"
+        android:layout_width="@dimen/spacing_0"
+        android:layout_height="@dimen/spacing_0"
+        android:background="@color/color_background_scrim"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
     <ImageView
         android:id="@+id/backgroundBlur"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
+        android:layout_width="@dimen/spacing_0"
+        android:layout_height="@dimen/spacing_0"
         android:scaleType="centerCrop"
         android:alpha="0.22"
         android:scaleX="1.15"
@@ -32,12 +32,12 @@
         android:id="@+id/resultsTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="AI Search Results"
-        android:textColor="#FFFFFF"
-        android:textSize="28sp"
+        android:text="@string/results_title"
+        android:textColor="@color/color_text_primary"
+        android:textSize="@dimen/text_screen_title"
         android:textStyle="bold"
-        android:layout_marginTop="72dp"
-        android:layout_marginStart="28dp"
+        android:layout_marginTop="@dimen/component_results_top_margin"
+        android:layout_marginStart="@dimen/component_results_title_inset"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"/>
 
@@ -45,20 +45,20 @@
         android:id="@+id/resultsCount"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textColor="#9EB2D8"
-        android:textSize="15sp"
-        android:layout_marginTop="10dp"
-        android:layout_marginStart="28dp"
+        android:textColor="@color/color_text_secondary"
+        android:textSize="@dimen/text_body"
+        android:layout_marginTop="@dimen/component_field_gap"
+        android:layout_marginStart="@dimen/component_results_title_inset"
         app:layout_constraintTop_toBottomOf="@id/resultsTitle"
         app:layout_constraintStart_toStartOf="parent"/>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/resultsRecycler"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
+        android:layout_width="@dimen/spacing_0"
+        android:layout_height="@dimen/spacing_0"
         android:clipToPadding="false"
-        android:paddingStart="110dp"
-        android:paddingEnd="110dp"
+        android:paddingStart="@dimen/component_results_recycler_padding"
+        android:paddingEnd="@dimen/component_results_recycler_padding"
         android:overScrollMode="never"
         app:layout_constraintTop_toBottomOf="@id/resultsCount"
         app:layout_constraintBottom_toBottomOf="parent"

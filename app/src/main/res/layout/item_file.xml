@@ -5,57 +5,57 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="14dp"
-    app:cardCornerRadius="22dp"
-    app:cardBackgroundColor="#121B32"
-    app:cardElevation="6dp">
+    android:layout_marginBottom="@dimen/component_action_padding"
+    app:cardCornerRadius="@dimen/component_list_item_radius"
+    app:cardBackgroundColor="@color/color_surface"
+    app:cardElevation="@dimen/elevation_card">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:padding="18dp">
+        android:padding="@dimen/component_card_padding">
 
         <ImageView
             android:id="@+id/fileIcon"
-            android:layout_width="52dp"
-            android:layout_height="52dp"
-            android:src="@android:drawable/ic_menu_gallery"/>
+            android:layout_width="@dimen/component_file_icon_size"
+            android:layout_height="@dimen/component_file_icon_size"
+            android:src="@drawable/ic_image"/>
 
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="@dimen/spacing_0"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:orientation="vertical"
-            android:layout_marginStart="16dp">
+            android:layout_marginStart="@dimen/spacing_16">
 
             <TextView
                 android:id="@+id/fileName"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="document.pdf"
-                android:textColor="#FFFFFF"
+                android:text="@string/sample_file_name"
+                android:textColor="@color/color_text_primary"
                 android:textStyle="bold"
-                android:textSize="16sp"/>
+                android:textSize="@dimen/text_body"/>
 
             <TextView
                 android:id="@+id/filePath"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="/storage/emulated/0/Downloads"
-                android:textColor="#8EA0C8"
-                android:textSize="12sp"
-                android:layout_marginTop="6dp"/>
+                android:text="@string/sample_file_path"
+                android:textColor="@color/color_text_muted"
+                android:textSize="@dimen/text_caption"
+                android:layout_marginTop="@dimen/component_label_gap"/>
 
             <TextView
                 android:id="@+id/fileType"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="PDF"
-                android:textColor="#6EA8FF"
+                android:text="@string/sample_file_type"
+                android:textColor="@color/color_accent_blue_soft"
                 android:textStyle="bold"
-                android:textSize="13sp"
-                android:layout_marginTop="10dp"/>
+                android:textSize="@dimen/text_label"
+                android:layout_marginTop="@dimen/component_field_gap"/>
 
         </LinearLayout>
 

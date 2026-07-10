@@ -470,7 +470,10 @@ public class MainActivity extends AppCompatActivity {
                     }
 
                     pdfCountText.setText(
-                            "Documents " + count
+                            getString(
+                                    R.string.documents_count,
+                                    count
+                            )
                     );
 
                     pdfGauge.setMax(
@@ -489,7 +492,10 @@ public class MainActivity extends AppCompatActivity {
                     }
 
                     jpgCountText.setText(
-                            "Images " + count
+                            getString(
+                                    R.string.images_count,
+                                    count
+                            )
                     );
 
                     jpgGauge.setMax(
@@ -508,7 +514,10 @@ public class MainActivity extends AppCompatActivity {
                     }
 
                     ocrCountText.setText(
-                            "Text detected " + count
+                            getString(
+                                    R.string.text_detected_count,
+                                    count
+                            )
                     );
 
                     ocrGauge.setMax(
@@ -527,7 +536,10 @@ public class MainActivity extends AppCompatActivity {
                     }
 
                     embeddingCountText.setText(
-                            "AI indexed " + count
+                            getString(
+                                    R.string.ai_indexed_count,
+                                    count
+                            )
                     );
 
                     embeddingGauge.setMax(
@@ -857,7 +869,9 @@ public class MainActivity extends AppCompatActivity {
                     if (status == null) {
 
                         status =
-                                "Preparing AI indexing...";
+                                getString(
+                                        R.string.indexing_status_preparing
+                                );
                     }
 
                     if (currentFile == null) {
@@ -881,19 +895,24 @@ public class MainActivity extends AppCompatActivity {
                             }
                         }
                         titleText_unu.setText(
-                                "Semantic AI Indexing"
+                                getString(
+                                        R.string.indexing_title_running
+                                )
                         );
 
                         subtitleText_unu.setText(
-                                "Please wait while the AI performs the initial semantic indexing process. The system is analyzing documents, OCR text, screenshots, images, file names and semantic vectors to build your private on-device AI memory search database. This extended indexing happens only once during the first setup and may take several minutes depending on the number of files stored on your device. After completion, the AI will automatically index only new or modified files in the background."
+                                getString(
+                                        R.string.indexing_body_running
+                                )
                         );
 
                         liveIndexingText.setText(
-                                processed
-                                        + " / "
-                                        + total
-                                        + " • "
-                                        + currentFile
+                                getString(
+                                        R.string.indexing_progress,
+                                        processed,
+                                        total,
+                                        currentFile
+                                )
                         );
                         long elapsedMs =
                                 System.currentTimeMillis()
@@ -936,10 +955,11 @@ public class MainActivity extends AppCompatActivity {
                                 etaSeconds % 60;
 
                         String etaTextValue =
-                                minutes
-                                        + "m "
-                                        + seconds
-                                        + "s";
+                                getString(
+                                        R.string.eta_time_value,
+                                        minutes,
+                                        seconds
+                                );
 
                         String speedValue =
                                 String.format(
@@ -949,14 +969,17 @@ public class MainActivity extends AppCompatActivity {
                                 );
 
                         speedText.setText(
-                                "SPEED "
-                                        + speedValue
-                                        + "/s"
+                                getString(
+                                        R.string.speed_value,
+                                        speedValue
+                                )
                         );
 
                         etaText.setText(
-                                "ETA "
-                                        + etaTextValue
+                                getString(
+                                        R.string.eta_value,
+                                        etaTextValue
+                                )
                         );
 
                         if (
@@ -966,14 +989,18 @@ public class MainActivity extends AppCompatActivity {
                         ) {
 
                             stageText.setText(
-                                    "STAGE "
-                                            + stage
+                                    getString(
+                                            R.string.stage_value,
+                                            stage
+                                    )
                             );
 
                         } else {
 
                             stageText.setText(
-                                    "STAGE Processing..."
+                                    getString(
+                                            R.string.stage_processing
+                                    )
                             );
                         }
                     }
@@ -997,37 +1024,53 @@ public class MainActivity extends AppCompatActivity {
                                 .apply();
 
                         titleText_unu.setText(
-                                "AI Index Completed"
+                                getString(
+                                        R.string.indexing_title_completed
+                                )
                         );
 
                         subtitleText_unu.setText(
-                                "Documents, images and semantic vectors indexed successfully."
+                                getString(
+                                        R.string.indexing_body_completed
+                                )
                         );
 
                         liveIndexingText.setText(
-                                "Live indexing active"
+                                getString(
+                                        R.string.live_indexing_active
+                                )
                         );
                         speedText.setText(
-                                "SPEED DONE"
+                                getString(
+                                        R.string.speed_done
+                                )
                         );
 
                         etaText.setText(
-                                "ETA 0s"
+                                getString(
+                                        R.string.eta_done
+                                )
                         );
 
                         stageText.setText(
-                                "STAGE Completed"
+                                getString(
+                                        R.string.stage_completed
+                                )
                         );
                         new android.os.Handler(
                                 android.os.Looper.getMainLooper()
                         ).postDelayed(() -> {
 
                             titleText_unu.setText(
-                                    "Search your phone memory"
+                                    getString(
+                                            R.string.search_invite_title
+                                    )
                             );
 
                             subtitleText_unu.setText(
-                                    "Type something like invoice, screenshot, name, document, location or text from an image."
+                                    getString(
+                                            R.string.search_invite_body
+                                    )
                             );
 
                         }, 3000);
@@ -1044,7 +1087,9 @@ public class MainActivity extends AppCompatActivity {
                             );
                         }
                         liveIndexingText.setText(
-                                "AI indexing completed"
+                                getString(
+                                        R.string.indexing_completed
+                                )
                         );
                     }
                 });
@@ -1078,7 +1123,9 @@ public class MainActivity extends AppCompatActivity {
             if (!granted) {
 
                 liveIndexingText.setText(
-                        "Storage permission denied"
+                        getString(
+                                R.string.storage_permission_denied
+                        )
                 );
 
                 return;
@@ -1099,7 +1146,9 @@ public class MainActivity extends AppCompatActivity {
             }
 
             liveIndexingText.setText(
-                    "Starting indexing..."
+                    getString(
+                            R.string.starting_indexing
+                    )
             );
 
             startIndexing();
@@ -1115,7 +1164,9 @@ public class MainActivity extends AppCompatActivity {
         observeIndexWorker();
 
         liveIndexingText.setText(
-                "Preparing AI indexing..."
+                getString(
+                        R.string.indexing_status_preparing
+                )
         );
 
         startBackgroundIndexing();
@@ -1165,7 +1216,9 @@ public class MainActivity extends AppCompatActivity {
         if (!firstIndexDone) {
 
             liveIndexingText.setText(
-                    "Preparing AI indexing..."
+                    getString(
+                            R.string.indexing_status_preparing
+                    )
             );
 
             return;
@@ -1182,8 +1235,10 @@ public class MainActivity extends AppCompatActivity {
                 );
 
         liveIndexingText.setText(
-                "Last scan "
-                        + formattedTime
+                getString(
+                        R.string.last_scan,
+                        formattedTime
+                )
         );
     }
     private void showPermissionCard() {
@@ -1194,7 +1249,12 @@ public class MainActivity extends AppCompatActivity {
 
         dimView.animate()
                 .alpha(1f)
-                .setDuration(250)
+                .setDuration(
+                        getResources()
+                                .getInteger(
+                                        R.integer.duration_dialog_enter
+                                )
+                )
                 .start();
 
         permissionCard.setVisibility(
@@ -1209,14 +1269,24 @@ public class MainActivity extends AppCompatActivity {
                 .alpha(1f)
                 .scaleX(1f)
                 .scaleY(1f)
-                .setDuration(260)
+                .setDuration(
+                        getResources()
+                                .getInteger(
+                                        R.integer.duration_modal
+                                )
+                )
                 .start();
     }
     private void hidePermissionCard() {
 
         dimView.animate()
                 .alpha(0f)
-                .setDuration(220)
+                .setDuration(
+                        getResources()
+                                .getInteger(
+                                        R.integer.duration_dialog_exit
+                                )
+                )
                 .withEndAction(() -> {
 
                     dimView.setVisibility(
@@ -1230,7 +1300,12 @@ public class MainActivity extends AppCompatActivity {
                 .alpha(0f)
                 .scaleX(0.92f)
                 .scaleY(0.92f)
-                .setDuration(220)
+                .setDuration(
+                        getResources()
+                                .getInteger(
+                                        R.integer.duration_dialog_exit
+                                )
+                )
                 .withEndAction(() -> {
 
                     permissionCard.setVisibility(
@@ -1274,7 +1349,12 @@ public class MainActivity extends AppCompatActivity {
         );
         dimView.animate()
                 .alpha(1f)
-                .setDuration(200)
+                .setDuration(
+                        getResources()
+                                .getInteger(
+                                        R.integer.duration_medium
+                                )
+                )
                 .start();
 
         exitCard.setVisibility(
@@ -1288,7 +1368,12 @@ public class MainActivity extends AppCompatActivity {
                 .alpha(1f)
                 .scaleX(1f)
                 .scaleY(1f)
-                .setDuration(250)
+                .setDuration(
+                        getResources()
+                                .getInteger(
+                                        R.integer.duration_dialog_enter
+                                )
+                )
                 .start();
     }
     private void hideExitDialog() {
@@ -1297,7 +1382,12 @@ public class MainActivity extends AppCompatActivity {
 
         dimView.animate()
                 .alpha(0f)
-                .setDuration(200)
+                .setDuration(
+                        getResources()
+                                .getInteger(
+                                        R.integer.duration_medium
+                                )
+                )
                 .withEndAction(() -> {
 
                     dimView.setVisibility(
@@ -1311,7 +1401,12 @@ public class MainActivity extends AppCompatActivity {
                 .alpha(0f)
                 .scaleX(0.9f)
                 .scaleY(0.9f)
-                .setDuration(200)
+                .setDuration(
+                        getResources()
+                                .getInteger(
+                                        R.integer.duration_medium
+                                )
+                )
                 .withEndAction(() -> {
 
                     exitCard.setVisibility(

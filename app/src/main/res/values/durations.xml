@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <integer name="duration_none">0</integer>
+    <integer name="duration_short">120</integer>
+    <integer name="duration_medium">200</integer>
+    <integer name="duration_dialog_exit">220</integer>
+    <integer name="duration_dialog_enter">250</integer>
+    <integer name="duration_modal">260</integer>
+    <integer name="duration_background_out">180</integer>
+    <integer name="duration_background_in">520</integer>
+</resources>

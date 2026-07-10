@@ -101,8 +101,12 @@ public class SearchCarouselAdapter
             );
 
             holder.snippet.setText(
-                    "AI detected the searched terms in:\n\n"
-                            + snippet
+                    holder.itemView
+                            .getContext()
+                            .getString(
+                                    R.string.result_explanation_prefix,
+                                    snippet
+                            )
             );
 
         } else {
@@ -122,7 +126,13 @@ public class SearchCarouselAdapter
         holder.card.animate()
                 .scaleX(0.96f)
                 .scaleY(0.96f)
-                .setDuration(0)
+                .setDuration(
+                        holder.itemView
+                                .getResources()
+                                .getInteger(
+                                        R.integer.duration_none
+                                )
+                )
                 .start();
 
         if (
@@ -143,7 +153,7 @@ public class SearchCarouselAdapter
         } else {
 
             holder.image.setImageResource(
-                    android.R.drawable.ic_menu_report_image
+                    R.drawable.ic_image
             );
         }
         holder.card.setOnLongClickListener(v -> {
@@ -226,7 +236,11 @@ public class SearchCarouselAdapter
 
                 android.widget.Toast.makeText(
                         holder.itemView.getContext(),
-                        "Cannot open file",
+                        holder.itemView
+                                .getContext()
+                                .getString(
+                                        R.string.cannot_open_file
+                                ),
                         android.widget.Toast.LENGTH_LONG
                 ).show();
 
@@ -270,21 +284,21 @@ public class SearchCarouselAdapter
         dialog.setContentView(
                 R.layout.dialog_result_actions
         );
-        android.widget.TextView actionFavorite =
+        View actionFavorite =
                 dialog.findViewById(
                         R.id.actionFavorite
                 );
-        android.widget.TextView actionShare =
+        View actionShare =
                 dialog.findViewById(
                         R.id.actionShare
                 );
 
-        android.widget.TextView actionEmail =
+        View actionEmail =
                 dialog.findViewById(
                         R.id.actionEmail
                 );
 
-        android.widget.TextView actionOpen =
+        View actionOpen =
                 dialog.findViewById(
                         R.id.actionOpen
                 );
@@ -329,7 +343,11 @@ public class SearchCarouselAdapter
                     .startActivity(
                             Intent.createChooser(
                                     intent,
-                                    "Share file"
+                                    holder.itemView
+                                            .getContext()
+                                            .getString(
+                                                    R.string.share_file
+                                            )
                             )
                     );
 
@@ -357,7 +375,11 @@ public class SearchCarouselAdapter
 
                             android.widget.Toast.makeText(
                                     holder.itemView.getContext(),
-                                    "Saved to favorites",
+                                    holder.itemView
+                                            .getContext()
+                                            .getString(
+                                                    R.string.saved_to_favorites
+                                            ),
                                     android.widget.Toast.LENGTH_SHORT
                             ).show();
                         });
@@ -393,7 +415,11 @@ public class SearchCarouselAdapter
                     .startActivity(
                             Intent.createChooser(
                                     intent,
-                                    "Send email"
+                                    holder.itemView
+                                            .getContext()
+                                            .getString(
+                                                    R.string.send_email
+                                            )
                             )
                     );
 

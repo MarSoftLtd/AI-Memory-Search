@@ -6,18 +6,18 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#050816">
+    android:background="@color/color_background">
 
     <TextView
         android:id="@+id/titleText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="AI Memory Search"
-        android:textColor="#FFFFFF"
-        android:textSize="28sp"
+        android:text="@string/home_title"
+        android:textColor="@color/color_text_primary"
+        android:textSize="@dimen/text_screen_title"
         android:textStyle="bold"
-        android:layout_marginTop="50dp"
-        android:layout_marginStart="24dp"
+        android:layout_marginTop="@dimen/component_screen_top_margin"
+        android:layout_marginStart="@dimen/spacing_24"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"/>
 
@@ -25,25 +25,25 @@
         android:id="@+id/subtitleText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Search anything on your phone"
-        android:textColor="#8E9AB8"
-        android:textSize="16sp"
-        android:layout_marginTop="3dp"
-        android:layout_marginStart="24dp"
+        android:text="@string/home_subtitle"
+        android:textColor="@color/color_text_muted"
+        android:textSize="@dimen/text_body"
+        android:layout_marginTop="@dimen/component_tiny_gap"
+        android:layout_marginStart="@dimen/spacing_24"
         app:layout_constraintTop_toBottomOf="@id/titleText"
         app:layout_constraintStart_toStartOf="parent"/>
 
     <androidx.cardview.widget.CardView
         android:id="@+id/searchCard"
-        android:layout_width="0dp"
-        android:layout_height="54dp"
-        android:layout_marginStart="24dp"
-        android:layout_marginEnd="24dp"
-        android:layout_marginTop="10dp"
-        android:elevation="0dp"
-        android:translationZ="0dp"
-        app:cardCornerRadius="28dp"
-        app:cardElevation="0dp"
+        android:layout_width="@dimen/spacing_0"
+        android:layout_height="@dimen/component_search_height"
+        android:layout_marginStart="@dimen/spacing_24"
+        android:layout_marginEnd="@dimen/spacing_24"
+        android:layout_marginTop="@dimen/component_field_gap"
+        android:elevation="@dimen/elevation_none"
+        android:translationZ="@dimen/elevation_none"
+        app:cardCornerRadius="@dimen/radius_large"
+        app:cardElevation="@dimen/elevation_none"
         app:cardBackgroundColor="@android:color/transparent"
         app:layout_constraintTop_toBottomOf="@id/subtitleText"
         app:layout_constraintStart_toStartOf="parent"
@@ -64,7 +64,7 @@
 
         <View
             android:layout_width="match_parent"
-            android:layout_height="42dp"
+            android:layout_height="@dimen/component_search_highlight_height"
             android:layout_gravity="top"
             android:alpha="0.45"
             android:background="@drawable/bg_glossy_top_shine"/>
@@ -76,15 +76,15 @@
 
             <EditText
                 android:id="@+id/searchEdit"
-                android:layout_width="0dp"
+                android:layout_width="@dimen/spacing_0"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="22dp"
-                android:layout_marginEnd="12dp"
+                android:layout_marginStart="@dimen/component_search_text_inset"
+                android:layout_marginEnd="@dimen/spacing_12"
                 android:background="@android:color/transparent"
-                android:hint="Search ... "
-                android:textColor="#FFFFFF"
-                android:textColorHint="#93A7D1"
-                android:textSize="16sp"
+                android:hint="@string/search_hint"
+                android:textColor="@color/color_text_primary"
+                android:textColorHint="@color/color_text_hint"
+                android:textSize="@dimen/text_body"
                 android:singleLine="true"
                 android:imeOptions="actionSearch"
                 android:inputType="text"
@@ -95,13 +95,13 @@
 
             <ImageView
                 android:id="@+id/searchButton"
-                android:layout_width="38dp"
-                android:layout_height="38dp"
-                android:layout_marginEnd="12dp"
+                android:layout_width="@dimen/component_icon_button_size"
+                android:layout_height="@dimen/component_icon_button_size"
+                android:layout_marginEnd="@dimen/spacing_12"
                 android:background="@drawable/bg_glossy_search_button"
-                android:padding="12dp"
-                android:src="@android:drawable/ic_menu_search"
-                app:tint="#FFFFFF"
+                android:padding="@dimen/spacing_12"
+                android:src="@drawable/ic_search"
+                app:tint="@color/color_text_primary"
                 android:visibility="visible"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
@@ -109,13 +109,13 @@
 
             <ImageView
                 android:id="@+id/clearSearch"
-                android:layout_width="38dp"
-                android:layout_height="38dp"
-                android:layout_marginEnd="12dp"
-                android:padding="13dp"
-                android:src="@android:drawable/ic_menu_close_clear_cancel"
+                android:layout_width="@dimen/component_icon_button_size"
+                android:layout_height="@dimen/component_icon_button_size"
+                android:layout_marginEnd="@dimen/spacing_12"
+                android:padding="@dimen/spacing_12"
+                android:src="@drawable/ic_close"
                 android:background="@drawable/bg_glossy_icon_button"
-                app:tint="#E2EEFF"
+                app:tint="@color/color_text_primary"
                 android:visibility="gone"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
@@ -128,20 +128,20 @@
 
     <androidx.cardview.widget.CardView
         android:id="@+id/indexStatsCard"
-        android:layout_width="0dp"
-        android:layout_marginStart="24dp"
-        android:layout_marginEnd="24dp"
-        android:layout_height="330dp"
-        android:elevation="0dp"
+        android:layout_width="@dimen/spacing_0"
+        android:layout_marginStart="@dimen/spacing_24"
+        android:layout_marginEnd="@dimen/spacing_24"
+        android:layout_height="@dimen/component_stats_height"
+        android:elevation="@dimen/elevation_none"
         app:cardBackgroundColor="@android:color/transparent"
-        app:cardCornerRadius="28dp"
-        app:cardElevation="0dp"
+        app:cardCornerRadius="@dimen/radius_large"
+        app:cardElevation="@dimen/elevation_none"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/searchCard"
-        android:layout_marginTop="18dp"
-        app:strokeColor="#35FFFFFF"
-        app:strokeWidth="1dp">
+        android:layout_marginTop="@dimen/component_card_padding"
+        app:strokeColor="@color/color_border"
+        app:strokeWidth="@dimen/border_width">
 
         <FrameLayout
             android:layout_width="match_parent"
@@ -158,15 +158,15 @@
 
             <View
                 android:layout_width="match_parent"
-                android:layout_height="70dp"
+                android:layout_height="@dimen/component_card_highlight_height"
                 android:layout_gravity="top"
                 android:alpha="0.55"
                 android:background="@drawable/bg_glossy_top_shine" />
 
 <LinearLayout
     android:layout_width="match_parent"
-    android:layout_height="30dp"
-    android:layout_marginTop="5dp">
+    android:layout_height="@dimen/spacing_48"
+    android:layout_marginTop="@dimen/component_compact_gap">
 
     <TextView
         android:layout_width="match_parent"
@@ -174,28 +174,28 @@
         android:letterSpacing="0.18"
         android:layout_gravity="center"
         android:gravity="center"
-        android:text="AI MEMORY ENGINE RESULTS"
-        android:textColor="#99FFFFFF"
-        android:textSize="10sp"
+        android:text="@string/engine_results_header"
+        android:textColor="@color/color_text_overline"
+        android:textSize="@dimen/text_overline"
         android:textStyle="bold" />
 </LinearLayout>
     
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="330dp"
+                android:layout_height="@dimen/component_stats_height"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
-                android:paddingStart="15dp"
-                android:paddingTop="18dp"
-                android:paddingEnd="22dp"
-                android:paddingBottom="18dp">
+                android:paddingStart="@dimen/component_card_padding"
+                android:paddingTop="@dimen/component_card_padding"
+                android:paddingEnd="@dimen/component_search_text_inset"
+                android:paddingBottom="@dimen/component_card_padding">
 
                 <LinearLayout
-                    android:layout_width="100dp"
+                    android:layout_width="@dimen/component_stats_column_width"
                     android:layout_height="wrap_content"
                     android:layout_gravity="top"
-                    android:layout_marginTop="70dp"
-                    android:layout_marginStart="10dp"
+                    android:layout_marginTop="@dimen/component_stats_column_top_margin"
+                    android:layout_marginStart="@dimen/component_field_gap"
                     android:orientation="vertical">
 
                     <LinearLayout
@@ -210,25 +210,25 @@
                             android:layout_height="wrap_content"
                             android:layout_gravity=""
                             android:text="0"
-                            android:textColor="#FFFFFF"
-                            android:textSize="34sp"
+                            android:textColor="@color/color_text_primary"
+                            android:textSize="@dimen/text_display"
                             android:textStyle="bold" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Indexed files"
+                            android:text="@string/indexed_files_label"
                             android:textAlignment="center"
-                            android:textColor="#80FFFFFF"
-                            android:textSize="12sp" />
+                            android:textColor="@color/color_overlay_highlight"
+                            android:textSize="@dimen/text_caption" />
                     </LinearLayout>
                     <com.github.ybq.android.spinkit.SpinKitView
                         android:id="@+id/indexLoader"
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        android:layout_marginTop="20dp"
-                        android:layout_margin="15dp"
-                        app:SpinKit_Color="#63E6FF"
+                        android:layout_width="@dimen/component_loader_size"
+                        android:layout_height="@dimen/component_loader_size"
+                        android:layout_marginTop="@dimen/component_loader_margin"
+                        android:layout_margin="@dimen/component_card_padding"
+                        app:SpinKit_Color="@color/color_accent_secondary"
                         app:SpinKit_Style="ThreeBounce"
                         android:visibility="gone"/>
 
@@ -237,7 +237,7 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="0dp"
+                    android:layout_marginTop="@dimen/spacing_0"
                     android:layout_gravity="center"
                     android:orientation="vertical">
 
@@ -253,21 +253,21 @@
                             android:id="@+id/pdfCountText"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="DOCUMENTS 0"
-                            android:textColor="#FFFFFF"
-                            android:textSize="11sp"
+                            android:text="@string/documents_count_initial"
+                            android:textColor="@color/color_text_primary"
+                            android:textSize="@dimen/text_overline"
                             android:textStyle="bold" />
 
                         <ProgressBar
                             android:id="@+id/pdfGauge"
                             style="?android:attr/progressBarStyleHorizontal"
                             android:layout_width="match_parent"
-                            android:layout_height="8dp"
-                            android:layout_marginTop="2dp"
+                            android:layout_height="@dimen/component_progress_height"
+                            android:layout_marginTop="@dimen/component_small_gap"
                             android:max="100"
                             android:progress="0"
-                            android:progressBackgroundTint="#22304F"
-                            android:progressTint="#63E6FF" />
+                            android:progressBackgroundTint="@color/color_progress_track"
+                            android:progressTint="@color/color_accent_secondary" />
 
                         <!-- JPG -->
 
@@ -275,22 +275,22 @@
                             android:id="@+id/jpgCountText"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:text="IMAGES 0"
-                            android:textColor="#FFFFFF"
-                            android:textSize="11sp"
+                            android:layout_marginTop="@dimen/spacing_8"
+                            android:text="@string/images_count_initial"
+                            android:textColor="@color/color_text_primary"
+                            android:textSize="@dimen/text_overline"
                             android:textStyle="bold" />
 
                         <ProgressBar
                             android:id="@+id/jpgGauge"
                             style="?android:attr/progressBarStyleHorizontal"
                             android:layout_width="match_parent"
-                            android:layout_height="8dp"
-                            android:layout_marginTop="2dp"
+                            android:layout_height="@dimen/component_progress_height"
+                            android:layout_marginTop="@dimen/component_small_gap"
                             android:max="100"
                             android:progress="0"
-                            android:progressBackgroundTint="#22304F"
-                            android:progressTint="#8B7CFF" />
+                            android:progressBackgroundTint="@color/color_progress_track"
+                            android:progressTint="@color/color_accent_violet" />
 
                         <!-- OCR -->
 
@@ -298,22 +298,22 @@
                             android:id="@+id/ocrCountText"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:text="TEXT DETECTED 0"
-                            android:textColor="#FFFFFF"
-                            android:textSize="11sp"
+                            android:layout_marginTop="@dimen/spacing_8"
+                            android:text="@string/text_detected_count_initial"
+                            android:textColor="@color/color_text_primary"
+                            android:textSize="@dimen/text_overline"
                             android:textStyle="bold" />
 
                         <ProgressBar
                             android:id="@+id/ocrGauge"
                             style="?android:attr/progressBarStyleHorizontal"
                             android:layout_width="match_parent"
-                            android:layout_height="8dp"
-                            android:layout_marginTop="2dp"
+                            android:layout_height="@dimen/component_progress_height"
+                            android:layout_marginTop="@dimen/component_small_gap"
                             android:max="100"
                             android:progress="0"
-                            android:progressBackgroundTint="#22304F"
-                            android:progressTint="#00F5A0" />
+                            android:progressBackgroundTint="@color/color_progress_track"
+                            android:progressTint="@color/color_success" />
 
                         <!-- EMBEDDINGS -->
 
@@ -321,22 +321,22 @@
                             android:id="@+id/embeddingCountText"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:text="AI INDEXED 0"
-                            android:textColor="#FFFFFF"
-                            android:textSize="11sp"
+                            android:layout_marginTop="@dimen/spacing_8"
+                            android:text="@string/ai_indexed_count_initial"
+                            android:textColor="@color/color_text_primary"
+                            android:textSize="@dimen/text_overline"
                             android:textStyle="bold" />
 
                         <ProgressBar
                             android:id="@+id/embeddingGauge"
                             style="?android:attr/progressBarStyleHorizontal"
                             android:layout_width="match_parent"
-                            android:layout_height="8dp"
-                            android:layout_marginTop="2dp"
+                            android:layout_height="@dimen/component_progress_height"
+                            android:layout_marginTop="@dimen/component_small_gap"
                             android:max="100"
                             android:progress="0"
-                            android:progressBackgroundTint="#22304F"
-                            android:progressTint="#00D4FF" />
+                            android:progressBackgroundTint="@color/color_progress_track"
+                            android:progressTint="@color/color_accent" />
 <FrameLayout
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
@@ -344,10 +344,10 @@
                             android:id="@+id/speedText"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="10dp"
-                            android:text="SPEED 0/s"
-                            android:textColor="#FFFFFF"
-                            android:textSize="11sp"
+                            android:layout_marginTop="@dimen/component_field_gap"
+                            android:text="@string/speed_initial"
+                            android:textColor="@color/color_text_primary"
+                            android:textSize="@dimen/text_overline"
                             android:textStyle="bold" />
 
                         <TextView
@@ -355,10 +355,10 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_gravity="end|bottom"
-                            android:layout_marginTop="6dp"
-                            android:text="ETA --"
-                            android:textColor="#7FDBFF"
-                            android:textSize="11sp"
+                            android:layout_marginTop="@dimen/component_label_gap"
+                            android:text="@string/eta_initial"
+                            android:textColor="@color/color_accent_soft"
+                            android:textSize="@dimen/text_overline"
                             android:textStyle="bold" />
         </FrameLayout>
                         
@@ -370,30 +370,30 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_gravity="bottom"
-                android:layout_marginStart="15dp"
-                android:layout_marginEnd="15dp"
+                android:layout_marginStart="@dimen/component_card_padding"
+                android:layout_marginEnd="@dimen/component_card_padding"
                 android:orientation="vertical"
-                android:layout_height="70dp">
+                android:layout_height="@dimen/component_card_highlight_height">
                 <TextView
                     android:id="@+id/stageText"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:text="STAGE - Idle"
-                    android:textColor="#AFC6F9"
-                    android:textSize="11sp"
+                    android:layout_marginTop="@dimen/spacing_12"
+                    android:text="@string/stage_idle"
+                    android:textColor="@color/color_text_secondary"
+                    android:textSize="@dimen/text_overline"
                     android:textStyle="bold" />
                 
                 <TextView
                     android:id="@+id/liveIndexingText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="5dp"
+                    android:layout_marginTop="@dimen/component_compact_gap"
                     android:ellipsize="end"
                     android:maxLines="2"
-                    android:text="Idle"
-                    android:textColor="#00D4FF"
-                    android:textSize="11sp"
+                    android:text="@string/idle"
+                    android:textColor="@color/color_accent"
+                    android:textSize="@dimen/text_overline"
                     android:textStyle="bold"/>
             </LinearLayout>
         </FrameLayout>
@@ -402,12 +402,12 @@
 
     <LinearLayout
         android:id="@+id/searchInvitePanel"
-        android:layout_width="390dp"
+        android:layout_width="@dimen/component_invite_width"
         android:layout_height="wrap_content"
         android:gravity="center"
         android:orientation="vertical"
-        android:padding="28dp"
-        android:minHeight="180dp"
+        android:padding="@dimen/component_invite_padding"
+        android:minHeight="@dimen/component_invite_min_height"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.476"
@@ -419,15 +419,15 @@
             android:id="@+id/titleText_unu"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Search your phone memory"
-            android:textColor="#FFFFFF"
-            android:textSize="22sp"
+            android:text="@string/search_invite_title"
+            android:textColor="@color/color_text_primary"
+            android:textSize="@dimen/text_title"
             android:textStyle="bold" />
 
         <ScrollView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="@dimen/spacing_12"
             android:fadeScrollbars="false"
             android:scrollbars="none">
 
@@ -437,11 +437,11 @@
                 android:layout_height="wrap_content"
                 android:gravity="start"
                 android:justificationMode="inter_word"
-                android:lineSpacingExtra="4dp"
-                android:paddingBottom="16dp"
-                android:text="Type something like invoice, screenshot, name, document, location or text from an image."
-                android:textColor="#8E9AB8"
-                android:textSize="12sp" />
+                android:lineSpacingExtra="@dimen/spacing_4"
+                android:paddingBottom="@dimen/spacing_16"
+                android:text="@string/search_invite_body"
+                android:textColor="@color/color_text_muted"
+                android:textSize="@dimen/text_caption" />
 
         </ScrollView>
     </LinearLayout>
@@ -449,23 +449,23 @@
         android:id="@+id/dimView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#F2000000"
+        android:background="@color/color_overlay"
         android:alpha="0"
         android:visibility="gone" />
     
     <androidx.cardview.widget.CardView
         android:id="@+id/permissionCard"
-        android:layout_width="0dp"
+        android:layout_width="@dimen/spacing_0"
         android:layout_height="wrap_content"
-        android:layout_marginStart="28dp"
-        android:layout_marginEnd="28dp"
+        android:layout_marginStart="@dimen/component_modal_horizontal_margin"
+        android:layout_marginEnd="@dimen/component_modal_horizontal_margin"
         android:visibility="gone"
         android:alpha="0"
-        android:elevation="40dp"
-        android:translationZ="40dp"
-        app:cardCornerRadius="30dp"
-        app:cardElevation="24dp"
-        app:cardBackgroundColor="#F0121B32"
+        android:elevation="@dimen/elevation_overlay"
+        android:translationZ="@dimen/elevation_overlay"
+        app:cardCornerRadius="@dimen/radius_extra_large"
+        app:cardElevation="@dimen/elevation_modal"
+        app:cardBackgroundColor="@color/color_surface_modal"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -475,31 +475,31 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="26dp">
+            android:padding="@dimen/component_dialog_padding">
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Enable Local AI Search"
-                android:textColor="#FFFFFF"
-                android:textSize="22sp"
+                android:text="@string/permission_title"
+                android:textColor="@color/color_text_primary"
+                android:textSize="@dimen/text_title"
                 android:textStyle="bold"/>
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
-                android:text="AI Memory Search needs storage access to index your screenshots, images and PDFs directly on your phone. Everything stays offline. No cloud. No external API."
-                android:textColor="#AFC0E8"
-                android:textSize="15sp"
-                android:lineSpacingExtra="4dp"/>
+                android:layout_marginTop="@dimen/component_action_padding"
+                android:text="@string/permission_body"
+                android:textColor="@color/color_text_secondary"
+                android:textSize="@dimen/text_body"
+                android:lineSpacingExtra="@dimen/spacing_4"/>
 
             <Button
                 android:id="@+id/btnGrantAccess"
                 android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:layout_marginTop="24dp"
-                android:text="Grant Access"
+                android:layout_height="@dimen/component_button_height"
+                android:layout_marginTop="@dimen/spacing_24"
+                android:text="@string/grant_access"
                 android:textAllCaps="false"/>
 
         </LinearLayout>
@@ -508,15 +508,15 @@
     
     <androidx.cardview.widget.CardView
         android:id="@+id/exitCard"
-        android:layout_width="320dp"
+        android:layout_width="@dimen/component_dialog_width"
         android:layout_height="wrap_content"
         android:visibility="gone"
         android:alpha="0"
-        android:elevation="40dp"
-        android:translationZ="40dp"
+        android:elevation="@dimen/elevation_overlay"
+        android:translationZ="@dimen/elevation_overlay"
         android:background="@drawable/bg_glossy_ai_card"
         app:cardBackgroundColor="@android:color/transparent"
-        app:cardCornerRadius="32dp"
+        app:cardCornerRadius="@dimen/radius_extra_large"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -526,28 +526,28 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="26dp">
+            android:padding="@dimen/component_dialog_padding">
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Exit AI Memory Search?"
-                android:textColor="#FFFFFF"
-                android:textSize="21sp"
+                android:text="@string/exit_title"
+                android:textColor="@color/color_text_primary"
+                android:textSize="@dimen/text_title"
                 android:textStyle="bold"/>
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
-                android:text="Are you sure you want to close the application?"
-                android:textColor="#C7D7F5"
-                android:textSize="15sp"/>
+                android:layout_marginTop="@dimen/component_action_padding"
+                android:text="@string/exit_body"
+                android:textColor="@color/color_text_soft"
+                android:textSize="@dimen/text_body"/>
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="28dp"
+                android:layout_marginTop="@dimen/component_dialog_actions_margin"
                 android:gravity="end"
                 android:orientation="horizontal">
 
@@ -555,22 +555,22 @@
                     android:id="@+id/btnNoExit"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="No"
-                    android:textColor="#AFC6F9"
-                    android:textSize="16sp"
+                    android:text="@string/no"
+                    android:textColor="@color/color_text_secondary"
+                    android:textSize="@dimen/text_body"
                     android:textStyle="bold"
-                    android:padding="14dp"/>
+                    android:padding="@dimen/component_action_padding"/>
 
                 <TextView
                     android:id="@+id/btnYesExit"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="18dp"
-                    android:text="Yes"
-                    android:textColor="#7FDBFF"
-                    android:textSize="16sp"
+                    android:layout_marginStart="@dimen/component_card_padding"
+                    android:text="@string/yes"
+                    android:textColor="@color/color_accent_soft"
+                    android:textSize="@dimen/text_body"
                     android:textStyle="bold"
-                    android:padding="14dp"/>
+                    android:padding="@dimen/component_action_padding"/>
 
             </LinearLayout>
 

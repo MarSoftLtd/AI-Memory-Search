@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="radius_small">16dp</dimen>
+    <dimen name="radius_medium">18dp</dimen>
+    <dimen name="radius_large">28dp</dimen>
+    <dimen name="radius_extra_large">32dp</dimen>
+</resources>
