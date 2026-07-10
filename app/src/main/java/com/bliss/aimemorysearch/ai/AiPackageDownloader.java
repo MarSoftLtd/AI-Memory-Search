@@ -11,6 +11,7 @@ import java.net.URLConnection;
 public final class AiPackageDownloader {
 
     private final Context context;
+    private volatile boolean cancelled;
 
     public AiPackageDownloader(
             Context context
@@ -22,6 +23,40 @@ public final class AiPackageDownloader {
     public File download(
             AiPackageInfo packageInfo
     ) throws Exception {
+        AiPackageDownloadResult result =
+                downloadPackage(
+                        packageInfo,
+                        null
+                );
+
+        if (!result.isSuccess()) {
+            if (result.getError() instanceof Exception) {
+                throw (Exception) result.getError();
+            }
+
+            throw new IllegalStateException(
+                    result.getMessage()
+            );
+        }
+
+        return result.getDownloadedFile();
+    }
+
+    public AiPackageDownloadResult downloadPackage(
+            AiPackageInfo packageInfo
+    ) {
+        return downloadPackage(
+                packageInfo,
+                null
+        );
+    }
+
+    public AiPackageDownloadResult downloadPackage(
+            AiPackageInfo packageInfo,
+            AiPackageDownloadProgressCallback progressCallback
+    ) {
+        cancelled =
+                false;
 
         if (
                 packageInfo == null
@@ -30,8 +65,12 @@ public final class AiPackageDownloader {
                         ||
                         packageInfo.getDownloadUrl().trim().isEmpty()
         ) {
-            throw new IllegalArgumentException(
-                    "Invalid AI package download URL"
+            return failure(
+                    packageInfo,
+                    null,
+                    0L,
+                    "Invalid AI package download URL",
+                    null
             );
         }
 
@@ -43,12 +82,53 @@ public final class AiPackageDownloader {
                         )
                 );
 
-        downloadToFile(
-                packageInfo.getDownloadUrl(),
-                outputFile
-        );
+        try {
+            long downloadedBytes =
+                    downloadToFile(
+                            packageInfo.getDownloadUrl(),
+                            outputFile,
+                            progressCallback
+                    );
 
-        return outputFile;
+            if (cancelled) {
+                if (outputFile.exists()) {
+                    outputFile.delete();
+                }
+
+                return new AiPackageDownloadResult(
+                        false,
+                        true,
+                        packageInfo,
+                        null,
+                        downloadedBytes,
+                        "Download cancelled",
+                        null
+                );
+            }
+
+            return new AiPackageDownloadResult(
+                    true,
+                    false,
+                    packageInfo,
+                    outputFile,
+                    downloadedBytes,
+                    "Package downloaded",
+                    null
+            );
+        } catch (Exception e) {
+            return failure(
+                    packageInfo,
+                    outputFile,
+                    0L,
+                    "Package download failed",
+                    e
+            );
+        }
+    }
+
+    public void cancel() {
+        cancelled =
+                true;
     }
 
     private static String buildDownloadFileName(
@@ -72,9 +152,10 @@ public final class AiPackageDownloader {
                 + ".zip";
     }
 
-    private static void downloadToFile(
+    private long downloadToFile(
             String downloadUrl,
-            File outputFile
+            File outputFile,
+            AiPackageDownloadProgressCallback progressCallback
     ) throws Exception {
 
         URLConnection connection =
@@ -83,6 +164,11 @@ public final class AiPackageDownloader {
                 ).openConnection();
 
         connection.connect();
+
+        long totalBytes =
+                connection.getContentLengthLong();
+        long downloadedBytes =
+                0L;
 
         try (
                 InputStream inputStream =
@@ -100,12 +186,46 @@ public final class AiPackageDownloader {
             while (
                     (read = inputStream.read(buffer)) != -1
             ) {
+                if (cancelled) {
+                    break;
+                }
+
                 outputStream.write(
                         buffer,
                         0,
                         read
                 );
+
+                downloadedBytes +=
+                        read;
+
+                if (progressCallback != null) {
+                    progressCallback.onProgress(
+                            downloadedBytes,
+                            totalBytes
+                    );
+                }
             }
         }
+
+        return downloadedBytes;
+    }
+
+    private static AiPackageDownloadResult failure(
+            AiPackageInfo packageInfo,
+            File downloadedFile,
+            long downloadedBytes,
+            String message,
+            Throwable error
+    ) {
+        return new AiPackageDownloadResult(
+                false,
+                false,
+                packageInfo,
+                downloadedFile,
+                downloadedBytes,
+                message,
+                error
+        );
     }
 }
