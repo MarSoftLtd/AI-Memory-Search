@@ -19,7 +19,8 @@ public final class AiCapabilityManager {
         return new AiCapabilityManager(
                 new AiCapabilityResolver(
                         new AiCapabilityRegistry(),
-                        new EmptyAiPackageRepository()
+                        new EmptyAiPackageRepository(),
+                        new AiPackageManager()
                 )
         );
     }

@@ -8,15 +8,19 @@ public final class AiCapabilityResolver {
 
     private final AiCapabilityRegistry registry;
     private final AiPackageRepository packageRepository;
+    private final AiPackageManager packageManager;
 
     public AiCapabilityResolver(
             AiCapabilityRegistry registry,
-            AiPackageRepository packageRepository
+            AiPackageRepository packageRepository,
+            AiPackageManager packageManager
     ) {
         this.registry =
                 registry;
         this.packageRepository =
                 packageRepository;
+        this.packageManager =
+                packageManager;
     }
 
     public CapabilityRequirement resolve(
@@ -49,10 +53,44 @@ public final class AiCapabilityResolver {
             );
         }
 
+        AiPackageInfo activePackage =
+                packageManager.getActivePackage(
+                        capability
+                );
+
+        if (activePackage != null) {
+            return new CapabilityRequirement(
+                    capability,
+                    CapabilityStatus.AVAILABLE,
+                    Collections.singletonList(
+                            activePackage
+                    ),
+                    activePackage,
+                    true,
+                    "Capability has an active installed AI package"
+            );
+        }
+
         List<AiPackageInfo> candidates =
                 findCandidatePackages(
                         definition
                 );
+
+        AiPackageInfo installedPackage =
+                findInstalledPackage(
+                        candidates
+                );
+
+        if (installedPackage != null) {
+            return new CapabilityRequirement(
+                    capability,
+                    CapabilityStatus.AVAILABLE,
+                    candidates,
+                    installedPackage,
+                    true,
+                    "Capability has an installed AI package"
+            );
+        }
 
         return new CapabilityRequirement(
                 capability,
@@ -95,6 +133,22 @@ public final class AiCapabilityResolver {
         return Collections.unmodifiableList(
                 requirements
         );
+    }
+
+    private AiPackageInfo findInstalledPackage(
+            List<AiPackageInfo> candidates
+    ) {
+        for (AiPackageInfo candidate : candidates) {
+            if (
+                    packageManager.isInstalled(
+                            candidate
+                    )
+            ) {
+                return candidate;
+            }
+        }
+
+        return null;
     }
 
     private List<AiPackageInfo> findCandidatePackages(
