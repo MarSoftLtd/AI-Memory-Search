@@ -7,15 +7,18 @@ public final class TranslationEngine {
     private static volatile TranslationEngine instance;
 
     private final Context context;
-    private final TranslatorSessionManager sessionManager;
+    private final TranslationRuntimeLoader runtimeLoader;
 
     private TranslationEngine(
             Context context
     ) {
         this.context =
                 context.getApplicationContext();
-        sessionManager =
-                TranslatorSessionManager.getInstance();
+        runtimeLoader =
+                new TranslationRuntimeLoader(
+                        AiPlatform.getRuntimeManager(),
+                        TranslatorSessionManager.getInstance()
+                );
     }
 
     public static synchronized TranslationEngine getInstance(
@@ -58,7 +61,7 @@ public final class TranslationEngine {
                                     modelId
                             );
 
-            return sessionManager.getTranslator(
+            return runtimeLoader.loadRuntime(
                     modelId,
                     translationPackage
             );
