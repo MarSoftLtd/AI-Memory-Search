@@ -9,9 +9,12 @@ import android.os.Environment;
 
 import com.bliss.aimemorysearch.ai.EmbeddingEngine;
 import com.bliss.aimemorysearch.ai.EmbeddingUtils;
+import com.bliss.aimemorysearch.ai.DocumentRuntimeLoader;
 import com.bliss.aimemorysearch.ai.EntityExtractionEngine;
 import com.bliss.aimemorysearch.ai.ImageEmbeddingEngine;
+import com.bliss.aimemorysearch.ai.ImageRuntimeLoader;
 import com.bliss.aimemorysearch.ai.MobileClipTextEmbeddingEngine;
+import com.bliss.aimemorysearch.ai.OcrRuntimeLoader;
 import com.bliss.aimemorysearch.ai.PrefixVocabularyCache;
 import com.tom_roush.pdfbox.android.PDFBoxResourceLoader;
 import com.tom_roush.pdfbox.pdmodel.PDDocument;
@@ -95,19 +98,19 @@ public class IndexWorker extends Worker {
         PDFBoxResourceLoader.init(
                 getApplicationContext()
         );
-        EmbeddingEngine
-                .getInstance()
-                .initialize(
+        DocumentRuntimeLoader
+                .createDefault()
+                .loadEmbeddingRuntime(
                         getApplicationContext()
                 );
-        ImageEmbeddingEngine
-                .getInstance()
-                .initialize(
+        ImageRuntimeLoader
+                .createDefault()
+                .loadImageEmbeddingRuntime(
                         getApplicationContext()
                 );
-        MobileClipTextEmbeddingEngine
-                .getInstance()
-                .initialize(
+        ImageRuntimeLoader
+                .createDefault()
+                .loadTextEmbeddingRuntime(
                         getApplicationContext()
                 );
         MiniLMTokenizer
@@ -410,9 +413,9 @@ public class IndexWorker extends Worker {
             CountDownLatch latch =
                     new CountDownLatch(1);
 
-            TextRecognition.getClient(
-                            TextRecognizerOptions.DEFAULT_OPTIONS
-                    )
+            OcrRuntimeLoader
+                    .createDefault()
+                    .loadRuntime()
                     .process(image)
                     .addOnSuccessListener(text -> {
 
@@ -475,9 +478,9 @@ public class IndexWorker extends Worker {
             CountDownLatch latch =
                     new CountDownLatch(1);
 
-            TextRecognition.getClient(
-                            TextRecognizerOptions.DEFAULT_OPTIONS
-                    )
+            OcrRuntimeLoader
+                    .createDefault()
+                    .loadRuntime()
                     .process(image)
                     .addOnSuccessListener(text -> {
 
@@ -789,8 +792,9 @@ public class IndexWorker extends Worker {
                     ).trim();
 
             float[] embeddingVector =
-                    EmbeddingEngine
-                            .getInstance()
+                    DocumentRuntimeLoader
+                            .createDefault()
+                            .getEmbeddingRuntime()
                             .generateEmbedding(combinedText);
 
             byte[] embeddingBytes =
@@ -944,8 +948,9 @@ public class IndexWorker extends Worker {
                     ).trim();
 
             float[] embeddingVector =
-                    EmbeddingEngine
-                            .getInstance()
+                    DocumentRuntimeLoader
+                            .createDefault()
+                            .getEmbeddingRuntime()
                             .generateEmbedding(combinedText);
 
             byte[] embeddingBytes =
@@ -978,8 +983,9 @@ public class IndexWorker extends Worker {
                     if (imageSizeMb <= 20) {
 
                         float[] imageEmbeddingVector =
-                                ImageEmbeddingEngine
-                                        .getInstance()
+                                ImageRuntimeLoader
+                                        .createDefault()
+                                        .getImageEmbeddingRuntime()
                                         .generateEmbedding(
                                                 bitmap
                                         );
@@ -1221,8 +1227,9 @@ public class IndexWorker extends Worker {
                     ).trim();
 
             float[] embeddingVector =
-                    EmbeddingEngine
-                            .getInstance()
+                    DocumentRuntimeLoader
+                            .createDefault()
+                            .getEmbeddingRuntime()
                             .generateEmbedding(combinedText);
 
             byte[] embeddingBytes =
@@ -1274,8 +1281,9 @@ public class IndexWorker extends Worker {
                 if (chunkIndex % 3 == 0) {
 
                     float[] chunkEmbedding =
-                            EmbeddingEngine
-                                    .getInstance()
+                            DocumentRuntimeLoader
+                                    .createDefault()
+                                    .getEmbeddingRuntime()
                                     .generateEmbedding(chunk);
 
                     if (chunkEmbedding != null) {

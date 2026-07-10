@@ -70,8 +70,9 @@ public class QueryUnderstandingEngine {
         try {
 
             embedding =
-                    EmbeddingEngine
-                            .getInstance()
+                    DocumentRuntimeLoader
+                            .createDefault()
+                            .getEmbeddingRuntime()
                             .generateEmbedding(
                                     request.getNormalizedQuery()
                             );

@@ -21,7 +21,7 @@ import androidx.work.WorkManager;
 
 import com.bliss.aimemorysearch.ai.E5EmbeddingEngine;
 import com.bliss.aimemorysearch.ai.E5SentencePieceNative;
-import com.bliss.aimemorysearch.ai.EmbeddingEngine;
+import com.bliss.aimemorysearch.ai.DocumentRuntimeLoader;
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
@@ -30,8 +30,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.WindowCompat;
 
-import com.bliss.aimemorysearch.ai.ImageEmbeddingEngine;
-import com.bliss.aimemorysearch.ai.MobileClipTextEmbeddingEngine;
+import com.bliss.aimemorysearch.ai.ImageRuntimeLoader;
 import com.bliss.aimemorysearch.ai.concept.ConceptSimilarityTest;
 import com.bliss.aimemorysearch.db.AppDatabase;
 import com.bliss.aimemorysearch.db.FileEntity;
@@ -254,37 +253,40 @@ public class MainActivity extends AppCompatActivity {
         );
         observeIndexStats();
         // =============================  AI
-        EmbeddingEngine
-                .getInstance()
-                .initialize(this);
-        ImageEmbeddingEngine
-                .getInstance()
-                .initialize(this);
-        MobileClipTextEmbeddingEngine
-                .getInstance()
-                .initialize(this);
+        DocumentRuntimeLoader
+                .createDefault()
+                .loadEmbeddingRuntime(this);
+        ImageRuntimeLoader
+                .createDefault()
+                .loadImageEmbeddingRuntime(this);
+        ImageRuntimeLoader
+                .createDefault()
+                .loadTextEmbeddingRuntime(this);
         MiniLMTokenizer
                 .getInstance()
                 .initialize(this);
         new Thread(() -> {
 
             float[] vector1 =
-                    EmbeddingEngine
-                            .getInstance()
+                    DocumentRuntimeLoader
+                            .createDefault()
+                            .getEmbeddingRuntime()
                             .generateEmbedding(
                                     "factura emag"
                             );
 
             float[] vector2 =
-                    EmbeddingEngine
-                            .getInstance()
+                    DocumentRuntimeLoader
+                            .createDefault()
+                            .getEmbeddingRuntime()
                             .generateEmbedding(
                                     "factura de la emag"
                             );
 
             float[] vector3 =
-                    EmbeddingEngine
-                            .getInstance()
+                    DocumentRuntimeLoader
+                            .createDefault()
+                            .getEmbeddingRuntime()
                             .generateEmbedding(
                                     "poza cu masina"
                             );

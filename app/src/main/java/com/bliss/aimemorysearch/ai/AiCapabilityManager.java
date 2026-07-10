@@ -20,7 +20,7 @@ public final class AiCapabilityManager {
                 new AiCapabilityResolver(
                         new AiCapabilityRegistry(),
                         new EmptyAiPackageRepository(),
-                        new AiPackageManager()
+                        AiPlatform.getPackageManager()
                 )
         );
     }
