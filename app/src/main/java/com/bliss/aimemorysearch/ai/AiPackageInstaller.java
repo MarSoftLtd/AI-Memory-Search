@@ -10,10 +10,7 @@ import java.util.zip.ZipInputStream;
 
 public final class AiPackageInstaller {
 
-    private static final String PACKAGE_ROOT_DIRECTORY =
-            "ai_packages";
-
-    private final Context context;
+    private final AiStorageManager storageManager;
     private final AiPackageManager packageManager;
     private final PackageVerification packageVerification;
 
@@ -22,8 +19,22 @@ public final class AiPackageInstaller {
             AiPackageManager packageManager,
             PackageVerification packageVerification
     ) {
-        this.context =
-                context.getApplicationContext();
+        this(
+                new AiStorageManager(
+                        context.getApplicationContext()
+                ),
+                packageManager,
+                packageVerification
+        );
+    }
+
+    public AiPackageInstaller(
+            AiStorageManager storageManager,
+            AiPackageManager packageManager,
+            PackageVerification packageVerification
+    ) {
+        this.storageManager =
+                storageManager;
         this.packageManager =
                 packageManager;
         this.packageVerification =
@@ -262,18 +273,8 @@ public final class AiPackageInstaller {
     public File getInstalledPackageDirectory(
             String packageId
     ) {
-        return new File(
-                getPackagesRootDirectory(),
-                sanitizeFileName(
-                        packageId
-                )
-        );
-    }
-
-    private File getPackagesRootDirectory() {
-        return new File(
-                context.getFilesDir(),
-                PACKAGE_ROOT_DIRECTORY
+        return storageManager.getInstalledPackageDirectory(
+                packageId
         );
     }
 
@@ -483,16 +484,4 @@ public final class AiPackageInstaller {
         file.delete();
     }
 
-    private static String sanitizeFileName(
-            String value
-    ) {
-        if (value == null) {
-            return "unknown-package";
-        }
-
-        return value.replaceAll(
-                "[^a-zA-Z0-9._-]",
-                "_"
-        );
-    }
 }
