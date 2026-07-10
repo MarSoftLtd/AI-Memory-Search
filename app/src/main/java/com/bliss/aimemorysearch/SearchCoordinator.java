@@ -5,6 +5,8 @@ import android.os.Handler;
 import android.os.Looper;
 
 import com.bliss.aimemorysearch.ai.ChunkSemanticSearchEngine;
+import com.bliss.aimemorysearch.ai.AiCapabilityManager;
+import com.bliss.aimemorysearch.ai.CapabilityPlan;
 import com.bliss.aimemorysearch.ai.ImageSemanticSearchEngine;
 import com.bliss.aimemorysearch.ai.MobileClipTextEmbeddingEngine;
 import com.bliss.aimemorysearch.ai.MultilingualQueryNormalizer;
@@ -27,6 +29,7 @@ public final class SearchCoordinator {
 
     private final Context context;
     private final Handler mainHandler;
+    private final AiCapabilityManager capabilityManager;
 
     public SearchCoordinator(
             Context context
@@ -37,6 +40,8 @@ public final class SearchCoordinator {
                 new Handler(
                         Looper.getMainLooper()
                 );
+        this.capabilityManager =
+                AiCapabilityManager.createDefault();
     }
 
     public void search(
@@ -64,6 +69,20 @@ public final class SearchCoordinator {
                     QueryUnderstandingEngine.createSearchAnalysis(
                             queryRequest
                     );
+            CapabilityPlan capabilityPlan =
+                    capabilityManager.evaluate(
+                            queryRequest,
+                            queryAnalysis
+                    );
+            android.util.Log.d(
+                    "AI_CAPABILITY",
+                    "canContinue="
+                            + capabilityPlan.canContinue()
+                            + " | mode="
+                            + capabilityPlan.getExecutionMode()
+                            + " | requirements="
+                            + capabilityPlan.getRequirements().size()
+            );
             List<ChunkSemanticSearchEngine.ChunkResult>
                     chunkResults =
                     ChunkSemanticSearchEngine.search(
