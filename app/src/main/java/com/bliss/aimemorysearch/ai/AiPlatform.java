@@ -160,6 +160,15 @@ public final class AiPlatform {
                 )
         );
 
+        for (BundledAiPackage bundledPackage
+                : BundledAiPackageCatalog.getPackages().values()) {
+            registerCorePackage(
+                    packageManager,
+                    bundledPackage.getCapability(),
+                    bundledPackage.getPackageInfo()
+            );
+        }
+
         return packageManager;
     }
 

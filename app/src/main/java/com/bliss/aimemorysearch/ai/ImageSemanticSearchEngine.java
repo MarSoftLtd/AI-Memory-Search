@@ -27,6 +27,9 @@ public class ImageSemanticSearchEngine {
             int topK
     ) {
 
+        android.util.Log.d("MULTILINGUAL_PIPELINE", "ImageSemanticSearchEngine input: dimensions="
+                + (queryEmbedding == null ? 0 : queryEmbedding.length) + " | topK=" + topK);
+
         List<FileEntity> images =
                 db.fileDao()
                         .getAllIndexedImages();

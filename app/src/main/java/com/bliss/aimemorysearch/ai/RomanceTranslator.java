@@ -45,6 +45,8 @@ public final class RomanceTranslator {
             String text
     ) {
 
+        android.util.Log.d("MULTILINGUAL_PIPELINE", "RomanceTranslator input: " + text);
+
         if (text == null) {
             return "";
         }
@@ -56,9 +58,11 @@ public final class RomanceTranslator {
             return "";
         }
 
-        return nativeTranslator.translate(
+        String translated = nativeTranslator.translate(
                 text
         );
+        android.util.Log.d("MULTILINGUAL_PIPELINE", "RomanceTranslator output: " + translated);
+        return translated;
     }
 
     public synchronized void close() {

@@ -31,6 +31,8 @@ public final class LanguageDetectionEngine {
     public TranslationModelId detect(
             String text
     ) {
+        android.util.Log.d("MULTILINGUAL_PIPELINE", "Language detector input: " + text);
+        android.util.Log.d("MULTILINGUAL_PIPELINE", "Detected language family/model: " + TranslationModelId.ROMANCE + " (hard-coded fallback)");
         return TranslationModelId.ROMANCE;
     }
 }

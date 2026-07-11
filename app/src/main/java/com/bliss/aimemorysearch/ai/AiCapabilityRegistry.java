@@ -37,8 +37,8 @@ public final class AiCapabilityRegistry {
                 new CapabilityDefinition(
                         AiCapability.TRANSLATION,
                         AiPackageType.TRANSLATION,
-                        "translation",
-                        false
+                        "romance",
+                        true
                 )
         );
         values.put(

@@ -133,6 +133,9 @@ public class MobileClipTextEmbeddingEngine {
             String text
     ) {
 
+        android.util.Log.d("MULTILINGUAL_PIPELINE", "MobileCLIP received text: " + text
+                + " | initialized=" + (environment != null && session != null));
+
         try {
 
             long[] inputIds =

@@ -17,8 +17,12 @@ import com.bliss.aimemorysearch.db.AppDatabase;
 import com.bliss.aimemorysearch.db.FileEntity;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class SearchCoordinator {
+
+    private static final AtomicBoolean SEARCH_IN_PROGRESS =
+            new AtomicBoolean(false);
 
     public interface Callback {
 
@@ -52,12 +56,25 @@ public final class SearchCoordinator {
                 "SEARCH_ENTRY",
                 "MAINACTIVITY SEARCH CALLED = " + query
         );
+        android.util.Log.d("MULTILINGUAL_PIPELINE", "1. User query: " + query);
         if (query == null || query.trim().isEmpty()) {
 
             return;
         }
 
+        if (!SEARCH_IN_PROGRESS.compareAndSet(false, true)) {
+            android.util.Log.d(
+                    "SEARCH_ENTRY",
+                    "SEARCH IGNORED: another search is already running"
+            );
+            return;
+        }
+
         new Thread(() -> {
+
+            boolean completionPosted = false;
+
+            try {
 
             SearchRequest
                     queryRequest =
@@ -69,6 +86,8 @@ public final class SearchCoordinator {
                     QueryUnderstandingEngine.createSearchAnalysis(
                             queryRequest
                     );
+            android.util.Log.d("MULTILINGUAL_PIPELINE", "2. QueryUnderstandingEngine output: normalized="
+                    + queryRequest.getNormalizedQuery() + " | tokens=" + queryRequest.getQueryTokens());
             CapabilityPlan capabilityPlan =
                     capabilityManager.evaluate(
                             queryRequest,
@@ -129,6 +148,8 @@ public final class SearchCoordinator {
                                     clipQueryHolder[0] =
                                             englishClipQuery;
 
+                                    android.util.Log.d("MULTILINGUAL_PIPELINE", "7. Final translated English query: " + englishClipQuery);
+
                                     normalizerLatch.countDown();
                                 }
 
@@ -136,18 +157,22 @@ public final class SearchCoordinator {
                                 public void onError(
                                         String originalQuery
                                 ) {
+                                    android.util.Log.w("MULTILINGUAL_PIPELINE", "Normalizer onError fallback; CLIP query remains: " + clipQueryHolder[0]);
                                     normalizerLatch.countDown();
                                 }
                             }
                     );
 
             try {
-                normalizerLatch.await(
+                boolean completed = normalizerLatch.await(
                         20,
                         java.util.concurrent.TimeUnit.SECONDS
                 );
+                if (!completed) {
+                    android.util.Log.w("MULTILINGUAL_PIPELINE", "Normalizer timeout fallback; CLIP query remains: " + clipQueryHolder[0]);
+                }
             } catch (Exception e) {
-                e.printStackTrace();
+                android.util.Log.e("MULTILINGUAL_PIPELINE", "Normalizer wait exception; CLIP query remains: " + clipQueryHolder[0], e);
             }
 
             SearchRequest
@@ -173,6 +198,9 @@ public final class SearchCoordinator {
                             .generateEmbedding(
                                     clipQueryHolder[0]
                             );
+            android.util.Log.d("MULTILINGUAL_PIPELINE", "8. Query sent to MobileCLIP: " + clipQueryHolder[0]
+                    + " | embedding created=" + (imageQueryEmbedding != null)
+                    + " | dimensions=" + (imageQueryEmbedding == null ? 0 : imageQueryEmbedding.length));
 
             ImageSemanticSearchEngine imageEngine =
                     new ImageSemanticSearchEngine(
@@ -185,6 +213,7 @@ public final class SearchCoordinator {
                             imageQueryEmbedding,
                             10
                     );
+            android.util.Log.d("MULTILINGUAL_PIPELINE", "9-10. ImageSemanticSearchEngine results found: " + imageResults.size());
             for (
                     ImageSemanticSearchEngine.SearchResult r
                     : imageResults
@@ -584,14 +613,31 @@ public final class SearchCoordinator {
 
             SearchResultsHolder.results =
                     finalResults;
+            android.util.Log.d("MULTILINGUAL_PIPELINE", "10. Final merged search results: " + finalResults.size());
 
-            mainHandler.post(() -> {
-                if (callback != null) {
-                    callback.onSearchCompleted(
-                            finalResults
-                    );
+            completionPosted = mainHandler.post(() -> {
+                try {
+                    if (callback != null) {
+                        callback.onSearchCompleted(
+                                finalResults
+                        );
+                    }
+                } finally {
+                    SEARCH_IN_PROGRESS.set(false);
                 }
             });
+
+            } catch (Throwable error) {
+                android.util.Log.e(
+                        "SEARCH_ENTRY",
+                        "SEARCH FAILED",
+                        error
+                );
+            } finally {
+                if (!completionPosted) {
+                    SEARCH_IN_PROGRESS.set(false);
+                }
+            }
 
         }).start();
     }

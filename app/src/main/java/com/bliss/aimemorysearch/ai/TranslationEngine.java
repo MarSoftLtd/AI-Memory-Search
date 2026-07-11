@@ -37,11 +37,14 @@ public final class TranslationEngine {
     public String translate(
             String text
     ) {
-        return getTranslator(
+        android.util.Log.d("MULTILINGUAL_PIPELINE", "TranslationEngine input: " + text);
+        String translated = getTranslator(
                 text
         ).translate(
                 text
         );
+        android.util.Log.d("MULTILINGUAL_PIPELINE", "TranslationEngine output: " + translated);
+        return translated;
     }
 
     private synchronized RomanceTranslator getTranslator(
@@ -59,13 +62,17 @@ public final class TranslationEngine {
                             .getInstance(context)
                             .getOrInstall(
                                     modelId
-                            );
+                             );
+
+            android.util.Log.d("MULTILINGUAL_PIPELINE", "Translation package directory: " + translationPackage.getDirectory()
+                    + " | installed=" + translationPackage.isInstalled());
 
             return runtimeLoader.loadRuntime(
                     modelId,
                     translationPackage
             );
         } catch (Exception e) {
+            android.util.Log.e("MULTILINGUAL_PIPELINE", "Translation runtime/package initialization failed", e);
             throw new IllegalStateException(
                     "Failed to initialize offline translation engine",
                     e
