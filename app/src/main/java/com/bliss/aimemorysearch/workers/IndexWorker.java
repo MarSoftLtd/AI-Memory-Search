@@ -49,6 +49,8 @@ import com.bliss.aimemorysearch.db.ChunkEntity;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import com.bliss.aimemorysearch.ai.DocumentTextExtractor;
 import com.bliss.aimemorysearch.ai.EmbeddingEngine;
 import com.bliss.aimemorysearch.ai.EmbeddingUtils;
@@ -59,6 +61,9 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import com.bliss.aimemorysearch.ai.ImageEmbeddingEngine;
 public class IndexWorker extends Worker {
+    public static final String KEY_FILE_PATH = "file_path";
+    public static final String KEY_MAINTENANCE = "maintenance";
+
     private AppDatabase database;
     private SharedPreferences prefs;
     private int newFilesIndexed = 0;
@@ -95,6 +100,12 @@ public class IndexWorker extends Worker {
                         "index_state",
                         Context.MODE_PRIVATE
                 );
+
+        if (getInputData().getBoolean(KEY_MAINTENANCE, false)) {
+            repairLegacyIndexRows();
+            return Result.success();
+        }
+
         PDFBoxResourceLoader.init(
                 getApplicationContext()
         );
@@ -120,6 +131,24 @@ public class IndexWorker extends Worker {
                 );
         sessionId =
                 UUID.randomUUID().toString();
+
+        String incrementalFilePath =
+                getInputData().getString(KEY_FILE_PATH);
+
+        if (
+                incrementalFilePath != null
+                        &&
+                        !incrementalFilePath.trim().isEmpty()
+        ) {
+            File incrementalFile =
+                    new File(incrementalFilePath);
+
+            totalFilesToIndex = 1;
+            processedFiles = 0;
+            processSingleFile(incrementalFile);
+
+            return Result.success();
+        }
 
         database.fileDao()
                 .resetInterruptedFiles();
@@ -163,6 +192,10 @@ public class IndexWorker extends Worker {
                 .putInt(
                         "last_indexed_count",
                         newFilesIndexed
+                )
+                .putBoolean(
+                        "first_index_done",
+                        true
                 )
                 .apply();
 
@@ -678,6 +711,52 @@ public class IndexWorker extends Worker {
         }
     }
 
+    private void processSingleFile(
+            File file
+    ) {
+        if (file == null || !file.isFile()) {
+            return;
+        }
+
+        String lower = file.getName().toLowerCase();
+
+        if (
+                lower.endsWith(".jpg")
+                        || lower.endsWith(".jpeg")
+                        || lower.endsWith(".png")
+                        || lower.endsWith(".webp")
+                        || lower.endsWith(".heic")
+                        || lower.endsWith(".heif")
+                        || lower.endsWith(".bmp")
+                        || lower.endsWith(".gif")
+        ) {
+            processImageFile(file);
+            return;
+        }
+
+        if (lower.endsWith(".pdf")) {
+            processPdf(file);
+            return;
+        }
+
+        if (
+                lower.endsWith(".txt")
+                        || lower.endsWith(".csv")
+                        || lower.endsWith(".json")
+                        || lower.endsWith(".xml")
+                        || lower.endsWith(".md")
+                        || lower.endsWith(".rtf")
+                        || lower.endsWith(".doc")
+                        || lower.endsWith(".docx")
+                        || lower.endsWith(".xls")
+                        || lower.endsWith(".xlsx")
+                        || lower.endsWith(".ppt")
+                        || lower.endsWith(".pptx")
+        ) {
+            processDocumentFile(file);
+        }
+    }
+
     private void countFilesRecursive(
             File folder
     ) {
@@ -839,8 +918,12 @@ public class IndexWorker extends Worker {
                             embeddingBytes
                     );
 
-            database.fileDao()
-                    .insertOrUpdate(entity);
+            replaceFileIndex(
+                    path,
+                    entity,
+                    new ArrayList<>(),
+                    false
+            );
 
             newFilesIndexed++;
             processedFiles++;
@@ -1058,9 +1141,6 @@ public class IndexWorker extends Worker {
             entity.imageEmbedding =
                     imageEmbeddingBytes;
 
-            database.fileDao()
-                    .insertOrUpdate(entity);
-
             List<String> imageChunks =
                     TextChunker.chunkText(
                             combinedText
@@ -1103,10 +1183,12 @@ public class IndexWorker extends Worker {
                 imageChunkIndex++;
             }
 
-            database.chunkDao()
-                    .insertChunks(
-                            imageChunkEntities
-                    );
+            replaceFileIndex(
+                    path,
+                    entity,
+                    imageChunkEntities,
+                    false
+            );
 
             newFilesIndexed++;
             processedFiles++;
@@ -1300,75 +1382,6 @@ public class IndexWorker extends Worker {
                 chunkIndex++;
             }
 
-            database.chunkDao()
-                    .insertChunks(chunkEntities);
-            List<TokenIndexEntity> tokenIndexes =
-                    new ArrayList<>();
-
-            for (ChunkEntity chunk : chunkEntities) {
-
-                if (
-                        chunk == null
-                                ||
-                                chunk.normalizedText == null
-                ) {
-
-                    continue;
-                }
-
-                String[] words =
-                        chunk.normalizedText.split("\\s+");
-
-                HashSet<String> uniqueWords =
-                        new HashSet<>();
-
-                for (String word : words) {
-
-                    if (
-                            word == null
-                                    ||
-                                    word.length() < 2
-                    ) {
-
-                        continue;
-                    }
-
-                    uniqueWords.add(word);
-                }
-
-                for (String word : uniqueWords) {
-
-                    TokenIndexEntity tokenEntity =
-                            new TokenIndexEntity();
-
-                    tokenEntity.token =
-                            word;
-
-                    tokenEntity.chunkId =
-                            chunk.id;
-
-                    tokenEntity.filePath =
-                            chunk.filePath;
-
-                    tokenEntity.chunkIndex =
-                            chunk.chunkIndex;
-
-                    tokenIndexes.add(
-                            tokenEntity
-                    );
-                }
-            }
-
-            database
-                    .tokenIndexDao()
-                    .insertTokenIndexes(
-                            tokenIndexes
-                    );
-            android.util.Log.d(
-                    "TOKEN_INDEX",
-                    "INSERTED = "
-                            + tokenIndexes.size()
-            );
             String pdfThumbnail =
                     generatePdfThumbnail(path);
 
@@ -1394,8 +1407,12 @@ public class IndexWorker extends Worker {
                             embeddingBytes
                     );
 
-            database.fileDao()
-                    .insertOrUpdate(entity);
+            replaceFileIndex(
+                    path,
+                    entity,
+                    chunkEntities,
+                    true
+            );
 
             newFilesIndexed++;
             processedFiles++;
@@ -1423,6 +1440,119 @@ public class IndexWorker extends Worker {
 
             e.printStackTrace();
         }
+    }
+
+    private void replaceFileIndex(
+            String filePath,
+            FileEntity entity,
+            List<ChunkEntity> chunks,
+            boolean createTokenIndex
+    ) {
+        database.runInTransaction(() -> {
+            database.tokenIndexDao()
+                    .deleteByFilePath(filePath);
+            database.chunkDao()
+                    .deleteByFilePath(filePath);
+
+            if (chunks != null && !chunks.isEmpty()) {
+                long[] chunkIds =
+                        database.chunkDao()
+                                .insertChunks(chunks);
+
+                for (
+                        int index = 0;
+                        index < chunks.size()
+                                && index < chunkIds.length;
+                        index++
+                ) {
+                    chunks.get(index).id =
+                            (int) chunkIds[index];
+                }
+            }
+
+            if (createTokenIndex && chunks != null) {
+                List<TokenIndexEntity> tokenIndexes =
+                        new ArrayList<>();
+
+                for (ChunkEntity chunk : chunks) {
+                    if (chunk == null || chunk.normalizedText == null) {
+                        continue;
+                    }
+
+                    HashSet<String> uniqueWords =
+                            new HashSet<>();
+
+                    for (String word
+                            : chunk.normalizedText.split("\\s+")) {
+                        if (word != null && word.length() >= 2) {
+                            uniqueWords.add(word);
+                        }
+                    }
+
+                    for (String word : uniqueWords) {
+                        TokenIndexEntity tokenEntity =
+                                new TokenIndexEntity();
+                        tokenEntity.token = word;
+                        tokenEntity.chunkId = chunk.id;
+                        tokenEntity.filePath = chunk.filePath;
+                        tokenEntity.chunkIndex = chunk.chunkIndex;
+                        tokenIndexes.add(tokenEntity);
+                    }
+                }
+
+                if (!tokenIndexes.isEmpty()) {
+                    database.tokenIndexDao()
+                            .insertTokenIndexes(tokenIndexes);
+                }
+            }
+
+            database.fileDao()
+                    .insertOrUpdate(entity);
+        });
+    }
+
+    private void repairLegacyIndexRows() {
+        database.runInTransaction(() -> {
+            database.chunkDao()
+                    .deleteDuplicateChunks();
+
+            Map<String, Integer> chunkIds =
+                    new HashMap<>();
+
+            for (ChunkEntity chunk
+                    : database.chunkDao().getAllChunks()) {
+                chunkIds.put(
+                        chunk.filePath + "\n" + chunk.chunkIndex,
+                        chunk.id
+                );
+            }
+
+            List<TokenIndexEntity> tokenIndexes =
+                    database.tokenIndexDao()
+                            .getAllTokenIndexes();
+
+            for (TokenIndexEntity tokenIndex : tokenIndexes) {
+                Integer chunkId =
+                        chunkIds.get(
+                                tokenIndex.filePath
+                                        + "\n"
+                                        + tokenIndex.chunkIndex
+                        );
+
+                if (chunkId != null) {
+                    tokenIndex.chunkId = chunkId;
+                }
+            }
+
+            database.tokenIndexDao()
+                    .updateTokenIndexes(tokenIndexes);
+            database.tokenIndexDao()
+                    .deleteDuplicateTokenIndexes();
+        });
+
+        prefs.edit()
+                .putBoolean("index_idempotency_repaired", true)
+                .apply();
     }
     private void sendIndexProgress(
             String status,

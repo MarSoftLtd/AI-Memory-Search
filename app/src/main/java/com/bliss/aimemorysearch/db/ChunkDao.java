@@ -15,7 +15,7 @@ public interface ChunkDao {
     );
 
     @Insert
-    void insertChunks(
+    long[] insertChunks(
             List<ChunkEntity> chunks
     );
 
@@ -52,4 +52,13 @@ public interface ChunkDao {
 
     @Query("DELETE FROM chunks")
     void deleteAllChunks();
+
+    @Query("DELETE FROM chunks WHERE filePath = :filePath")
+    void deleteByFilePath(String filePath);
+
+    @Query(
+            "DELETE FROM chunks WHERE id NOT IN " +
+                    "(SELECT MIN(id) FROM chunks GROUP BY filePath, chunkIndex)"
+    )
+    void deleteDuplicateChunks();
 }

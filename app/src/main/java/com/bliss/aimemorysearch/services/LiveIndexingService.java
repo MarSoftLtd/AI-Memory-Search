@@ -16,6 +16,7 @@ import android.provider.MediaStore;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 import androidx.work.OneTimeWorkRequest;
+import androidx.work.Data;
 import androidx.work.WorkManager;
 
 import com.bliss.aimemorysearch.workers.IndexWorker;
@@ -30,12 +31,7 @@ public class LiveIndexingService extends Service {
     private final List<FileObserver> observers =
             new ArrayList<>();
 
-    private boolean indexingRunning = false;
-
     private final Handler pollingHandler =
-            new Handler();
-
-    private final Handler mainHandler =
             new Handler();
 
     private long latestImageTimestamp = 0;
@@ -117,7 +113,8 @@ public class LiveIndexingService extends Service {
     private void checkLatestMedia() {
 
         String[] projection = {
-                MediaStore.Images.Media.DATE_ADDED
+                MediaStore.Images.Media.DATE_ADDED,
+                MediaStore.Images.Media.DATA
         };
 
         Cursor cursor =
@@ -142,8 +139,11 @@ public class LiveIndexingService extends Service {
             if (latest > latestImageTimestamp) {
 
                 latestImageTimestamp = latest;
+                String path = cursor.getString(1);
 
-                triggerIncrementalIndex();
+                triggerIncrementalIndex(
+                        path == null ? null : new File(path)
+                );
             }
         }
 
@@ -268,7 +268,9 @@ public class LiveIndexingService extends Service {
                             return;
                         }
 
-                        triggerIncrementalIndex();
+                        triggerIncrementalIndex(
+                                new File(folder, path)
+                        );
                     }
                 };
 
@@ -279,18 +281,26 @@ public class LiveIndexingService extends Service {
         );
     }
 
-    private synchronized void triggerIncrementalIndex() {
+    private void triggerIncrementalIndex(
+            File file
+    ) {
 
-        if (indexingRunning) {
+        if (file == null || !file.isFile()) {
             return;
         }
-
-        indexingRunning = true;
 
         OneTimeWorkRequest request =
                 new OneTimeWorkRequest.Builder(
                         IndexWorker.class
                 )
+                        .setInputData(
+                                new Data.Builder()
+                                        .putString(
+                                                IndexWorker.KEY_FILE_PATH,
+                                                file.getAbsolutePath()
+                                        )
+                                        .build()
+                        )
                         .setInitialDelay(
                                 1200,
                                 TimeUnit.MILLISECONDS
@@ -301,14 +311,9 @@ public class LiveIndexingService extends Service {
                 .getInstance(this)
                 .enqueueUniqueWork(
                         "ai_memory_index_worker_debug",
-                        androidx.work.ExistingWorkPolicy.REPLACE,
+                        androidx.work.ExistingWorkPolicy.APPEND_OR_REPLACE,
                         request
                 );
-
-        mainHandler.postDelayed(
-                () -> indexingRunning = false,
-                2000
-        );
     }
 
     @Override

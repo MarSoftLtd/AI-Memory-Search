@@ -55,7 +55,6 @@ public class MainActivity extends AppCompatActivity {
     private SharedPreferences prefs;
     private int ocrProcessedCount = 0;
     private int ocrStartedCount = 0;
-    private boolean indexingStarted = false;
     private android.widget.Button btnGrantAccess;
     private CardView permissionCard;
     private final Handler uiHandler =
@@ -1155,13 +1154,14 @@ public class MainActivity extends AppCompatActivity {
         }
     }
     private void startIndexing() {
-
-        indexingStarted = true;
-
         indexingStartTime =
                 System.currentTimeMillis();
 
         observeIndexWorker();
+
+        if (prefs.getBoolean("first_index_done", false)) {
+            return;
+        }
 
         liveIndexingText.setText(
                 getString(
@@ -1183,7 +1183,35 @@ public class MainActivity extends AppCompatActivity {
                 .getInstance(this)
                 .enqueueUniqueWork(
                         "ai_memory_index_worker_debug",
-                        androidx.work.ExistingWorkPolicy.REPLACE,
+                        androidx.work.ExistingWorkPolicy.KEEP,
+                        request
+                );
+    }
+
+    private void startIndexMaintenance() {
+        if (prefs.getBoolean("index_idempotency_repaired", false)) {
+            return;
+        }
+
+        androidx.work.OneTimeWorkRequest request =
+                new androidx.work.OneTimeWorkRequest.Builder(
+                        com.bliss.aimemorysearch.workers.IndexWorker.class
+                )
+                        .setInputData(
+                                new androidx.work.Data.Builder()
+                                        .putBoolean(
+                                                com.bliss.aimemorysearch.workers.IndexWorker.KEY_MAINTENANCE,
+                                                true
+                                        )
+                                        .build()
+                        )
+                        .build();
+
+        androidx.work.WorkManager
+                .getInstance(this)
+                .enqueueUniqueWork(
+                        "ai_memory_index_maintenance",
+                        androidx.work.ExistingWorkPolicy.KEEP,
                         request
                 );
     }
@@ -1494,9 +1522,10 @@ public class MainActivity extends AppCompatActivity {
                             "first_index_done",
                             false
                     );
-            if (!indexingStarted) {
-
+            if (!firstIndexDone) {
                 startIndexing();
+            } else {
+                startIndexMaintenance();
             }
 
             
