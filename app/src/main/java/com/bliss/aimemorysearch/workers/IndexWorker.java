@@ -81,6 +81,7 @@ public class IndexWorker extends Worker {
     private int embeddingCount = 0;
     private int totalFilesToIndex = 0;
     private int processedFiles = 0;
+    private int failedFiles = 0;
     private String currentStage = "Preparing...";
     public IndexWorker(
             @NonNull Context context,
@@ -184,6 +185,7 @@ public class IndexWorker extends Worker {
         scanFolderRecursive(
                 rootFolder
         );
+        boolean completedSuccessfully = failedFiles == 0;
         prefs.edit()
                 .putLong(
                         "last_index_time",
@@ -191,11 +193,11 @@ public class IndexWorker extends Worker {
                 )
                 .putInt(
                         "last_indexed_count",
-                        newFilesIndexed
+                        database.fileDao().countIndexed()
                 )
                 .putBoolean(
                         "first_index_done",
-                        true
+                        completedSuccessfully
                 )
                 .apply();
 
@@ -218,7 +220,13 @@ public class IndexWorker extends Worker {
                         .build()
         );
 
-        return Result.success();
+        return completedSuccessfully
+                ? Result.success()
+                : Result.failure(
+                        new androidx.work.Data.Builder()
+                                .putInt("failed", failedFiles)
+                                .build()
+                );
         
     }
     private void scanPdfFiles() {
@@ -942,13 +950,19 @@ public class IndexWorker extends Worker {
         } catch (Exception e) {
 
             processedFiles++;
+            failedFiles++;
 
             sendIndexProgress(
                     "Document processing failed",
                     file == null ? "" : file.getName()
             );
 
-            e.printStackTrace();
+            android.util.Log.e(
+                    "INDEX_WORKER",
+                    "Document processing failed: "
+                            + (file == null ? "" : file.getAbsolutePath()),
+                    e
+            );
         }
     }
     private void processImageFile(
@@ -1220,13 +1234,19 @@ public class IndexWorker extends Worker {
         } catch (Exception e) {
 
             processedFiles++;
+            failedFiles++;
 
             sendIndexProgress(
                     "Image processing failed",
                     imageFile == null ? "" : imageFile.getName()
             );
 
-            e.printStackTrace();
+            android.util.Log.e(
+                    "INDEX_WORKER",
+                    "Image processing failed: "
+                            + (imageFile == null ? "" : imageFile.getAbsolutePath()),
+                    e
+            );
         }
     }
     private void processPdf(
@@ -1432,13 +1452,19 @@ public class IndexWorker extends Worker {
         } catch (Exception e) {
 
             processedFiles++;
+            failedFiles++;
 
             sendIndexProgress(
                     "PDF processing failed",
                     file == null ? "" : file.getName()
             );
 
-            e.printStackTrace();
+            android.util.Log.e(
+                    "INDEX_WORKER",
+                    "PDF processing failed: "
+                            + (file == null ? "" : file.getAbsolutePath()),
+                    e
+            );
         }
     }
 

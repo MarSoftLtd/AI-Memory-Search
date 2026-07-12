@@ -37,6 +37,17 @@ public class LiveIndexingService extends Service {
     private long latestImageTimestamp = 0;
 
     @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        return START_NOT_STICKY;
+    }
+
+    @Override
+    public void onTimeout(int startId, int fgsType) {
+        stopForeground(STOP_FOREGROUND_REMOVE);
+        stopSelf(startId);
+    }
+
+    @Override
     public void onCreate() {
 
         super.onCreate();

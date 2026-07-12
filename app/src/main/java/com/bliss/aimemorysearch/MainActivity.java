@@ -813,7 +813,7 @@ public class MainActivity extends AppCompatActivity {
                     }
 
                     WorkInfo workInfo =
-                            workInfos.get(0);
+                            workInfos.get(workInfos.size() - 1);
 
                     androidx.work.Data progress =
                             workInfo.getProgress();
@@ -1015,13 +1015,6 @@ public class MainActivity extends AppCompatActivity {
                                     View.GONE
                             );
                         }
-                        prefs.edit()
-                                .putBoolean(
-                                        "first_index_done",
-                                        true
-                                )
-                                .apply();
-
                         titleText_unu.setText(
                                 getString(
                                         R.string.indexing_title_completed
@@ -1159,17 +1152,22 @@ public class MainActivity extends AppCompatActivity {
 
         observeIndexWorker();
 
-        if (prefs.getBoolean("first_index_done", false)) {
-            return;
-        }
+        new Thread(() -> {
+            boolean firstIndexDone = prefs.getBoolean("first_index_done", false);
+            int persistedCount = prefs.getInt("last_indexed_count", 0);
+            int actualCount = database.fileDao().countIndexed();
 
-        liveIndexingText.setText(
-                getString(
-                        R.string.indexing_status_preparing
-                )
-        );
+            if (firstIndexDone && actualCount > 0 && actualCount >= persistedCount) {
+                return;
+            }
 
-        startBackgroundIndexing();
+            prefs.edit().putBoolean("first_index_done", false).apply();
+
+            uiHandler.post(() -> {
+                liveIndexingText.setText(getString(R.string.indexing_status_preparing));
+                startBackgroundIndexing();
+            });
+        }).start();
     }
     private void startBackgroundIndexing() {
 
@@ -1522,9 +1520,8 @@ public class MainActivity extends AppCompatActivity {
                             "first_index_done",
                             false
                     );
-            if (!firstIndexDone) {
-                startIndexing();
-            } else {
+            startIndexing();
+            if (firstIndexDone) {
                 startIndexMaintenance();
             }
 
