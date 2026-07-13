@@ -9,7 +9,6 @@ public final class TranslationPackageManifest {
     private final AiPackageManifest packageManifest;
     private final String family;
     private final String translatorEngine;
-    private final String modelDirectory;
     private final String tokenizer;
     private final List<String> supportedLanguages;
 
@@ -20,7 +19,6 @@ public final class TranslationPackageManifest {
             String version,
             String minimumAppVersion,
             String translatorEngine,
-            String modelDirectory,
             String tokenizer,
             List<String> supportedLanguages
     ) {
@@ -36,8 +34,6 @@ public final class TranslationPackageManifest {
                 family;
         this.translatorEngine =
                 translatorEngine;
-        this.modelDirectory =
-                modelDirectory;
         this.tokenizer =
                 tokenizer;
         this.supportedLanguages =
@@ -74,10 +70,6 @@ public final class TranslationPackageManifest {
 
     public String getTranslatorEngine() {
         return translatorEngine;
-    }
-
-    public String getModelDirectory() {
-        return modelDirectory;
     }
 
     public String getTokenizer() {

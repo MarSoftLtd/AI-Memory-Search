@@ -7,7 +7,7 @@ public final class TranslationPackageValidator {
     public boolean isValid(
             TranslationPackageLayout layout
     ) {
-        return isExistingDirectory(
+        boolean validLayout = isExistingDirectory(
                 layout.getRootDirectory()
         )
                 &&
@@ -30,6 +30,18 @@ public final class TranslationPackageValidator {
                 isExistingFile(
                         layout.getTargetTokenizerFile()
                 );
+
+        if (!validLayout) {
+            return false;
+        }
+
+        try {
+            return TranslationPackageManifestSchema.hasExactFields(
+                    layout.getManifestFile()
+            );
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private static boolean isExistingDirectory(

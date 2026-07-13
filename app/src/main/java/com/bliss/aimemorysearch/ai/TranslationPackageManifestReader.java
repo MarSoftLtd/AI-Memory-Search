@@ -10,7 +10,10 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 public final class TranslationPackageManifestReader {
 
@@ -38,15 +41,17 @@ public final class TranslationPackageManifestReader {
                         )
                 );
 
+        validateSchema(jsonObject);
+
         return new TranslationPackageManifest(
                 jsonObject.getString(
-                        "id"
+                        "packageId"
                 ),
                 jsonObject.getString(
                         "displayName"
                 ),
                 jsonObject.getString(
-                        "family"
+                        "languageFamily"
                 ),
                 jsonObject.getString(
                         "version"
@@ -58,9 +63,6 @@ public final class TranslationPackageManifestReader {
                         "translatorEngine"
                 ),
                 jsonObject.getString(
-                        "modelDirectory"
-                ),
-                jsonObject.getString(
                         "tokenizer"
                 ),
                 readSupportedLanguages(
@@ -69,6 +71,70 @@ public final class TranslationPackageManifestReader {
                         )
                 )
         );
+    }
+
+    private static void validateSchema(
+            JSONObject jsonObject
+    ) throws JSONException {
+
+        Set<String> actualFields =
+                new HashSet<>();
+        Iterator<String> keys =
+                jsonObject.keys();
+
+        while (keys.hasNext()) {
+            actualFields.add(keys.next());
+        }
+
+        if (
+                !actualFields.equals(
+                        TranslationPackageManifestSchema.getFields()
+                )
+        ) {
+            throw new JSONException(
+                    "Translation package manifest schema is invalid"
+            );
+        }
+
+        requireNonEmptyString(jsonObject, "packageId");
+        requireNonEmptyString(jsonObject, "displayName");
+        if (!"TRANSLATION".equals(jsonObject.getString("packageType"))) {
+            throw new JSONException(
+                    "Translation package type is invalid"
+            );
+        }
+        requireNonEmptyString(jsonObject, "languageFamily");
+        if (jsonObject.getJSONArray("supportedLanguages").length() == 0) {
+            throw new JSONException(
+                    "Translation package languages are missing"
+            );
+        }
+        jsonObject.getInt("packageFormatVersion");
+        requireNonEmptyString(jsonObject, "modelVersion");
+        requireNonEmptyString(jsonObject, "translatorEngine");
+        requireNonEmptyString(jsonObject, "tokenizer");
+        requireNonEmptyString(jsonObject, "version");
+        requireNonEmptyString(jsonObject, "minimumAppVersion");
+        requireNonEmptyString(jsonObject, "runtime");
+        requireNonEmptyString(jsonObject, "architecture");
+        requireNonEmptyString(jsonObject, "createdBy");
+        requireNonEmptyString(jsonObject, "buildDate");
+        requireNonEmptyString(jsonObject, "checksum");
+        jsonObject.getLong("compressedSize");
+        jsonObject.getLong("uncompressedSize");
+    }
+
+    private static void requireNonEmptyString(
+            JSONObject jsonObject,
+            String field
+    ) throws JSONException {
+
+        if (jsonObject.getString(field).trim().isEmpty()) {
+            throw new JSONException(
+                    "Translation package manifest field is empty: "
+                            + field
+            );
+        }
     }
 
     private static List<String> readSupportedLanguages(
