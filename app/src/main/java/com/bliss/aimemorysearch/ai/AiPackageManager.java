@@ -65,6 +65,29 @@ public final class AiPackageManager {
         );
     }
 
+    public synchronized AiPackageInfo findInstalledPackage(
+            AiPackageType packageType,
+            String capabilityKey
+    ) {
+        if (packageType == null || isBlank(capabilityKey)) {
+            return null;
+        }
+
+        for (AiPackageInfo packageInfo : installedPackages.values()) {
+            if (
+                    packageType == packageInfo.getPackageType()
+                            &&
+                            capabilityKey.equals(
+                                    packageInfo.getCapabilityKey()
+                            )
+            ) {
+                return packageInfo;
+            }
+        }
+
+        return null;
+    }
+
     public synchronized void registerInstalledPackage(
             AiPackageInfo packageInfo
     ) {

@@ -9,10 +9,8 @@ public final class TranslationPackageManager {
     private static volatile TranslationPackageManager instance;
 
     private final ModelStorageManager storageManager;
-    private final AiStorageManager aiStorageManager;
     private final ModelInstallationManager installationManager;
     private final TranslationPackageManifestReader manifestReader;
-    private final BundledAiPackageInstaller bundledPackageInstaller;
     private final TranslationPackageValidator packageValidator;
 
     private TranslationPackageManager(
@@ -25,21 +23,12 @@ public final class TranslationPackageManager {
                 ModelStorageManager.getInstance(
                         applicationContext
                 );
-        aiStorageManager =
-                new AiStorageManager(
-                        applicationContext
-                );
         installationManager =
                 ModelInstallationManager.getInstance(
                         applicationContext
                 );
         manifestReader =
                 new TranslationPackageManifestReader();
-        bundledPackageInstaller =
-                new BundledAiPackageInstaller(
-                        applicationContext,
-                        AiPlatform.getPackageManager()
-                );
         packageValidator =
                 new TranslationPackageValidator();
     }
@@ -60,22 +49,6 @@ public final class TranslationPackageManager {
     public TranslationPackage getPackage(
             TranslationModelId modelId
     ) {
-        if (modelId == TranslationModelId.ROMANCE) {
-            try {
-                bundledPackageInstaller.ensureInstalled(
-                        BundledAiPackageCatalog.get(
-                                AiCapability.TRANSLATION
-                        )
-                );
-            } catch (Exception e) {
-                android.util.Log.e(
-                        "AI_PACKAGE",
-                        "Failed to install bundled Romance translation package",
-                        e
-                );
-            }
-        }
-
         File directory =
                 getPackageDirectory(modelId);
 
@@ -105,12 +78,6 @@ public final class TranslationPackageManager {
     private File getPackageDirectory(
             TranslationModelId modelId
     ) {
-        if (modelId == TranslationModelId.ROMANCE) {
-            return aiStorageManager.getInstalledPackageDirectory(
-                    BundledAiPackageCatalog.ROMANCE_TRANSLATION_PACKAGE_ID
-            );
-        }
-
         return storageManager.getModelDirectory(modelId);
     }
 

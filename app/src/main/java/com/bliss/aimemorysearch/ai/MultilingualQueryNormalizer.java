@@ -32,6 +32,18 @@ public class MultilingualQueryNormalizer {
 
     public void normalizeForClip(String query,
                                  Callback callback) {
+        normalizeForClip(
+                query,
+                "",
+                callback
+        );
+    }
+
+    public void normalizeForClip(
+            String query,
+            String selectedLanguageFamily,
+            Callback callback
+    ) {
 
         android.util.Log.d("MULTILINGUAL_PIPELINE", "Normalizer input/original query: " + query);
 
@@ -54,7 +66,10 @@ public class MultilingualQueryNormalizer {
             englishQuery =
                     TranslationEngine
                             .getInstance(context)
-                             .translate(query);
+                            .translate(
+                                    query,
+                                    selectedLanguageFamily
+                            );
 
             android.util.Log.d("MULTILINGUAL_PIPELINE", "Translated English query: " + englishQuery);
 

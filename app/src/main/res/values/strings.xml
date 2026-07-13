@@ -84,6 +84,9 @@
     <string name="ai_package_status_disabled">Disabled</string>
     <string name="storage_installed_packages">Installed packages</string>
     <string name="storage_installed_packages_value">2 active</string>
+    <string name="language_package_required_title">Language package required</string>
+    <string name="language_package_required_message">Download the %1$s language package to continue.</string>
+    <string name="language_package_download">Download</string>
     <string name="storage_used">Used storage</string>
     <string name="storage_used_value">284 MB</string>
     <string name="storage_free">Free storage</string>

@@ -38,7 +38,7 @@ public final class AiCapabilityRegistry {
                         AiCapability.TRANSLATION,
                         AiPackageType.TRANSLATION,
                         "romance",
-                        true
+                        false
                 )
         );
         values.put(

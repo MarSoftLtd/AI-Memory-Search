@@ -13,6 +13,7 @@ public final class SearchRequest {
     private String translatedQuery;
     private String detectedLanguage;
     private String workingLanguage;
+    private String selectedLanguageFamily;
     private List<String> queryTokens;
     private List<String> concepts;
     private List<QueryEntity> entities;
@@ -29,6 +30,8 @@ public final class SearchRequest {
         detectedLanguage =
                 "";
         workingLanguage =
+                "";
+        selectedLanguageFamily =
                 "";
         queryTokens =
                 new ArrayList<>();
@@ -106,6 +109,19 @@ public final class SearchRequest {
         this.workingLanguage =
                 nonNullString(
                         workingLanguage
+                );
+    }
+
+    public String getSelectedLanguageFamily() {
+        return selectedLanguageFamily;
+    }
+
+    public void setSelectedLanguageFamily(
+            String selectedLanguageFamily
+    ) {
+        this.selectedLanguageFamily =
+                nonNullString(
+                        selectedLanguageFamily
                 );
     }
 

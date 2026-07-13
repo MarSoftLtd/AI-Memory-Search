@@ -1,17 +1,23 @@
 package com.bliss.aimemorysearch.ai;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 public final class TranslationModelInfo {
 
     private final TranslationModelId id;
     private final String translationFamily;
     private final String assetDirectory;
     private final String internalDirectory;
+    private final List<String> supportedLanguages;
 
     public TranslationModelInfo(
             TranslationModelId id,
             String translationFamily,
             String assetDirectory,
-            String internalDirectory
+            String internalDirectory,
+            List<String> supportedLanguages
     ) {
         this.id =
                 id;
@@ -21,6 +27,10 @@ public final class TranslationModelInfo {
                 assetDirectory;
         this.internalDirectory =
                 internalDirectory;
+        this.supportedLanguages =
+                Collections.unmodifiableList(
+                        new ArrayList<>(supportedLanguages)
+                );
     }
 
     public TranslationModelId getId() {
@@ -37,5 +47,9 @@ public final class TranslationModelInfo {
 
     public String getInternalDirectory() {
         return internalDirectory;
+    }
+
+    public List<String> getSupportedLanguages() {
+        return supportedLanguages;
     }
 }

@@ -1,0 +1,620 @@
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
+
+import java.nio.charset.StandardCharsets
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+import java.security.MessageDigest
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneOffset
+import java.util.zip.CRC32
+import java.util.zip.ZipEntry
+import java.util.zip.ZipFile
+import java.util.zip.ZipOutputStream
+
+def packageSourceDirectory =
+        file("${rootDir}/package-builder/sources/romance")
+def payloadDirectory =
+        new File(packageSourceDirectory, "payload")
+def manifestTemplateFile =
+        new File(packageSourceDirectory, "manifest.template.json")
+def packageOutputDirectory =
+        file("${rootDir}/build/packages")
+def packageFile =
+        new File(packageOutputDirectory, "romance-1.0.0.aipackage")
+def packageChecksumFile =
+        new File(packageOutputDirectory, "romance-1.0.0.aipackage.sha256")
+
+def payloadFileNames = [
+        "config.json",
+        "model.bin",
+        "source.spm",
+        "target.spm",
+        "shared_vocabulary.json"
+]
+def checksumOrder = payloadFileNames.toSorted()
+def archiveEntryOrder = [
+        "manifest.json",
+        "config.json",
+        "model.bin",
+        "source.spm",
+        "target.spm",
+        "shared_vocabulary.json",
+        "checksum.sha256"
+]
+def generatedManifestFields = [
+        "buildDate",
+        "checksum",
+        "compressedSize",
+        "uncompressedSize"
+] as Set
+def requiredManifestFields = [
+        "packageId",
+        "displayName",
+        "packageType",
+        "languageFamily",
+        "supportedLanguages",
+        "packageFormatVersion",
+        "modelVersion",
+        "translatorEngine",
+        "tokenizer",
+        "version",
+        "minimumAppVersion",
+        "runtime",
+        "architecture",
+        "createdBy",
+        "buildDate",
+        "checksum",
+        "compressedSize",
+        "uncompressedSize"
+]
+
+def hex = { byte[] digest ->
+    digest.collect { String.format("%02x", it & 0xff) }.join()
+}
+
+def sha256Bytes = { byte[] bytes ->
+    hex(MessageDigest.getInstance("SHA-256").digest(bytes))
+}
+
+def sha256File = { File source ->
+    MessageDigest digest = MessageDigest.getInstance("SHA-256")
+    source.withInputStream { input ->
+        byte[] buffer = new byte[1024 * 1024]
+        int read
+        while ((read = input.read(buffer)) != -1) {
+            digest.update(buffer, 0, read)
+        }
+    }
+    hex(digest.digest())
+}
+
+def normalizedJsonBytes = { Map<String, Object> value ->
+    String json = JsonOutput.prettyPrint(JsonOutput.toJson(value))
+            .replace("\r\n", "\n")
+            .replace("\r", "\n") + "\n"
+    json.getBytes(StandardCharsets.UTF_8)
+}
+
+def readManifestTemplate = {
+    if (!manifestTemplateFile.isFile()) {
+        throw new GradleException(
+                "Manifest template is missing: ${manifestTemplateFile}"
+        )
+    }
+
+    Object parsed = new JsonSlurper().parseText(
+            manifestTemplateFile.getText("UTF-8")
+    )
+    if (!(parsed instanceof Map)) {
+        throw new GradleException("Manifest template must be a JSON object")
+    }
+
+    Map template = parsed as Map
+    if (template.keySet().toList() != requiredManifestFields) {
+        throw new GradleException(
+                "Manifest template fields or order are invalid"
+        )
+    }
+
+    requiredManifestFields.each { String field ->
+        if (!generatedManifestFields.contains(field)) {
+            Object value = template[field]
+            if (value == null ||
+                    (value instanceof String && value.trim().isEmpty()) ||
+                    (value instanceof Collection && value.isEmpty())) {
+                throw new GradleException(
+                        "Manifest template field is missing: ${field}"
+                )
+            }
+        } else if (template[field] != null) {
+            throw new GradleException(
+                    "Generated manifest field must be null in template: ${field}"
+            )
+        }
+    }
+
+    if (template.version != "1.0.0") {
+        throw new GradleException(
+                "Manifest version must match output version 1.0.0"
+        )
+    }
+    if (template.packageType != "TRANSLATION") {
+        throw new GradleException("Manifest packageType must be TRANSLATION")
+    }
+    if (template.languageFamily != "romance") {
+        throw new GradleException("Manifest languageFamily must be romance")
+    }
+
+    template
+}
+
+def validateSourcePayload = {
+    if (!payloadDirectory.isDirectory()) {
+        throw new GradleException(
+                "Canonical payload directory is missing: ${payloadDirectory}"
+        )
+    }
+
+    List<File> actualFiles = payloadDirectory.listFiles()?.toList() ?: []
+    if (actualFiles.any { it.isDirectory() || Files.isSymbolicLink(it.toPath()) }) {
+        throw new GradleException(
+                "Canonical payload may contain regular files only"
+        )
+    }
+
+    List<String> actualNames = actualFiles.collect { it.name }.toSorted()
+    if (actualNames != payloadFileNames.toSorted()) {
+        throw new GradleException(
+                "Canonical payload entries are invalid: ${actualNames}"
+        )
+    }
+
+    payloadFileNames.each { String name ->
+        File source = new File(payloadDirectory, name)
+        if (!source.isFile() || source.length() == 0L) {
+            throw new GradleException(
+                    "Canonical payload file is missing or empty: ${name}"
+            )
+        }
+    }
+}
+
+def checksumDocumentBytes = {
+    String document = checksumOrder.collect { String name ->
+        "${sha256File(new File(payloadDirectory, name))}  ${name}"
+    }.join("\n") + "\n"
+    document.getBytes(StandardCharsets.UTF_8)
+}
+
+def createManifest = {
+    Map template,
+    String buildDate,
+    String checksum,
+    compressedSize,
+    uncompressedSize ->
+
+    LinkedHashMap<String, Object> manifest = new LinkedHashMap<>()
+    requiredManifestFields.each { String field ->
+        switch (field) {
+            case "buildDate":
+                manifest[field] = buildDate
+                break
+            case "checksum":
+                manifest[field] = checksum
+                break
+            case "compressedSize":
+                manifest[field] = compressedSize
+                break
+            case "uncompressedSize":
+                manifest[field] = uncompressedSize
+                break
+            default:
+                manifest[field] = template[field]
+        }
+    }
+    manifest
+}
+
+def addZipBytes = {
+    ZipOutputStream output,
+    String name,
+    byte[] bytes,
+    LocalDateTime timestamp,
+    boolean stored ->
+
+    ZipEntry entry = new ZipEntry(name)
+    entry.setTimeLocal(timestamp)
+    if (stored) {
+        CRC32 crc = new CRC32()
+        crc.update(bytes)
+        entry.method = ZipEntry.STORED
+        entry.size = bytes.length
+        entry.compressedSize = bytes.length
+        entry.crc = crc.value
+    }
+    output.putNextEntry(entry)
+    output.write(bytes)
+    output.closeEntry()
+}
+
+def addZipFile = {
+    ZipOutputStream output,
+    String name,
+    File source,
+    LocalDateTime timestamp ->
+
+    ZipEntry entry = new ZipEntry(name)
+    entry.setTimeLocal(timestamp)
+    output.putNextEntry(entry)
+    source.withInputStream { input ->
+        byte[] buffer = new byte[1024 * 1024]
+        int read
+        while ((read = input.read(buffer)) != -1) {
+            output.write(buffer, 0, read)
+        }
+    }
+    output.closeEntry()
+}
+
+def writeArchive = {
+    File target,
+    byte[] manifestBytes,
+    byte[] checksumBytes,
+    LocalDateTime timestamp ->
+
+    target.parentFile.mkdirs()
+    target.withOutputStream { fileOutput ->
+        ZipOutputStream zipOutput = new ZipOutputStream(fileOutput)
+        zipOutput.setLevel(9)
+        try {
+            archiveEntryOrder.each { String name ->
+                if (name == "manifest.json") {
+                    addZipBytes(zipOutput, name, manifestBytes, timestamp, true)
+                } else if (name == "checksum.sha256") {
+                    addZipBytes(zipOutput, name, checksumBytes, timestamp, true)
+                } else {
+                    addZipFile(
+                            zipOutput,
+                            name,
+                            new File(payloadDirectory, name),
+                            timestamp
+                    )
+                }
+            }
+        } finally {
+            zipOutput.close()
+        }
+    }
+}
+
+def readZipEntryBytes = { ZipFile archive, String name ->
+    ZipEntry entry = archive.getEntry(name)
+    if (entry == null) {
+        throw new GradleException("Archive entry is missing: ${name}")
+    }
+    archive.getInputStream(entry).withCloseable { it.bytes }
+}
+
+def extractArchive = { File archiveFile, File targetDirectory ->
+    if (targetDirectory.exists()) {
+        targetDirectory.deleteDir()
+    }
+    targetDirectory.mkdirs()
+    String canonicalRoot = targetDirectory.canonicalPath + File.separator
+
+    new ZipFile(archiveFile, StandardCharsets.UTF_8).withCloseable { ZipFile archive ->
+        archive.entries().each { ZipEntry entry ->
+            File target = new File(targetDirectory, entry.name)
+            if (!target.canonicalPath.startsWith(canonicalRoot)) {
+                throw new GradleException(
+                        "Archive entry escapes validation directory: ${entry.name}"
+                )
+            }
+            target.withOutputStream { output ->
+                archive.getInputStream(entry).withCloseable { input ->
+                    input.transferTo(output)
+                }
+            }
+        }
+    }
+}
+
+def invokeTranslationPackageValidator = { File extractedDirectory ->
+    def compileTask = project(":app").tasks.getByName(
+            "compileDebugJavaWithJavac"
+    )
+    File classesDirectory = compileTask.destinationDirectory.get().asFile
+    URLClassLoader loader = new URLClassLoader(
+            [classesDirectory.toURI().toURL()] as URL[],
+            this.class.classLoader
+    )
+    try {
+        Class<?> layoutClass = loader.loadClass(
+                "com.bliss.aimemorysearch.ai.TranslationPackageLayout"
+        )
+        Class<?> validatorClass = loader.loadClass(
+                "com.bliss.aimemorysearch.ai.TranslationPackageValidator"
+        )
+        Object layout = layoutClass.getConstructor(File).newInstance(
+                extractedDirectory
+        )
+        Object validator = validatorClass.getConstructor().newInstance()
+        boolean valid = validatorClass
+                .getMethod("isValid", layoutClass)
+                .invoke(validator, layout) as boolean
+        if (!valid) {
+            throw new GradleException("TranslationPackageValidator rejected package")
+        }
+    } finally {
+        loader.close()
+    }
+}
+
+def validateArchive = {
+    File archiveFile,
+    File extractionDirectory,
+    Map template,
+    String expectedBuildDate ->
+
+    if (!archiveFile.isFile() || archiveFile.length() == 0L) {
+        throw new GradleException("Package archive is missing or empty")
+    }
+
+    Map manifest
+    byte[] checksumBytes
+    new ZipFile(archiveFile, StandardCharsets.UTF_8).withCloseable { ZipFile archive ->
+        List<? extends ZipEntry> entries = archive.entries().toList()
+        List<String> names = entries.collect { it.name }
+        if (names != archiveEntryOrder) {
+            throw new GradleException(
+                    "Archive entry order or contents are invalid: ${names}"
+            )
+        }
+        if (entries.any { it.directory || it.name.contains("/") || it.name.contains("\\") }) {
+            throw new GradleException("Archive must contain root files only")
+        }
+
+        manifest = new JsonSlurper().parse(
+                archive.getInputStream(archive.getEntry("manifest.json")),
+                "UTF-8"
+        ) as Map
+        if (manifest.keySet().toList() != requiredManifestFields) {
+            throw new GradleException("Generated manifest fields or order are invalid")
+        }
+
+        requiredManifestFields.each { String field ->
+            if (!generatedManifestFields.contains(field) && manifest[field] != template[field]) {
+                throw new GradleException(
+                        "Generated manifest is inconsistent: ${field}"
+                )
+            }
+        }
+        if (manifest.buildDate != expectedBuildDate) {
+            throw new GradleException("Generated buildDate is inconsistent")
+        }
+        if ((manifest.compressedSize as long) != archiveFile.length()) {
+            throw new GradleException("Manifest compressedSize is inconsistent")
+        }
+        long actualUncompressedSize = entries.sum { it.size as long } as long
+        if ((manifest.uncompressedSize as long) != actualUncompressedSize) {
+            throw new GradleException("Manifest uncompressedSize is inconsistent")
+        }
+
+        checksumBytes = readZipEntryBytes(archive, "checksum.sha256")
+        if (manifest.checksum != sha256Bytes(checksumBytes)) {
+            throw new GradleException("Manifest checksum is inconsistent")
+        }
+    }
+
+    extractArchive(archiveFile, extractionDirectory)
+    invokeTranslationPackageValidator(extractionDirectory)
+
+    String expectedChecksumDocument = checksumOrder.collect { String name ->
+        "${sha256File(new File(extractionDirectory, name))}  ${name}"
+    }.join("\n") + "\n"
+    String actualChecksumDocument = new String(
+            checksumBytes,
+            StandardCharsets.UTF_8
+    )
+    if (actualChecksumDocument != expectedChecksumDocument) {
+        throw new GradleException("Payload checksum verification failed")
+    }
+}
+
+tasks.register("buildRomanceAiPackage") {
+    group = "AI package"
+    description = "Builds the production Romance AI package."
+    dependsOn(":app:compileDebugJavaWithJavac")
+
+    inputs.dir(packageSourceDirectory)
+    inputs.property(
+            "sourceDateEpoch",
+            providers.environmentVariable("SOURCE_DATE_EPOCH")
+    )
+    outputs.files(packageFile, packageChecksumFile)
+
+    doLast {
+        String stage = "initialization"
+        File workDirectory = new File(temporaryDir, "romance-1.0.0")
+        File candidatePackage = new File(
+                workDirectory,
+                "romance-1.0.0.aipackage.partial"
+        )
+        File validationDirectory = new File(workDirectory, "validation")
+        File candidateChecksum = new File(
+                workDirectory,
+                "romance-1.0.0.aipackage.sha256.partial"
+        )
+
+        try {
+            if (packageFile.exists() || packageChecksumFile.exists()) {
+                throw new GradleException(
+                        "A production output already exists; refusing to overwrite it"
+                )
+            }
+
+            stage = "source validation"
+            validateSourcePayload()
+            Map template = readManifestTemplate()
+
+            stage = "build date generation"
+            String sourceDateEpoch = System.getenv("SOURCE_DATE_EPOCH")
+            if (sourceDateEpoch == null || !(sourceDateEpoch ==~ /\d+/)) {
+                throw new GradleException(
+                        "SOURCE_DATE_EPOCH must contain non-negative epoch seconds"
+                )
+            }
+            long epochSeconds = Long.parseLong(sourceDateEpoch)
+            Instant buildInstant = Instant.ofEpochSecond(epochSeconds)
+            String buildDate = buildInstant.toString()
+            LocalDateTime zipTimestamp = LocalDateTime.ofInstant(
+                    buildInstant,
+                    ZoneOffset.UTC
+            )
+            if (zipTimestamp.year < 1980) {
+                throw new GradleException(
+                        "SOURCE_DATE_EPOCH must be on or after 1980-01-01"
+                )
+            }
+
+            stage = "checksum generation"
+            byte[] checksumBytes = checksumDocumentBytes()
+            String manifestChecksum = sha256Bytes(checksumBytes)
+
+            stage = "deterministic package creation"
+            workDirectory.mkdirs()
+            long compressedSize = 0L
+            long uncompressedSize = 0L
+            boolean stabilized = false
+            for (int attempt = 0; attempt < 10; attempt++) {
+                Map manifest = createManifest(
+                        template,
+                        buildDate,
+                        manifestChecksum,
+                        compressedSize,
+                        uncompressedSize
+                )
+                byte[] manifestBytes = normalizedJsonBytes(manifest)
+                long nextUncompressedSize = manifestBytes.length + checksumBytes.length
+                payloadFileNames.each { String name ->
+                    nextUncompressedSize += new File(payloadDirectory, name).length()
+                }
+                writeArchive(
+                        candidatePackage,
+                        manifestBytes,
+                        checksumBytes,
+                        zipTimestamp
+                )
+                long nextCompressedSize = candidatePackage.length()
+                if (nextCompressedSize == compressedSize &&
+                        nextUncompressedSize == uncompressedSize) {
+                    stabilized = true
+                    break
+                }
+                compressedSize = nextCompressedSize
+                uncompressedSize = nextUncompressedSize
+            }
+            if (!stabilized) {
+                throw new GradleException("Package size fields did not stabilize")
+            }
+
+            stage = "candidate validation"
+            validateArchive(
+                    candidatePackage,
+                    validationDirectory,
+                    template,
+                    buildDate
+            )
+
+            stage = "archive SHA-256 generation"
+            String archiveChecksum = sha256File(candidatePackage)
+            candidateChecksum.setText(
+                    "${archiveChecksum}  romance-1.0.0.aipackage\n",
+                    "UTF-8"
+            )
+
+            stage = "atomic publication"
+            packageOutputDirectory.mkdirs()
+            Files.move(
+                    candidateChecksum.toPath(),
+                    packageChecksumFile.toPath(),
+                    StandardCopyOption.ATOMIC_MOVE
+            )
+            try {
+                Files.move(
+                        candidatePackage.toPath(),
+                        packageFile.toPath(),
+                        StandardCopyOption.ATOMIC_MOVE
+                )
+            } catch (Exception publicationFailure) {
+                packageChecksumFile.delete()
+                throw publicationFailure
+            }
+        } catch (Exception failure) {
+            candidatePackage.delete()
+            candidateChecksum.delete()
+            validationDirectory.deleteDir()
+            throw new GradleException(
+                    "AI package build failed at ${stage}: ${failure.message}",
+                    failure
+            )
+        } finally {
+            validationDirectory.deleteDir()
+        }
+    }
+}
+
+tasks.register("validateRomanceAiPackage") {
+    group = "verification"
+    description = "Validates the production Romance AI package."
+    dependsOn("buildRomanceAiPackage")
+
+    inputs.files(packageFile, packageChecksumFile)
+
+    doLast {
+        String stage = "production package validation"
+        File validationDirectory = new File(
+                temporaryDir,
+                "romance-1.0.0-validation"
+        )
+        try {
+            Map template = readManifestTemplate()
+            String sourceDateEpoch = System.getenv("SOURCE_DATE_EPOCH")
+            if (sourceDateEpoch == null || !(sourceDateEpoch ==~ /\d+/)) {
+                throw new GradleException(
+                        "SOURCE_DATE_EPOCH must contain non-negative epoch seconds"
+                )
+            }
+            String buildDate = Instant.ofEpochSecond(
+                    Long.parseLong(sourceDateEpoch)
+            ).toString()
+            validateArchive(
+                    packageFile,
+                    validationDirectory,
+                    template,
+                    buildDate
+            )
+
+            stage = "production SHA-256 validation"
+            String expected =
+                    "${sha256File(packageFile)}  romance-1.0.0.aipackage\n"
+            String actual = packageChecksumFile.getText("UTF-8")
+                    .replace("\r\n", "\n")
+                    .replace("\r", "\n")
+            if (actual != expected) {
+                throw new GradleException(
+                        "Production package SHA-256 sidecar is inconsistent"
+                )
+            }
+        } catch (Exception failure) {
+            throw new GradleException(
+                    "AI package validation failed at ${stage}: ${failure.message}",
+                    failure
+            )
+        } finally {
+            validationDirectory.deleteDir()
+        }
+    }
+}

@@ -37,9 +37,54 @@ public final class TranslationEngine {
     public String translate(
             String text
     ) {
+        return translate(
+                text,
+                ""
+        );
+    }
+
+    public String translate(
+            String text,
+            String selectedLanguageFamily
+    ) {
         android.util.Log.d("MULTILINGUAL_PIPELINE", "TranslationEngine input: " + text);
+        if (
+                selectedLanguageFamily == null
+                        ||
+                        selectedLanguageFamily.trim().isEmpty()
+        ) {
+            return text;
+        }
+
+        TranslationModelInfo modelInfo =
+                TranslationModelRegistry.getModelByFamily(
+                        selectedLanguageFamily
+                );
+
+        if (modelInfo == null) {
+            throw new IllegalArgumentException(
+                    "Unknown language family: " + selectedLanguageFamily
+            );
+        }
+
+        AiPackageInfo packageInfo =
+                AiPlatform
+                        .getPackageManager()
+                        .findInstalledPackage(
+                                AiPackageType.TRANSLATION,
+                                modelInfo.getTranslationFamily()
+                        );
+
+        if (packageInfo == null) {
+            throw new IllegalStateException(
+                    "Required language package is not installed: "
+                            + modelInfo.getTranslationFamily()
+            );
+        }
+
         String translated = getTranslator(
-                text
+                modelInfo.getId(),
+                packageInfo
         ).translate(
                 text
         );
@@ -48,21 +93,35 @@ public final class TranslationEngine {
     }
 
     private synchronized RomanceTranslator getTranslator(
-            String text
+            TranslationModelId modelId,
+            AiPackageInfo packageInfo
     ) {
 
         try {
-            TranslationModelId modelId =
-                    LanguageDetectionEngine
-                            .getInstance(context)
-                            .detect(text);
+            java.io.File packageDirectory =
+                    new AiStorageManager(context)
+                            .getInstalledPackageDirectory(packageInfo);
+            TranslationPackageLayout layout =
+                    new TranslationPackageLayout(packageDirectory);
+            TranslationPackageValidator validator =
+                    new TranslationPackageValidator();
 
+            if (!validator.isValid(layout)) {
+                throw new IllegalStateException(
+                        "Installed language package is invalid"
+                );
+            }
+
+            TranslationPackageManifest manifest =
+                    new TranslationPackageManifestReader()
+                            .read(layout);
             TranslationPackage translationPackage =
-                    TranslationModelManager
-                            .getInstance(context)
-                            .getOrInstall(
-                                    modelId
-                             );
+                    new TranslationPackage(
+                            modelId,
+                            packageDirectory,
+                            manifest,
+                            true
+                    );
 
             android.util.Log.d("MULTILINGUAL_PIPELINE", "Translation package directory: " + translationPackage.getDirectory()
                     + " | installed=" + translationPackage.isInstalled());

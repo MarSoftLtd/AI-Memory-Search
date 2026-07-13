@@ -26,6 +26,16 @@ public final class AiCapabilityResolver {
     public CapabilityRequirement resolve(
             AiCapability capability
     ) {
+        return resolve(
+                capability,
+                null
+        );
+    }
+
+    public CapabilityRequirement resolve(
+            AiCapability capability,
+            String capabilityKey
+    ) {
         AiCapabilityRegistry.CapabilityDefinition definition =
                 registry.getDefinition(
                         capability
@@ -53,12 +63,23 @@ public final class AiCapabilityResolver {
             );
         }
 
+        String requiredCapabilityKey =
+                isBlank(capabilityKey)
+                        ? definition.getCapabilityKey()
+                        : capabilityKey.trim();
+
         AiPackageInfo activePackage =
                 packageManager.getActivePackage(
                         capability
                 );
 
-        if (activePackage != null) {
+        if (
+                activePackage != null
+                        &&
+                        requiredCapabilityKey.equals(
+                                activePackage.getCapabilityKey()
+                        )
+        ) {
             return new CapabilityRequirement(
                     capability,
                     CapabilityStatus.AVAILABLE,
@@ -73,11 +94,14 @@ public final class AiCapabilityResolver {
 
         List<AiPackageInfo> candidates =
                 findCandidatePackages(
-                        definition
+                        definition,
+                        requiredCapabilityKey
                 );
 
         AiPackageInfo installedPackage =
                 findInstalledPackage(
+                        definition,
+                        requiredCapabilityKey,
                         candidates
                 );
 
@@ -136,6 +160,8 @@ public final class AiCapabilityResolver {
     }
 
     private AiPackageInfo findInstalledPackage(
+            AiCapabilityRegistry.CapabilityDefinition definition,
+            String capabilityKey,
             List<AiPackageInfo> candidates
     ) {
         for (AiPackageInfo candidate : candidates) {
@@ -148,11 +174,15 @@ public final class AiCapabilityResolver {
             }
         }
 
-        return null;
+        return packageManager.findInstalledPackage(
+                definition.getPackageType(),
+                capabilityKey
+        );
     }
 
     private List<AiPackageInfo> findCandidatePackages(
-            AiCapabilityRegistry.CapabilityDefinition definition
+            AiCapabilityRegistry.CapabilityDefinition definition,
+            String capabilityKey
     ) {
         if (packageRepository == null) {
             return Collections.emptyList();
@@ -176,7 +206,7 @@ public final class AiCapabilityResolver {
             if (
                     definition.getPackageType() == packageInfo.getPackageType()
                             &&
-                            definition.getCapabilityKey().equals(
+                            capabilityKey.equals(
                                     packageInfo.getCapabilityKey()
                             )
             ) {
@@ -189,5 +219,11 @@ public final class AiCapabilityResolver {
         return Collections.unmodifiableList(
                 candidates
         );
+    }
+
+    private static boolean isBlank(
+            String value
+    ) {
+        return value == null || value.trim().isEmpty();
     }
 }

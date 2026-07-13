@@ -97,9 +97,27 @@ public final class AiPackageInstaller {
                             packageInfo
                     );
 
-            deleteRecursively(
-                    installDirectory
-            );
+            if (installDirectory.exists()) {
+                if (validatePackageLayout(installDirectory)) {
+                    packageManager.registerInstalledPackage(packageInfo);
+                    return new AiPackageInstallResult(
+                            true,
+                            packageInfo,
+                            installDirectory,
+                            verificationResult,
+                            "Package is already installed",
+                            null
+                    );
+                }
+
+                return installFailure(
+                        packageInfo,
+                        installDirectory,
+                        verificationResult,
+                        "Existing package directory is invalid",
+                        null
+                );
+            }
 
             if (
                     !installDirectory.exists()

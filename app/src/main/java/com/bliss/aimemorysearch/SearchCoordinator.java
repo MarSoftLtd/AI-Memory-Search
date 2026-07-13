@@ -52,6 +52,24 @@ public final class SearchCoordinator {
             String query,
             Callback callback
     ) {
+        SearchRequest request =
+                QueryUnderstandingEngine.createSearchRequest(
+                        query == null ? "" : query.trim()
+                );
+        search(
+                request,
+                callback
+        );
+    }
+
+    public void search(
+            SearchRequest queryRequest,
+            Callback callback
+    ) {
+        String query =
+                queryRequest == null
+                        ? ""
+                        : queryRequest.getOriginalQuery();
         android.util.Log.e(
                 "SEARCH_ENTRY",
                 "MAINACTIVITY SEARCH CALLED = " + query
@@ -76,11 +94,6 @@ public final class SearchCoordinator {
 
             try {
 
-            SearchRequest
-                    queryRequest =
-                    QueryUnderstandingEngine.createSearchRequest(
-                            query.trim()
-                    );
             SearchAnalysis
                     queryAnalysis =
                     QueryUnderstandingEngine.createSearchAnalysis(
@@ -139,6 +152,7 @@ public final class SearchCoordinator {
                     .getInstance(context)
                     .normalizeForClip(
                             query.trim(),
+                            queryRequest.getSelectedLanguageFamily(),
                             new MultilingualQueryNormalizer.Callback() {
                                 @Override
                                 public void onReady(
@@ -180,6 +194,9 @@ public final class SearchCoordinator {
                     QueryUnderstandingEngine.createSearchRequest(
                             clipQueryHolder[0]
                     );
+            imageSearchRequest.setSelectedLanguageFamily(
+                    queryRequest.getSelectedLanguageFamily()
+            );
             SearchAnalysis
                     imageSearchAnalysis =
                     QueryUnderstandingEngine.createSearchAnalysis(
