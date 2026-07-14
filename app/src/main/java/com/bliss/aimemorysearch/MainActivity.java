@@ -889,6 +889,12 @@ public class MainActivity extends AppCompatActivity {
                         totalBytes
                 );
                 break;
+            case VERIFYING:
+                aiPackageDialog.showVerifyingState();
+                aiPackageDialog.setSecondaryActionListener(
+                        v -> aiPackageDownloadManager.cancel()
+                );
+                break;
             case COMPLETED:
                 aiPackageDialog.showDownloadCompletedState();
                 aiPackageDialog.setPrimaryActionListener(v -> closeAiPackageDialog());
@@ -919,6 +925,8 @@ public class MainActivity extends AppCompatActivity {
                 return R.string.ai_package_http_error;
             case STORAGE:
                 return R.string.ai_package_storage_error;
+            case CHECKSUM:
+                return R.string.ai_package_checksum_error;
             case NETWORK:
             default:
                 return R.string.ai_package_network_error;

@@ -112,6 +112,7 @@
     <string name="ai_package_network_error">The package could not be downloaded. Check your connection and try again later.</string>
     <string name="ai_package_http_error">The package server returned an error.</string>
     <string name="ai_package_storage_error">The temporary download file could not be created.</string>
+    <string name="ai_package_checksum_error">The downloaded package could not be verified.</string>
     <string name="ai_package_progress_bytes">%1$s / %2$s</string>
     <string name="ai_package_progress_percent">%1$d%%</string>
     <string name="ai_package_list_separator">,\u0020</string>

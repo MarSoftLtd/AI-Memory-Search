@@ -13,6 +13,8 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -21,6 +23,7 @@ public final class AiPackageDownloadManager {
     public enum Event {
         STARTED,
         PROGRESS,
+        VERIFYING,
         COMPLETED,
         FAILED,
         CANCELLED
@@ -30,7 +33,8 @@ public final class AiPackageDownloadManager {
         NOT_AVAILABLE,
         NETWORK,
         HTTP,
-        STORAGE
+        STORAGE,
+        CHECKSUM
     }
 
     public interface Listener {
@@ -183,14 +187,13 @@ public final class AiPackageDownloadManager {
             if (cancelled) {
                 finishCancelled(listener, temporaryFile);
             } else {
-                finish(listener);
-                post(listener, event(
-                        Event.COMPLETED,
-                        downloadedBytes,
-                        totalBytes,
+                verifyAndComplete(
+                        packageInfo,
+                        listener,
                         temporaryFile,
-                        null
-                ));
+                        downloadedBytes,
+                        totalBytes
+                );
             }
         } catch (Exception failure) {
             if (cancelled) {
@@ -216,6 +219,58 @@ public final class AiPackageDownloadManager {
                 new File(context.getFilesDir(), "ai_packages/downloads"),
                 packageFileName
         );
+    }
+
+    private void verifyAndComplete(
+            AIPackageInfo packageInfo,
+            Listener listener,
+            File temporaryFile,
+            long downloadedBytes,
+            long totalBytes
+    ) {
+        post(listener, event(
+                Event.VERIFYING,
+                downloadedBytes,
+                totalBytes,
+                temporaryFile,
+                null
+        ));
+        try {
+            if (!SHA256Verifier.verify(temporaryFile, packageInfo.getSha256())) {
+                finishFailed(listener, temporaryFile, FailureReason.CHECKSUM);
+                return;
+            }
+            if (cancelled) {
+                finishCancelled(listener, temporaryFile);
+                return;
+            }
+
+            File packageFile = packageFile(temporaryFile);
+            Files.move(
+                    temporaryFile.toPath(),
+                    packageFile.toPath(),
+                    StandardCopyOption.REPLACE_EXISTING
+            );
+            finish(listener);
+            post(listener, event(
+                    Event.COMPLETED,
+                    downloadedBytes,
+                    totalBytes,
+                    packageFile,
+                    null
+            ));
+        } catch (Exception failure) {
+            finishFailed(listener, temporaryFile, FailureReason.STORAGE);
+        }
+    }
+
+    private static File packageFile(File temporaryFile) {
+        String temporaryName = temporaryFile.getName();
+        String packageName = temporaryName.substring(
+                0,
+                temporaryName.length() - ".download".length()
+        );
+        return new File(temporaryFile.getParentFile(), packageName);
     }
 
     private void finishCancelled(Listener listener, File temporaryFile) {
