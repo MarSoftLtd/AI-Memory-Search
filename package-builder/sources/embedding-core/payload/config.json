@@ -1,0 +1,4 @@
+{
+  "runtimeRole": "EMBEDDING_CORE",
+  "requiredFiles": ["model.onnx", "vocab.txt"]
+}

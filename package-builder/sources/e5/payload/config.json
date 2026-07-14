@@ -1,0 +1,4 @@
+{
+  "runtimeRole": "E5",
+  "requiredFiles": ["model.onnx", "sentencepiece.bpe.model", "special_tokens_map.json", "tokenizer_config.json"]
+}

@@ -1,6 +1,7 @@
 package com.bliss.aimemorysearch.ai;
 
 public enum AiPackageType {
+    MODEL,
     DOCUMENT,
     IMAGE,
     TRANSLATION,

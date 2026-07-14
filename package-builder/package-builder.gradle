@@ -17,24 +17,53 @@ def packageSourcesDirectory =
         file("${rootDir}/package-builder/sources")
 def packageOutputDirectory =
         file("${rootDir}/build/packages")
+def bundleSourcesDirectory =
+        file("${rootDir}/package-builder/bundles")
 
-def payloadFileNames = [
+def translationPayloadFileNames = [
         "config.json",
         "model.bin",
         "source.spm",
         "target.spm",
         "shared_vocabulary.json"
 ]
-def checksumOrder = payloadFileNames.toSorted()
-def archiveEntryOrder = [
-        "manifest.json",
-        "config.json",
-        "model.bin",
-        "source.spm",
-        "target.spm",
-        "shared_vocabulary.json",
-        "checksum.sha256"
-]
+
+def resolvePayloadFileNames = { File payloadDirectory, String packageType ->
+    if (packageType == "TRANSLATION") {
+        return new ArrayList<String>(translationPayloadFileNames)
+    }
+    if (packageType != "MODEL") {
+        throw new GradleException("Unsupported packageType: ${packageType}")
+    }
+
+    File configFile = new File(payloadDirectory, "config.json")
+    if (!configFile.isFile() || configFile.length() == 0L) {
+        throw new GradleException("MODEL package config.json is missing or empty")
+    }
+    Object parsed = new JsonSlurper().parse(configFile, "UTF-8")
+    Object requiredValue = parsed instanceof Map ? parsed.get("requiredFiles") : null
+    if (!(requiredValue instanceof List) || requiredValue.isEmpty()) {
+        throw new GradleException("MODEL config.json.requiredFiles is missing or empty")
+    }
+
+    List<String> names = ["config.json"]
+    for (Object requiredName : (List) requiredValue) {
+        if (!(requiredName instanceof String)) {
+            throw new GradleException("MODEL requiredFiles entries must be strings")
+        }
+        String name = requiredName.trim()
+        if (name.isEmpty() || name.contains("/") || name.contains("\\")
+                || name == "manifest.json" || name == "config.json"
+                || name == "checksum.sha256") {
+            throw new GradleException("Invalid MODEL required file: ${name}")
+        }
+        if (names.contains(name)) {
+            throw new GradleException("Duplicate MODEL required file: ${name}")
+        }
+        names.add(name)
+    }
+    names
+}
 def manifestPropertyNames = [
         "packageId",
         "displayName",
@@ -175,11 +204,19 @@ def loadPackageDefinition = { File sourceDirectory ->
         }
     }
 
+    File payloadDirectory = new File(sourceDirectory, "payload")
+    List<String> packagePayloadFileNames = resolvePayloadFileNames(
+            payloadDirectory,
+            manifestValues.packageType as String
+    )
     String outputBaseName = "${archiveBaseName}-${version}"
     [
             key                 : sourceDirectory.name,
             sourceDirectory     : sourceDirectory,
-            payloadDirectory    : new File(sourceDirectory, "payload"),
+            payloadDirectory    : payloadDirectory,
+            payloadFileNames    : packagePayloadFileNames,
+            checksumOrder       : packagePayloadFileNames.toSorted(),
+            archiveEntryOrder   : ["manifest.json"] + packagePayloadFileNames + ["checksum.sha256"],
             propertiesFile      : propertiesFile,
             archiveBaseName     : archiveBaseName,
             outputBaseName      : outputBaseName,
@@ -258,12 +295,12 @@ def validateSourcePayload = { Map definition ->
         )
     }
     List<String> actualNames = actualFiles.collect { it.name }.toSorted()
-    if (actualNames != payloadFileNames.toSorted()) {
+    if (actualNames != definition.payloadFileNames.toSorted()) {
         throw new GradleException(
                 "Canonical payload entries are invalid for ${definition.key}: ${actualNames}"
         )
     }
-    payloadFileNames.each { String name ->
+    definition.payloadFileNames.each { String name ->
         File source = new File(payloadDirectory, name)
         if (!source.isFile() || source.length() == 0L) {
             throw new GradleException(
@@ -275,7 +312,7 @@ def validateSourcePayload = { Map definition ->
 
 def checksumDocumentBytes = { Map definition ->
     File payloadDirectory = definition.payloadDirectory
-    String document = checksumOrder.collect { String name ->
+    String document = definition.checksumOrder.collect { String name ->
         "${sha256File(new File(payloadDirectory, name))}  ${name}"
     }.join("\n") + "\n"
     document.getBytes(StandardCharsets.UTF_8)
@@ -364,7 +401,7 @@ def writeArchive = {
         ZipOutputStream zipOutput = new ZipOutputStream(fileOutput)
         zipOutput.setLevel(9)
         try {
-            archiveEntryOrder.each { String name ->
+            definition.archiveEntryOrder.each { String name ->
                 if (name == "manifest.json") {
                     addZipBytes(zipOutput, name, manifestBytes, timestamp, true)
                 } else if (name == "checksum.sha256") {
@@ -462,7 +499,7 @@ def validateArchive = {
     new ZipFile(archiveFile, StandardCharsets.UTF_8).withCloseable { ZipFile archive ->
         List<? extends ZipEntry> entries = archive.entries().toList()
         List<String> names = entries.collect { it.name }
-        if (names != archiveEntryOrder) {
+        if (names != definition.archiveEntryOrder) {
             throw new GradleException(
                     "Archive entry order or contents are invalid: ${names}"
             )
@@ -503,9 +540,11 @@ def validateArchive = {
     }
 
     extractArchive(archiveFile, extractionDirectory)
-    invokeTranslationPackageValidator(extractionDirectory)
+    if (definition.manifestValues.packageType == "TRANSLATION") {
+        invokeTranslationPackageValidator(extractionDirectory)
+    }
 
-    String expectedChecksumDocument = checksumOrder.collect { String name ->
+    String expectedChecksumDocument = definition.checksumOrder.collect { String name ->
         "${sha256File(new File(extractionDirectory, name))}  ${name}"
     }.join("\n") + "\n"
     String actualChecksumDocument = new String(
@@ -615,7 +654,7 @@ def buildPackage = {
             )
             byte[] manifestBytes = normalizedJsonBytes(manifest)
             long nextUncompressedSize = manifestBytes.length + checksumBytes.length
-            payloadFileNames.each { String name ->
+            definition.payloadFileNames.each { String name ->
                 nextUncompressedSize += new File(
                         definition.payloadDirectory,
                         name
@@ -755,11 +794,23 @@ def generateMetadataRepository = { List<Map> definitions, String generatedAt ->
                 sha256             : sha256File(definition.packageFile)
         ] as LinkedHashMap<String, Object>
     }
+    File bundleFile = new File(bundleSourcesDirectory, "ai-search.properties")
+    Properties bundleValues = new Properties()
+    bundleFile.withReader("UTF-8") { reader -> bundleValues.load(reader) }
+    List<String> bundlePackageIds = bundleValues.getProperty("packageIds")
+            .split(",").collect { value -> value.trim() }
+    List<Map<String, Object>> bundles = [[
+            bundleId: bundleValues.getProperty("bundleId"),
+            displayNameKey: bundleValues.getProperty("displayNameKey"),
+            descriptionKey: bundleValues.getProperty("descriptionKey"),
+            packageIds: bundlePackageIds
+    ] as LinkedHashMap<String, Object>]
     LinkedHashMap<String, Object> repository = [
             schemaVersion: 1,
             generatedBy  : "AIMemorySearch Production AI Package Builder",
             generatedAt  : generatedAt,
-            packages     : packages
+            packages     : packages,
+            bundles      : bundles
     ]
     repositoryOutputFile.parentFile.mkdirs()
     repositoryOutputFile.bytes = normalizedJsonBytes(repository)

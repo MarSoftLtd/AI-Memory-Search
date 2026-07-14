@@ -4,6 +4,62 @@
     "generatedAt": "2026-07-13T00:00:00Z",
     "packages": [
         {
+            "packageId": "core-model-clip-text",
+            "packageType": "MODEL",
+            "displayNameKey": "ai_package_model_clip_text",
+            "descriptionKey": "ai_package_model_clip_text_description",
+            "version": "1.0.0",
+            "modelVersion": "1.0.0",
+            "downloadSizeBytes": 43848345,
+            "installedSizeBytes": 65457889,
+            "supportedLanguages": [
+                "multilingual"
+            ],
+            "sha256": "2cbb161a9961609f341f5498452d0b6ab662a87e2f819a03fc662c6eb09e5363"
+        },
+        {
+            "packageId": "core-model-clip-vision",
+            "packageType": "MODEL",
+            "displayNameKey": "ai_package_model_clip_vision",
+            "descriptionKey": "ai_package_model_clip_vision_description",
+            "version": "1.0.0",
+            "modelVersion": "1.0.0",
+            "downloadSizeBytes": 49182206,
+            "installedSizeBytes": 53267457,
+            "supportedLanguages": [
+                "und"
+            ],
+            "sha256": "e8580ec3973a654ee5092b6adc5d2a581d63034be65f7b4d7cccbcda9effbbc7"
+        },
+        {
+            "packageId": "core-model-e5",
+            "packageType": "MODEL",
+            "displayNameKey": "ai_package_model_e5",
+            "descriptionKey": "ai_package_model_e5_description",
+            "version": "1.0.0",
+            "modelVersion": "1.0.0",
+            "downloadSizeBytes": 81634650,
+            "installedSizeBytes": 123345671,
+            "supportedLanguages": [
+                "multilingual"
+            ],
+            "sha256": "fdb80ea24cecb85802c045426b9c438290e7935cda43787ce5e02b28db12bb59"
+        },
+        {
+            "packageId": "core-model-embedding",
+            "packageType": "MODEL",
+            "displayNameKey": "ai_package_model_embedding_core",
+            "descriptionKey": "ai_package_model_embedding_core_description",
+            "version": "1.0.0",
+            "modelVersion": "1.0.0",
+            "downloadSizeBytes": 82949685,
+            "installedSizeBytes": 90636808,
+            "supportedLanguages": [
+                "und"
+            ],
+            "sha256": "19baa21052c47c87084595180eb1403acb133f02aa2d2b982f81baad6728099d"
+        },
+        {
             "packageId": "core-translation-germanic-en",
             "packageType": "TRANSLATION",
             "displayNameKey": "ai_package_translation_germanic",
@@ -89,6 +145,19 @@
                 "tr"
             ],
             "sha256": "55bcaecca64b3def2d192df02fba05055f0bb6d1a769dcd7e411d699dacf13cd"
+        }
+    ],
+    "bundles": [
+        {
+            "bundleId": "ai-search",
+            "displayNameKey": "ai_package_bundle_ai_search",
+            "descriptionKey": "ai_package_bundle_ai_search_description",
+            "packageIds": [
+                "core-model-embedding",
+                "core-model-e5",
+                "core-model-clip-text",
+                "core-model-clip-vision"
+            ]
         }
     ]
 }

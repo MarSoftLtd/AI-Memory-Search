@@ -140,4 +140,14 @@
     <string name="ai_package_translation_greek_description">Offline translation from Greek to English.</string>
     <string name="ai_package_translation_turkish">Core Turkish to English Translation</string>
     <string name="ai_package_translation_turkish_description">Offline translation from Turkish to English.</string>
+    <string name="ai_package_model_embedding_core">Embedding Core</string>
+    <string name="ai_package_model_embedding_core_description">Offline semantic embeddings for document search.</string>
+    <string name="ai_package_model_e5">E5</string>
+    <string name="ai_package_model_e5_description">Offline multilingual semantic embeddings.</string>
+    <string name="ai_package_model_clip_text">CLIP Text</string>
+    <string name="ai_package_model_clip_text_description">Offline text embeddings for image search.</string>
+    <string name="ai_package_model_clip_vision">CLIP Vision</string>
+    <string name="ai_package_model_clip_vision_description">Offline visual embeddings for image search.</string>
+    <string name="ai_package_bundle_ai_search">AI Search</string>
+    <string name="ai_package_bundle_ai_search_description">AI Search requires additional AI models.</string>
 </resources>

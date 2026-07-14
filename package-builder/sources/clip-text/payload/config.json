@@ -1,0 +1,4 @@
+{
+  "runtimeRole": "CLIP_TEXT",
+  "requiredFiles": ["text_model_uint8.onnx", "vocab.json", "merges.txt"]
+}

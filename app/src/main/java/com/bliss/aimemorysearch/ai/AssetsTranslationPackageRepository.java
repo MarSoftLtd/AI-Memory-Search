@@ -13,6 +13,9 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import com.bliss.aimemorysearch.ai.model.AIPackageBundleInfo;
 
 public final class AssetsTranslationPackageRepository
         implements TranslationPackageRepository {
@@ -23,6 +26,7 @@ public final class AssetsTranslationPackageRepository
 
     private final Context context;
     private volatile List<AIPackageInfo> cachedPackages;
+    private volatile Map<String, AIPackageBundleInfo> cachedBundles;
 
     public AssetsTranslationPackageRepository(Context context) {
         this.context = context.getApplicationContext();
@@ -53,26 +57,65 @@ public final class AssetsTranslationPackageRepository
         return null;
     }
 
-    @Override
-    public List<TranslationPackageInfo> getPackages() {
-        return Collections.emptyList();
+    public AIPackageBundleInfo findBundleById(String bundleId) {
+        if (bundleId == null) {
+            return null;
+        }
+        ensureLoaded();
+        return cachedBundles.get(bundleId);
     }
 
-    private List<AIPackageInfo> loadPackages() {
+    private synchronized void ensureLoaded() {
+        if (cachedPackages != null && cachedBundles != null) {
+            return;
+        }
         try {
             JSONObject root = new JSONObject(readAssetText());
             if (root.getInt("schemaVersion") != SUPPORTED_SCHEMA_VERSION) {
-                return Collections.emptyList();
+                cachedPackages = Collections.emptyList();
+                cachedBundles = Collections.emptyMap();
+                return;
             }
             JSONArray entries = root.getJSONArray("packages");
             List<AIPackageInfo> packages = new ArrayList<>(entries.length());
             for (int index = 0; index < entries.length(); index++) {
                 packages.add(readPackage(entries.getJSONObject(index)));
             }
-            return Collections.unmodifiableList(packages);
+            Map<String, AIPackageBundleInfo> bundles = new LinkedHashMap<>();
+            JSONArray bundleEntries = root.optJSONArray("bundles");
+            if (bundleEntries != null) {
+                for (int index = 0; index < bundleEntries.length(); index++) {
+                    JSONObject entry = bundleEntries.getJSONObject(index);
+                    JSONArray ids = entry.getJSONArray("packageIds");
+                    List<String> packageIds = new ArrayList<>(ids.length());
+                    for (int item = 0; item < ids.length(); item++) {
+                        packageIds.add(ids.getString(item));
+                    }
+                    AIPackageBundleInfo bundle = new AIPackageBundleInfo(
+                            entry.getString("bundleId"),
+                            entry.getString("displayNameKey"),
+                            entry.getString("descriptionKey"),
+                            packageIds
+                    );
+                    bundles.put(bundle.getBundleId(), bundle);
+                }
+            }
+            cachedPackages = Collections.unmodifiableList(packages);
+            cachedBundles = Collections.unmodifiableMap(bundles);
         } catch (Exception ignored) {
-            return Collections.emptyList();
+            cachedPackages = Collections.emptyList();
+            cachedBundles = Collections.emptyMap();
         }
+    }
+
+    @Override
+    public List<TranslationPackageInfo> getPackages() {
+        return Collections.emptyList();
+    }
+
+    private List<AIPackageInfo> loadPackages() {
+        ensureLoaded();
+        return cachedPackages;
     }
 
     private AIPackageInfo readPackage(JSONObject entry) throws Exception {
