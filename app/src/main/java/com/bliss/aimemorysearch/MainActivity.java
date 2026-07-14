@@ -90,6 +90,9 @@ public class MainActivity extends AppCompatActivity {
     private com.bliss.aimemorysearch.ai.SearchRequest pendingSearchRequest;
     private String selectedLanguageFamily = "";
     private boolean languagePackagePromptVisible = false;
+    private com.bliss.aimemorysearch.ui.AIPackageDialog aiPackageDialog;
+    private com.bliss.aimemorysearch.ai.TranslationPackageManager
+            translationPackageManager;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -132,6 +135,13 @@ public class MainActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         WindowCompat.setDecorFitsSystemWindows( getWindow(), false );
         setContentView(R.layout.activity_main);
+        aiPackageDialog =
+                new com.bliss.aimemorysearch.ui.AIPackageDialog(
+                        findViewById(R.id.aiPackageCard)
+                );
+        translationPackageManager =
+                com.bliss.aimemorysearch.ai.TranslationPackageManager
+                        .getInstance(this);
         initializeLanguagePackageRouting();
         database = AppDatabase.getInstance(this);
         rebuildVocabularyCache();
@@ -720,19 +730,25 @@ public class MainActivity extends AppCompatActivity {
                 selectedLanguageFamily
         );
 
-        if (
-                !selectedLanguageFamily.isEmpty()
-                        &&
-                        !languagePackageRouter.activateInstalledPackage(
-                                selectedLanguageFamily
-                        )
-        ) {
-            pendingSearchRequest = request;
-            showLanguagePackagePrompt(
-                    selectedLanguageFamily,
-                    false
+        if (!selectedLanguageFamily.isEmpty()) {
+            String requiredPackageId =
+                    languagePackageRouter.getRequiredPackageId(
+                            selectedLanguageFamily
+                    );
+            if (
+                    requiredPackageId != null
+                            &&
+                            !translationPackageManager.isInstalled(
+                                    requiredPackageId
+                            )
+            ) {
+                pendingSearchRequest = request;
+                showLanguagePackagePrompt(requiredPackageId, false);
+                return;
+            }
+            languagePackageRouter.activateInstalledPackage(
+                    selectedLanguageFamily
             );
-            return;
         }
 
         executeSearch(request);
@@ -801,77 +817,31 @@ public class MainActivity extends AppCompatActivity {
                     .apply();
         }
 
-        if (
-                !selectedLanguageFamily.isEmpty()
-                        &&
-                        com.bliss.aimemorysearch.ai.AiPlatform.getPackageManager()
-                                .getInstalledPackages()
-                                .isEmpty()
-                        &&
-                        !routingPreferences.getBoolean(
-                                "initial_prompt_shown",
-                                false
-                        )
-        ) {
-            uiHandler.post(
-                    () -> showLanguagePackagePrompt(
-                            selectedLanguageFamily,
-                            true
-                    )
-            );
-        }
     }
 
     private void showLanguagePackagePrompt(
-            String family,
+            String packageId,
             boolean initialPrompt
     ) {
         if (
                 languagePackagePromptVisible
                         ||
-                        family == null
+                        packageId == null
                         ||
-                        family.trim().isEmpty()
+                        packageId.trim().isEmpty()
         ) {
             return;
         }
 
+        com.bliss.aimemorysearch.ai.model.AIPackageInfo metadata =
+                translationPackageManager.getMetadata(packageId);
+        if (metadata == null) {
+            return;
+        }
         languagePackagePromptVisible = true;
-
-        new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle(R.string.language_package_required_title)
-                .setMessage(
-                        getString(
-                                R.string.language_package_required_message,
-                                family
-                        )
-                )
-                .setPositiveButton(
-                        R.string.language_package_download,
-                        (dialog, which) -> {
-                            languagePackagePromptVisible = false;
-                            markInitialLanguagePromptShown(initialPrompt);
-                            installLanguagePackageAndResume(family);
-                        }
-                )
-                .setNegativeButton(
-                        android.R.string.cancel,
-                        (dialog, which) -> {
-                            languagePackagePromptVisible = false;
-                            markInitialLanguagePromptShown(initialPrompt);
-                            if (!initialPrompt) {
-                                pendingSearchRequest = null;
-                            }
-                        }
-                )
-                .setOnCancelListener(dialog -> {
-                    languagePackagePromptVisible = false;
-                    markInitialLanguagePromptShown(initialPrompt);
-                    if (!initialPrompt) {
-                        pendingSearchRequest = null;
-                    }
-                })
-                .show();
+        aiPackageDialog.bind(metadata);
+        aiPackageDialog.showReadyState();
+        aiPackageDialog.show();
     }
 
     private void markInitialLanguagePromptShown(

@@ -2,6 +2,8 @@ package com.bliss.aimemorysearch.ai;
 
 import android.content.Context;
 
+import com.bliss.aimemorysearch.ai.model.AIPackageInfo;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -17,142 +19,96 @@ public final class AssetsTranslationPackageRepository
 
     private static final String REPOSITORY_ASSET_PATH =
             "translation_packages/repository.json";
+    private static final int SUPPORTED_SCHEMA_VERSION = 1;
 
     private final Context context;
+    private volatile List<AIPackageInfo> cachedPackages;
 
-    public AssetsTranslationPackageRepository(
-            Context context
-    ) {
-        this.context =
-                context.getApplicationContext();
+    public AssetsTranslationPackageRepository(Context context) {
+        this.context = context.getApplicationContext();
+    }
+
+    public List<AIPackageInfo> getAIPackages() {
+        List<AIPackageInfo> packages = cachedPackages;
+        if (packages != null) {
+            return packages;
+        }
+        synchronized (this) {
+            if (cachedPackages == null) {
+                cachedPackages = loadPackages();
+            }
+            return cachedPackages;
+        }
+    }
+
+    public AIPackageInfo findByPackageId(String packageId) {
+        if (packageId == null) {
+            return null;
+        }
+        for (AIPackageInfo packageInfo : getAIPackages()) {
+            if (packageId.equals(packageInfo.getPackageId())) {
+                return packageInfo;
+            }
+        }
+        return null;
     }
 
     @Override
     public List<TranslationPackageInfo> getPackages() {
+        return Collections.emptyList();
+    }
+
+    private List<AIPackageInfo> loadPackages() {
         try {
-            JSONArray packages =
-                    readPackagesArray();
-
-            List<TranslationPackageInfo> result =
-                    new ArrayList<>();
-
-            for (int i = 0; i < packages.length(); i++) {
-                result.add(
-                        readPackageInfo(
-                                packages.getJSONObject(
-                                        i
-                                )
-                        )
-                );
+            JSONObject root = new JSONObject(readAssetText());
+            if (root.getInt("schemaVersion") != SUPPORTED_SCHEMA_VERSION) {
+                return Collections.emptyList();
             }
-
-            return Collections.unmodifiableList(
-                    result
-            );
-        } catch (Exception e) {
+            JSONArray entries = root.getJSONArray("packages");
+            List<AIPackageInfo> packages = new ArrayList<>(entries.length());
+            for (int index = 0; index < entries.length(); index++) {
+                packages.add(readPackage(entries.getJSONObject(index)));
+            }
+            return Collections.unmodifiableList(packages);
+        } catch (Exception ignored) {
             return Collections.emptyList();
         }
     }
 
-    private JSONArray readPackagesArray() throws Exception {
-
-        String json =
-                readAssetText();
-
-        String trimmedJson =
-                json.trim();
-
-        if (trimmedJson.startsWith("[")) {
-            return new JSONArray(
-                    trimmedJson
-            );
+    private AIPackageInfo readPackage(JSONObject entry) throws Exception {
+        JSONArray languageArray = entry.getJSONArray("supportedLanguages");
+        List<String> supportedLanguages = new ArrayList<>(languageArray.length());
+        for (int index = 0; index < languageArray.length(); index++) {
+            supportedLanguages.add(languageArray.getString(index));
         }
-
-        JSONObject root =
-                new JSONObject(
-                        trimmedJson
-                );
-
-        return root.getJSONArray(
-                "packages"
-        );
-    }
-
-    private TranslationPackageInfo readPackageInfo(
-            JSONObject jsonObject
-    ) throws Exception {
-
-        return new TranslationPackageInfo(
-                jsonObject.getString(
-                        "packageId"
-                ),
-                jsonObject.getString(
-                        "translationFamily"
-                ),
-                jsonObject.getString(
-                        "displayName"
-                ),
-                jsonObject.optString(
-                        "description",
-                        ""
-                ),
-                jsonObject.getString(
-                        "version"
-                ),
-                jsonObject.optLong(
-                        "sizeBytes",
-                        0L
-                ),
-                jsonObject.optLong(
-                        "requiredSpaceBytes",
-                        0L
-                ),
-                jsonObject.optString(
-                        "downloadUrl",
-                        ""
-                ),
-                jsonObject.optString(
-                        "checksumSha256",
-                        ""
-                ),
-                jsonObject.getString(
-                        "minAppVersion"
-                )
+        return new AIPackageInfo(
+                entry.getString("packageId"),
+                entry.getString("displayNameKey"),
+                entry.getString("descriptionKey"),
+                supportedLanguages,
+                entry.getString("version"),
+                entry.getString("modelVersion"),
+                entry.getLong("downloadSizeBytes"),
+                entry.getLong("installedSizeBytes"),
+                AiPackageType.valueOf(entry.getString("packageType")),
+                AiPackageLifecycleState.NOT_INSTALLED,
+                entry.getString("sha256")
         );
     }
 
     private String readAssetText() throws Exception {
-
-        StringBuilder builder =
-                new StringBuilder();
-
+        StringBuilder builder = new StringBuilder();
         try (
-                InputStream inputStream =
-                        context.getAssets().open(
-                                REPOSITORY_ASSET_PATH
-                        );
-                BufferedReader reader =
-                        new BufferedReader(
-                                new InputStreamReader(
-                                        inputStream,
-                                        "UTF-8"
-                                )
-                        )
+                InputStream inputStream = context.getAssets().open(REPOSITORY_ASSET_PATH);
+                BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(inputStream, "UTF-8")
+                )
         ) {
             String line;
-
-            while (
-                    (line = reader.readLine()) != null
-            ) {
-                builder.append(
-                        line
-                );
-                builder.append(
-                        '\n'
-                );
+            while ((line = reader.readLine()) != null) {
+                builder.append(line).append('\n');
             }
         }
-
         return builder.toString();
     }
 }

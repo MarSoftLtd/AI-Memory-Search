@@ -1,0 +1,94 @@
+{
+    "schemaVersion": 1,
+    "generatedBy": "AIMemorySearch Production AI Package Builder",
+    "generatedAt": "2026-07-13T00:00:00Z",
+    "packages": [
+        {
+            "packageId": "core-translation-germanic-en",
+            "packageType": "TRANSLATION",
+            "displayNameKey": "ai_package_translation_germanic",
+            "descriptionKey": "ai_package_translation_germanic_description",
+            "version": "1.0.0",
+            "modelVersion": "b716e9fb7b2720631174ac1fcee78a93796233f5",
+            "downloadSizeBytes": 64107822,
+            "installedSizeBytes": 77858837,
+            "supportedLanguages": [
+                "de",
+                "nl",
+                "sv",
+                "da",
+                "no",
+                "is"
+            ],
+            "sha256": "eda3967ff2c9255e22395792cab3262fa9c02993a4c2921c84c01b7e9102ca56"
+        },
+        {
+            "packageId": "core-translation-greek-en",
+            "packageType": "TRANSLATION",
+            "displayNameKey": "ai_package_translation_greek",
+            "descriptionKey": "ai_package_translation_greek_description",
+            "version": "1.0.0",
+            "modelVersion": "b6bc9488a1944c681f3afbb94148be0981ddcdd2",
+            "downloadSizeBytes": 51360355,
+            "installedSizeBytes": 59047255,
+            "supportedLanguages": [
+                "el"
+            ],
+            "sha256": "c1abe5a6f70cf8a2baf5d7909cc77f70b8bd4c260458453d926e2b04111c7a87"
+        },
+        {
+            "packageId": "core-translation-romance-en",
+            "packageType": "TRANSLATION",
+            "displayNameKey": "ai_package_translation_romance",
+            "descriptionKey": "ai_package_translation_romance_description",
+            "version": "1.0.0",
+            "modelVersion": "1.0.0",
+            "downloadSizeBytes": 66976420,
+            "installedSizeBytes": 82358850,
+            "supportedLanguages": [
+                "ro",
+                "fr",
+                "es",
+                "it",
+                "pt"
+            ],
+            "sha256": "3bc8441385e749f6aac70d26cf54df706ae0f083d2ef441c6c0147a4fa6c038f"
+        },
+        {
+            "packageId": "core-translation-slavic-en",
+            "packageType": "TRANSLATION",
+            "displayNameKey": "ai_package_translation_slavic",
+            "descriptionKey": "ai_package_translation_slavic_description",
+            "version": "1.0.0",
+            "modelVersion": "b112ef1fec998f5c96c9e8b01c105933249ca29f",
+            "downloadSizeBytes": 221699773,
+            "installedSizeBytes": 246697915,
+            "supportedLanguages": [
+                "ru",
+                "uk",
+                "pl",
+                "cs",
+                "sk",
+                "bg",
+                "sr",
+                "hr",
+                "sl"
+            ],
+            "sha256": "269dabf1bb61f925cbf1536606458029c9357501bec1d8d012f1def7176b0599"
+        },
+        {
+            "packageId": "core-translation-turkish-en",
+            "packageType": "TRANSLATION",
+            "displayNameKey": "ai_package_translation_turkish",
+            "descriptionKey": "ai_package_translation_turkish_description",
+            "version": "1.0.0",
+            "modelVersion": "19c65427cc2af5f191337d4899e0348c4af25902",
+            "downloadSizeBytes": 69582754,
+            "installedSizeBytes": 81171534,
+            "supportedLanguages": [
+                "tr"
+            ],
+            "sha256": "55bcaecca64b3def2d192df02fba05055f0bb6d1a769dcd7e411d699dacf13cd"
+        }
+    ]
+}

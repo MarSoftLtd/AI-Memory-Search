@@ -77,8 +77,9 @@ def manifestFieldOrder = [
         "compressedSize",
         "uncompressedSize"
 ]
+def repositoryPropertyNames = ["displayNameKey", "descriptionKey"] as Set
 def packagePropertyNames =
-        (["archiveBaseName"] + manifestPropertyNames) as Set
+        (["archiveBaseName"] + manifestPropertyNames + repositoryPropertyNames) as Set
 
 def hex = { byte[] digest ->
     digest.collect { String.format("%02x", it & 0xff) }.join()
@@ -192,7 +193,11 @@ def loadPackageDefinition = { File sourceDirectory ->
                     packageOutputDirectory,
                     "${outputBaseName}.aipackage.sha256"
             ),
-            manifestValues      : manifestValues
+            manifestValues      : manifestValues,
+            repositoryValues    : [
+                    displayNameKey: properties.getProperty("displayNameKey").trim(),
+                    descriptionKey: properties.getProperty("descriptionKey").trim()
+            ]
     ]
 }
 
@@ -715,6 +720,64 @@ def configurePackageTaskInputs = { Task task ->
     )
 }
 
+def repositoryOutputFile = file(
+        "${rootDir}/app/src/main/assets/translation_packages/repository.json"
+)
+
+def generateMetadataRepository = { List<Map> definitions, String generatedAt ->
+    Set<String> packageIds = new HashSet<>()
+    List<Map<String, Object>> packages = definitions.collect { Map definition ->
+        if (!definition.packageFile.isFile()) {
+            throw new GradleException(
+                    "Built AI package is missing: ${definition.packageFile}"
+            )
+        }
+        String packageId = definition.manifestValues.packageId
+        if (!packageIds.add(packageId)) {
+            throw new GradleException("Duplicate packageId: ${packageId}")
+        }
+        long installedSizeBytes = 0L
+        definition.payloadDirectory.eachFile { File payloadFile ->
+            if (payloadFile.isFile()) {
+                installedSizeBytes += payloadFile.length()
+            }
+        }
+        [
+                packageId          : packageId,
+                packageType        : definition.manifestValues.packageType,
+                displayNameKey     : definition.repositoryValues.displayNameKey,
+                descriptionKey     : definition.repositoryValues.descriptionKey,
+                version            : definition.manifestValues.version,
+                modelVersion       : definition.manifestValues.modelVersion,
+                downloadSizeBytes  : definition.packageFile.length(),
+                installedSizeBytes : installedSizeBytes,
+                supportedLanguages : definition.manifestValues.supportedLanguages,
+                sha256             : sha256File(definition.packageFile)
+        ] as LinkedHashMap<String, Object>
+    }
+    LinkedHashMap<String, Object> repository = [
+            schemaVersion: 1,
+            generatedBy  : "AIMemorySearch Production AI Package Builder",
+            generatedAt  : generatedAt,
+            packages     : packages
+    ]
+    repositoryOutputFile.parentFile.mkdirs()
+    repositoryOutputFile.bytes = normalizedJsonBytes(repository)
+}
+
+tasks.register("generateAiPackageRepository") {
+    group = "AI package"
+    description = "Generates the runtime AI package metadata repository."
+    dependsOn("buildAllAiPackages")
+    configurePackageTaskInputs(delegate as Task)
+    outputs.file(repositoryOutputFile)
+
+    doLast {
+        Map date = sourceDate()
+        generateMetadataRepository(discoverPackageDefinitions(), date.buildDate)
+    }
+}
+
 tasks.register("buildAiPackage") {
     group = "AI package"
     description = "Builds one discovered production AI package."
@@ -761,6 +824,10 @@ tasks.register("buildAllAiPackages") {
             buildPackage(definition, temporaryDir, date)
         }
     }
+}
+
+tasks.named("buildAllAiPackages") {
+    finalizedBy("generateAiPackageRepository")
 }
 
 tasks.register("validateAllAiPackages") {

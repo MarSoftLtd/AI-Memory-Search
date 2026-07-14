@@ -14,6 +14,7 @@ public final class LanguagePackageRouter {
     private final TranslationPackageValidator packageValidator;
     private final LanguagePackageBootstrapper bootstrapper;
     private final AiPackageLifecycleManager lifecycleManager;
+    private final TranslationPackageManager translationPackageManager;
 
     public LanguagePackageRouter(
             Context context
@@ -46,6 +47,8 @@ public final class LanguagePackageRouter {
                         applicationContext,
                         packageRepository
                 );
+        translationPackageManager =
+                TranslationPackageManager.getInstance(applicationContext);
     }
 
     public int restoreInstalledPackages() {
@@ -95,6 +98,17 @@ public final class LanguagePackageRouter {
             String family
     ) {
         return getInstalledPackage(family) != null;
+    }
+
+    public String getRequiredPackageId(String family) {
+        TranslationModelInfo modelInfo =
+                TranslationModelRegistry.getModelByFamily(family);
+        if (modelInfo == null) {
+            return null;
+        }
+        com.bliss.aimemorysearch.ai.model.AIPackageInfo metadata =
+                translationPackageManager.getMetadata(modelInfo.getId());
+        return metadata == null ? null : metadata.getPackageId();
     }
 
     public boolean activateInstalledPackage(
