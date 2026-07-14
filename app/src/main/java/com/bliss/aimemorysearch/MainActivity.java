@@ -91,6 +91,8 @@ public class MainActivity extends AppCompatActivity {
     private String selectedLanguageFamily = "";
     private boolean languagePackagePromptVisible = false;
     private com.bliss.aimemorysearch.ui.AIPackageDialog aiPackageDialog;
+    private com.bliss.aimemorysearch.ai.AiPackageDownloadManager aiPackageDownloadManager;
+    private com.bliss.aimemorysearch.ai.model.AIPackageInfo activeAiPackageInfo;
     private com.bliss.aimemorysearch.ai.TranslationPackageManager
             translationPackageManager;
     @Override
@@ -139,6 +141,8 @@ public class MainActivity extends AppCompatActivity {
                 new com.bliss.aimemorysearch.ui.AIPackageDialog(
                         findViewById(R.id.aiPackageCard)
                 );
+        aiPackageDownloadManager =
+                new com.bliss.aimemorysearch.ai.AiPackageDownloadManager(this);
         translationPackageManager =
                 com.bliss.aimemorysearch.ai.TranslationPackageManager
                         .getInstance(this);
@@ -839,9 +843,92 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         languagePackagePromptVisible = true;
+        activeAiPackageInfo = metadata;
         aiPackageDialog.bind(metadata);
         aiPackageDialog.showReadyState();
+        configureAiPackageReadyActions();
         aiPackageDialog.show();
+    }
+
+    private void configureAiPackageReadyActions() {
+        aiPackageDialog.setPrimaryActionListener(v -> startAiPackageDownload());
+        aiPackageDialog.setSecondaryActionListener(v -> closeAiPackageDialog());
+    }
+
+    private void startAiPackageDownload() {
+        if (activeAiPackageInfo == null) {
+            return;
+        }
+        aiPackageDialog.setPrimaryActionListener(v -> aiPackageDownloadManager.cancel());
+        aiPackageDialog.setSecondaryActionListener(null);
+        aiPackageDownloadManager.start(
+                activeAiPackageInfo,
+                this::handleAiPackageDownloadEvent
+        );
+    }
+
+    private void handleAiPackageDownloadEvent(
+            com.bliss.aimemorysearch.ai.AiPackageDownloadManager.DownloadEvent event
+    ) {
+        switch (event.getEvent()) {
+            case STARTED:
+                aiPackageDialog.showDownloadingState(
+                        0,
+                        0L,
+                        event.getTotalBytes()
+                );
+                break;
+            case PROGRESS:
+                long totalBytes = event.getTotalBytes();
+                int progress = totalBytes > 0L
+                        ? (int) Math.min(100L, event.getDownloadedBytes() * 100L / totalBytes)
+                        : 0;
+                aiPackageDialog.showDownloadingState(
+                        progress,
+                        event.getDownloadedBytes(),
+                        totalBytes
+                );
+                break;
+            case COMPLETED:
+                aiPackageDialog.showDownloadCompletedState();
+                aiPackageDialog.setPrimaryActionListener(v -> closeAiPackageDialog());
+                break;
+            case CANCELLED:
+                aiPackageDialog.showReadyState();
+                configureAiPackageReadyActions();
+                break;
+            case FAILED:
+                aiPackageDialog.showDownloadErrorState(
+                        getString(downloadFailureMessage(event.getFailureReason()))
+                );
+                aiPackageDialog.setPrimaryActionListener(v -> closeAiPackageDialog());
+                break;
+        }
+    }
+
+    private int downloadFailureMessage(
+            com.bliss.aimemorysearch.ai.AiPackageDownloadManager.FailureReason reason
+    ) {
+        if (reason == null) {
+            return R.string.ai_package_network_error;
+        }
+        switch (reason) {
+            case NOT_AVAILABLE:
+                return R.string.ai_package_not_available;
+            case HTTP:
+                return R.string.ai_package_http_error;
+            case STORAGE:
+                return R.string.ai_package_storage_error;
+            case NETWORK:
+            default:
+                return R.string.ai_package_network_error;
+        }
+    }
+
+    private void closeAiPackageDialog() {
+        aiPackageDialog.hide();
+        languagePackagePromptVisible = false;
+        activeAiPackageInfo = null;
     }
 
     private void markInitialLanguagePromptShown(
@@ -1692,6 +1779,14 @@ public class MainActivity extends AppCompatActivity {
 
             showPermissionCard();
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (aiPackageDownloadManager != null) {
+            aiPackageDownloadManager.close();
+        }
+        super.onDestroy();
     }
 
 }

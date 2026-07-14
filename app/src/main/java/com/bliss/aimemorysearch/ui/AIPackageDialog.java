@@ -34,6 +34,7 @@ public final class AIPackageDialog {
     private final TextView errorText;
     private final MaterialButton primaryButton;
     private final TextView secondaryButton;
+    private boolean closingEnabled = true;
 
     public AIPackageDialog(View root) {
         if (root == null) {
@@ -67,6 +68,9 @@ public final class AIPackageDialog {
     }
 
     public void hide() {
+        if (!closingEnabled) {
+            return;
+        }
         root.setVisibility(View.GONE);
         root.setAlpha(0f);
     }
@@ -90,14 +94,16 @@ public final class AIPackageDialog {
     }
 
     public void showReadyState() {
+        closingEnabled = true;
         applyState(R.string.ai_package_ready, false, false, true, true,
                 R.string.ai_package_download, R.string.ai_package_later);
     }
 
     public void showDownloadingState(int progress, long downloadedBytes, long totalBytes) {
+        closingEnabled = false;
         int boundedProgress = Math.max(0, Math.min(100, progress));
-        applyState(R.string.ai_package_downloading, true, false, false, true,
-                0, R.string.ai_package_cancel);
+        applyState(R.string.ai_package_downloading, true, false, true, false,
+                R.string.ai_package_cancel, 0);
         progressStatusText.setText(R.string.ai_package_downloading_status);
         progressBar.setIndeterminate(false);
         progressBar.setProgressCompat(boundedProgress, true);
@@ -127,14 +133,37 @@ public final class AIPackageDialog {
     }
 
     public void showInstalledState() {
+        closingEnabled = true;
         applyState(R.string.ai_package_installed, false, false, true, true,
                 R.string.ai_package_done, R.string.ai_package_close);
     }
 
     public void showErrorState(String message) {
+        closingEnabled = true;
         applyState(R.string.ai_package_error, false, true, true, true,
                 R.string.ai_package_retry, R.string.ai_package_close);
         errorText.setText(message);
+    }
+
+    public void showDownloadCompletedState() {
+        closingEnabled = true;
+        applyState(R.string.ai_package_download_completed, false, false, true, false,
+                R.string.ai_package_close, 0);
+    }
+
+    public void showDownloadErrorState(String message) {
+        closingEnabled = true;
+        applyState(R.string.ai_package_error, false, true, true, false,
+                R.string.ai_package_close, 0);
+        errorText.setText(message);
+    }
+
+    public void setPrimaryActionListener(View.OnClickListener listener) {
+        primaryButton.setOnClickListener(listener);
+    }
+
+    public void setSecondaryActionListener(View.OnClickListener listener) {
+        secondaryButton.setOnClickListener(listener);
     }
 
     private void bindState(AiPackageLifecycleState state) {
