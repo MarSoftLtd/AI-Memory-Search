@@ -113,6 +113,11 @@
     <string name="ai_package_http_error">The package server returned an error.</string>
     <string name="ai_package_storage_error">The temporary download file could not be created.</string>
     <string name="ai_package_checksum_error">The downloaded package could not be verified.</string>
+    <string name="ai_package_manifest_error">The package manifest is invalid.</string>
+    <string name="ai_package_format_error">This package format is not supported.</string>
+    <string name="ai_package_contents_error">The package is missing required files.</string>
+    <string name="ai_package_installation_error">The package could not be installed.</string>
+    <string name="ai_package_activation_error">The package was installed but could not be activated.</string>
     <string name="ai_package_progress_bytes">%1$s / %2$s</string>
     <string name="ai_package_progress_percent">%1$d%%</string>
     <string name="ai_package_list_separator">,\u0020</string>

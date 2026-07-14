@@ -329,6 +329,53 @@ public final class AiPackageLifecycleManager {
         );
     }
 
+    public AiPackageLifecycleResult activateInstalledTranslationPackage(
+            TranslationModelId modelId,
+            TranslationPackage translationPackage,
+            AiPackageInfo packageInfo
+    ) {
+        if (modelId == null
+                || translationPackage == null
+                || !translationPackage.isInstalled()
+                || packageInfo == null
+                || packageInfo.getPackageType() != AiPackageType.TRANSLATION) {
+            return AiPackageLifecycleResult.failure(
+                    AiPackageLifecycleState.FAILED,
+                    AiCapability.TRANSLATION,
+                    packageInfo,
+                    "ACTIVATION_INVALID",
+                    "Installed translation package is invalid",
+                    null
+            );
+        }
+
+        try {
+            packageManager.registerInstalledPackage(packageInfo);
+            packageManager.activatePackage(AiCapability.TRANSLATION, packageInfo);
+            new TranslationRuntimeLoader(
+                    runtimeManager,
+                    TranslatorSessionManager.getInstance()
+            ).loadRuntime(modelId, translationPackage);
+            return AiPackageLifecycleResult.success(
+                    AiPackageLifecycleState.ACTIVE,
+                    AiCapability.TRANSLATION,
+                    packageInfo,
+                    "Translation package activated"
+            );
+        } catch (Exception failure) {
+            runtimeManager.unloadRuntime(AiCapability.TRANSLATION);
+            packageManager.unregisterInstalledPackage(packageInfo);
+            return AiPackageLifecycleResult.failure(
+                    AiPackageLifecycleState.FAILED,
+                    AiCapability.TRANSLATION,
+                    packageInfo,
+                    "ACTIVATION_FAILED",
+                    "Translation package activation failed",
+                    failure
+            );
+        }
+    }
+
     public AiPackageLifecycleResult activateCapability(
             AiCapability capability,
             AiPackageInfo packageInfo

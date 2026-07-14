@@ -15,6 +15,7 @@ public final class TranslationPackageManager {
     private final TranslationPackageManifestReader manifestReader;
     private final TranslationPackageValidator packageValidator;
     private final AssetsTranslationPackageRepository metadataRepository;
+    private final AiPackageLifecycleManager lifecycleManager;
 
     private TranslationPackageManager(
             Context context
@@ -36,6 +37,10 @@ public final class TranslationPackageManager {
                 new TranslationPackageValidator();
         metadataRepository =
                 new AssetsTranslationPackageRepository(applicationContext);
+        lifecycleManager = AiPlatform.createPackageLifecycleManager(
+                applicationContext,
+                null
+        );
     }
 
     public static synchronized TranslationPackageManager getInstance(
@@ -131,6 +136,90 @@ public final class TranslationPackageManager {
             }
         }
         return false;
+    }
+
+    public AiPackageLifecycleResult activateInstalledPackage(
+            com.bliss.aimemorysearch.ai.model.AIPackageInfo metadata,
+            File installedDirectory
+    ) {
+        if (metadata == null
+                || metadata.getPackageType() != AiPackageType.TRANSLATION
+                || installedDirectory == null) {
+            return activationFailure("Installed package metadata is invalid", null);
+        }
+
+        TranslationPackageLayout layout = new TranslationPackageLayout(installedDirectory);
+        if (!packageValidator.isValid(layout)) {
+            return activationFailure("Installed package contents are invalid", null);
+        }
+
+        try {
+            TranslationPackageManifest manifest = manifestReader.read(layout);
+            if (!metadata.getPackageId().equals(manifest.getPackageId())
+                    || !metadata.getVersion().equals(manifest.getVersion())) {
+                return activationFailure("Installed package manifest does not match metadata", null);
+            }
+
+            TranslationModelId modelId = findModelId(metadata);
+            if (modelId == null) {
+                return activationFailure("No translation runtime matches the package", null);
+            }
+
+            AiPackageInfo runtimePackageInfo = new AiPackageInfo(
+                    manifest.getPackageId(),
+                    AiPackageType.TRANSLATION,
+                    manifest.getFamily(),
+                    manifest.getDisplayName(),
+                    "",
+                    manifest.getVersion(),
+                    0L,
+                    0L,
+                    "",
+                    metadata.getSha256(),
+                    manifest.getMinimumAppVersion()
+            );
+            TranslationPackage translationPackage = new TranslationPackage(
+                    modelId,
+                    installedDirectory,
+                    manifest,
+                    true
+            );
+            return lifecycleManager.activateInstalledTranslationPackage(
+                    modelId,
+                    translationPackage,
+                    runtimePackageInfo
+            );
+        } catch (Exception failure) {
+            return activationFailure("Installed package activation failed", failure);
+        }
+    }
+
+    private static TranslationModelId findModelId(
+            com.bliss.aimemorysearch.ai.model.AIPackageInfo metadata
+    ) {
+        HashSet<String> packageLanguages = new HashSet<>(metadata.getSupportedLanguages());
+        for (TranslationModelId modelId : TranslationModelId.values()) {
+            if (packageLanguages.equals(new HashSet<>(
+                    TranslationModelRegistry.getModel(modelId).getSupportedLanguages()
+            ))) {
+                return modelId;
+            }
+        }
+        return null;
+    }
+
+    private static AiPackageLifecycleResult activationFailure(
+            String message,
+            Throwable error
+    ) {
+        return AiPackageLifecycleResult.failure(
+                AiPackageLifecycleState.FAILED,
+                AiCapability.TRANSLATION,
+                null,
+                "ACTIVATION_FAILED",
+                message,
+                error
+        );
     }
 
     private File getPackageDirectory(

@@ -92,6 +92,7 @@ public class MainActivity extends AppCompatActivity {
     private boolean languagePackagePromptVisible = false;
     private com.bliss.aimemorysearch.ui.AIPackageDialog aiPackageDialog;
     private com.bliss.aimemorysearch.ai.AiPackageDownloadManager aiPackageDownloadManager;
+    private com.bliss.aimemorysearch.ai.AtomicAiPackageInstaller aiPackageInstaller;
     private com.bliss.aimemorysearch.ai.model.AIPackageInfo activeAiPackageInfo;
     private com.bliss.aimemorysearch.ai.TranslationPackageManager
             translationPackageManager;
@@ -143,6 +144,7 @@ public class MainActivity extends AppCompatActivity {
                 );
         aiPackageDownloadManager =
                 new com.bliss.aimemorysearch.ai.AiPackageDownloadManager(this);
+        aiPackageInstaller = new com.bliss.aimemorysearch.ai.AtomicAiPackageInstaller(this);
         translationPackageManager =
                 com.bliss.aimemorysearch.ai.TranslationPackageManager
                         .getInstance(this);
@@ -896,8 +898,7 @@ public class MainActivity extends AppCompatActivity {
                 );
                 break;
             case COMPLETED:
-                aiPackageDialog.showDownloadCompletedState();
-                aiPackageDialog.setPrimaryActionListener(v -> closeAiPackageDialog());
+                installVerifiedAiPackage(event.getTemporaryFile());
                 break;
             case CANCELLED:
                 aiPackageDialog.showReadyState();
@@ -910,6 +911,72 @@ public class MainActivity extends AppCompatActivity {
                 aiPackageDialog.setPrimaryActionListener(v -> closeAiPackageDialog());
                 break;
         }
+    }
+
+    private void installVerifiedAiPackage(File packageFile) {
+        com.bliss.aimemorysearch.ai.model.AIPackageInfo packageInfo = activeAiPackageInfo;
+        if (packageInfo == null || packageFile == null) {
+            showAiPackageInstallationError(
+                    com.bliss.aimemorysearch.ai.AtomicAiPackageInstaller.FailureReason.INVALID_PACKAGE
+            );
+            return;
+        }
+        aiPackageDialog.showInstallingState();
+        aiPackageDialog.setSecondaryActionListener(null);
+        new Thread(() -> {
+            com.bliss.aimemorysearch.ai.AtomicAiPackageInstaller.Result result =
+                    aiPackageInstaller.install(packageInfo, packageFile);
+            com.bliss.aimemorysearch.ai.AiPackageLifecycleResult activationResult =
+                    result.isSuccess()
+                            ? translationPackageManager.activateInstalledPackage(
+                                    packageInfo,
+                                    result.getInstalledDirectory()
+                            )
+                            : null;
+            uiHandler.post(() -> {
+                if (result.isSuccess()
+                        && activationResult != null
+                        && activationResult.isSuccess()) {
+                    aiPackageDialog.showInstalledState();
+                    aiPackageDialog.setPrimaryActionListener(v -> closeAiPackageDialog());
+                } else if (result.isSuccess()) {
+                    aiPackageDialog.showDownloadErrorState(
+                            getString(R.string.ai_package_activation_error)
+                    );
+                    aiPackageDialog.setPrimaryActionListener(v -> closeAiPackageDialog());
+                } else {
+                    showAiPackageInstallationError(result.getFailureReason());
+                }
+            });
+        }).start();
+    }
+
+    private void showAiPackageInstallationError(
+            com.bliss.aimemorysearch.ai.AtomicAiPackageInstaller.FailureReason reason
+    ) {
+        int messageResId;
+        if (reason == null) {
+            messageResId = R.string.ai_package_installation_error;
+        } else {
+            switch (reason) {
+                case INVALID_MANIFEST:
+                    messageResId = R.string.ai_package_manifest_error;
+                    break;
+                case UNSUPPORTED_FORMAT:
+                    messageResId = R.string.ai_package_format_error;
+                    break;
+                case INVALID_CONTENTS:
+                    messageResId = R.string.ai_package_contents_error;
+                    break;
+                case INVALID_PACKAGE:
+                case INSTALLATION:
+                default:
+                    messageResId = R.string.ai_package_installation_error;
+                    break;
+            }
+        }
+        aiPackageDialog.showDownloadErrorState(getString(messageResId));
+        aiPackageDialog.setPrimaryActionListener(v -> closeAiPackageDialog());
     }
 
     private int downloadFailureMessage(
