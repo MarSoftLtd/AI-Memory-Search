@@ -938,7 +938,8 @@ public class MainActivity extends AppCompatActivity {
                         && activationResult != null
                         && activationResult.isSuccess()) {
                     aiPackageDialog.showInstalledState();
-                    aiPackageDialog.setPrimaryActionListener(v -> closeAiPackageDialog());
+                    closeAiPackageDialog();
+                    resumePendingSearch();
                 } else if (result.isSuccess()) {
                     aiPackageDialog.showDownloadErrorState(
                             getString(R.string.ai_package_activation_error)
