@@ -82,5 +82,4 @@ dependencies {
     implementation 'com.github.ybq:Android-SpinKit:1.4.0'
     implementation 'com.google.mlkit:language-id:17.0.6'
     implementation 'com.google.mlkit:translate:17.0.3'
-    implementation 'ai.djl.huggingface:tokenizers:0.36.0'
 }
