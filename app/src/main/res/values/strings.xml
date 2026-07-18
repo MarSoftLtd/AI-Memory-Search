@@ -106,6 +106,8 @@
     <string name="ai_package_downloading_status">Downloading package…</string>
     <string name="ai_package_verifying_status">Verifying package…</string>
     <string name="ai_package_installing_status">Installing package…</string>
+    <string name="ai_package_reconciling_status">Updating multilingual search…</string>
+    <string name="ai_package_reconciliation_error">The package is installed, but multilingual search could not be updated.</string>
     <string name="ai_package_error_default">The package operation failed.</string>
     <string name="ai_package_download_completed">Download completed</string>
     <string name="ai_package_not_available">Package is not available yet.</string>
@@ -150,4 +152,5 @@
     <string name="ai_package_model_clip_vision_description">Offline visual embeddings for image search.</string>
     <string name="ai_package_bundle_ai_search">AI Search</string>
     <string name="ai_package_bundle_ai_search_description">AI Search requires additional AI models.</string>
+    <string name="multilingual_collection_package_missing">%1$d %2$s files cannot yet participate in multilingual search. Install the required language package.</string>
 </resources>

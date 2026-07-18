@@ -60,9 +60,18 @@ import java.util.HashSet;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import com.bliss.aimemorysearch.ai.ImageEmbeddingEngine;
+import com.bliss.aimemorysearch.ai.canonical.CanonicalIndexingPipeline;
+import com.bliss.aimemorysearch.indexing.FileIndexingPolicy;
 public class IndexWorker extends Worker {
+    public static final String UNIQUE_WORK_NAME = "ai_memory_index_worker_debug";
     public static final String KEY_FILE_PATH = "file_path";
     public static final String KEY_MAINTENANCE = "maintenance";
+    public static final String KEY_RECONCILIATION_FAMILY = "reconciliation_family";
+    private static final int CANONICAL_RECONCILIATION_BATCH_SIZE = 64;
+    private static final String AI_PACKAGE_STAGE_DIRECTORY =
+            "aimemory-package-stage";
+    private static final FileIndexingPolicy FILE_INDEXING_POLICY =
+            new FileIndexingPolicy();
 
     private AppDatabase database;
     private SharedPreferences prefs;
@@ -83,6 +92,7 @@ public class IndexWorker extends Worker {
     private int processedFiles = 0;
     private int failedFiles = 0;
     private String currentStage = "Preparing...";
+    private CanonicalIndexingPipeline canonicalIndexingPipeline;
     public IndexWorker(
             @NonNull Context context,
             @NonNull WorkerParameters workerParams
@@ -105,6 +115,31 @@ public class IndexWorker extends Worker {
         if (getInputData().getBoolean(KEY_MAINTENANCE, false)) {
             repairLegacyIndexRows();
             return Result.success();
+        }
+
+        try {
+            canonicalIndexingPipeline =
+                    new CanonicalIndexingPipeline(
+                            getApplicationContext()
+                    );
+        } catch (Exception e) {
+            android.util.Log.e(
+                    "CANONICAL_INDEX",
+                    "Canonical indexing infrastructure initialization failed",
+                    e
+            );
+            return Result.failure();
+        }
+
+        String reconciliationFamily =
+                getInputData().getString(KEY_RECONCILIATION_FAMILY);
+        if (reconciliationFamily != null
+                && !reconciliationFamily.trim().isEmpty()) {
+            return reconcileCanonicalFamily(reconciliationFamily);
+        }
+
+        if (cancellationRequested()) {
+            return finishCancelledIndexing();
         }
 
         PDFBoxResourceLoader.init(
@@ -130,6 +165,9 @@ public class IndexWorker extends Worker {
                 .initialize(
                         getApplicationContext()
                 );
+        if (cancellationRequested()) {
+            return finishCancelledIndexing();
+        }
         sessionId =
                 UUID.randomUUID().toString();
 
@@ -147,6 +185,15 @@ public class IndexWorker extends Worker {
             totalFilesToIndex = 1;
             processedFiles = 0;
             processSingleFile(incrementalFile);
+
+            if (cancellationRequested()) {
+                return finishCancelledIndexing();
+            }
+
+            if (!closeCanonicalIndexingPipeline()
+                    || failedFiles != 0) {
+                return Result.failure();
+            }
 
             return Result.success();
         }
@@ -170,6 +217,10 @@ public class IndexWorker extends Worker {
                 rootFolder
         );
 
+        if (cancellationRequested()) {
+            return finishCancelledIndexing();
+        }
+
         sendIndexProgress(
                 "Filesystem scan completed",
                 totalFilesToIndex
@@ -185,6 +236,9 @@ public class IndexWorker extends Worker {
         scanFolderRecursive(
                 rootFolder
         );
+        if (cancellationRequested()) {
+            return finishCancelledIndexing();
+        }
         boolean completedSuccessfully = failedFiles == 0;
         prefs.edit()
                 .putLong(
@@ -220,6 +274,10 @@ public class IndexWorker extends Worker {
                         .build()
         );
 
+        completedSuccessfully =
+                closeCanonicalIndexingPipeline()
+                        && completedSuccessfully;
+
         return completedSuccessfully
                 ? Result.success()
                 : Result.failure(
@@ -230,6 +288,10 @@ public class IndexWorker extends Worker {
         
     }
     private void scanPdfFiles() {
+
+        if (cancellationRequested()) {
+            return;
+        }
 
         String[] projection = {
                 MediaStore.Files.FileColumns.DATA,
@@ -271,6 +333,10 @@ public class IndexWorker extends Worker {
                 );
 
         while (cursor.moveToNext()) {
+
+            if (cancellationRequested()) {
+                break;
+            }
 
             String path =
                     cursor.getString(pathColumn);
@@ -608,9 +674,12 @@ public class IndexWorker extends Worker {
     ) {
 
         if (
-                folder == null
+                cancellationRequested()
+                        || folder == null
                         ||
                         !folder.exists()
+                        ||
+                        isExcludedAiPackagePath(folder)
         ) {
             return;
         }
@@ -623,6 +692,10 @@ public class IndexWorker extends Worker {
         }
 
         for (File file : files) {
+
+            if (cancellationRequested()) {
+                return;
+            }
 
             try {
 
@@ -685,6 +758,8 @@ public class IndexWorker extends Worker {
 
                 if (
                         lower.endsWith(".txt")
+                                || lower.endsWith(".html")
+                                || lower.endsWith(".htm")
                                 ||
                                 lower.endsWith(".csv")
                                 ||
@@ -722,7 +797,26 @@ public class IndexWorker extends Worker {
     private void processSingleFile(
             File file
     ) {
-        if (file == null || !file.isFile()) {
+        if (cancellationRequested() || file == null) {
+            return;
+        }
+        if (isExcludedAiPackagePath(file)) {
+            return;
+        }
+        if (!file.isFile()) {
+            String deletedPath = file.getAbsolutePath();
+            database.runInTransaction(() -> {
+                database.tokenIndexDao().deleteByFilePath(deletedPath);
+                database.chunkDao().deleteByFilePath(deletedPath);
+                database.fileDao().deleteByPath(deletedPath);
+            });
+            try {
+                canonicalIndexingPipeline.deleteFile(deletedPath);
+            } catch (Exception e) {
+                failedFiles++;
+                android.util.Log.e("CANONICAL_INDEX",
+                        "Unable to remove deleted file evidence", e);
+            }
             return;
         }
 
@@ -749,6 +843,8 @@ public class IndexWorker extends Worker {
 
         if (
                 lower.endsWith(".txt")
+                        || lower.endsWith(".html")
+                        || lower.endsWith(".htm")
                         || lower.endsWith(".csv")
                         || lower.endsWith(".json")
                         || lower.endsWith(".xml")
@@ -770,9 +866,12 @@ public class IndexWorker extends Worker {
     ) {
 
         if (
-                folder == null
+                cancellationRequested()
+                        || folder == null
                         ||
                         !folder.exists()
+                        ||
+                        isExcludedAiPackagePath(folder)
         ) {
             return;
         }
@@ -785,6 +884,10 @@ public class IndexWorker extends Worker {
         }
 
         for (File file : files) {
+
+            if (cancellationRequested()) {
+                return;
+            }
 
             try {
 
@@ -811,6 +914,8 @@ public class IndexWorker extends Worker {
                                 lower.endsWith(".pdf")
                                 ||
                                 lower.endsWith(".txt")
+                                || lower.endsWith(".html")
+                                || lower.endsWith(".htm")
                                 ||
                                 lower.endsWith(".csv")
                                 ||
@@ -832,6 +937,13 @@ public class IndexWorker extends Worker {
             File file
     ) {
 
+        if (cancellationRequested()) {
+            return;
+        }
+        if (skipByFileIndexingPolicy(file)) {
+            processedFiles++;
+            return;
+        }
         try {
 
             String path = file.getAbsolutePath();
@@ -851,6 +963,8 @@ public class IndexWorker extends Worker {
 
                 if (unchanged) {
 
+                    ensureCanonicalIndexed(path);
+
                     processedFiles++;
 
                     sendIndexProgress(
@@ -864,6 +978,10 @@ public class IndexWorker extends Worker {
 
             String text =
                     DocumentTextExtractor.extractText(file);
+
+            if (cancellationRequested()) {
+                return;
+            }
 
             if (text == null) {
                 text = "";
@@ -883,6 +1001,10 @@ public class IndexWorker extends Worker {
                             .createDefault()
                             .getEmbeddingRuntime()
                             .generateEmbedding(combinedText);
+
+            if (cancellationRequested()) {
+                return;
+            }
 
             byte[] embeddingBytes =
                     EmbeddingUtils
@@ -926,11 +1048,36 @@ public class IndexWorker extends Worker {
                             embeddingBytes
                     );
 
-            replaceFileIndex(
+            List<ChunkEntity> documentChunks = new ArrayList<>();
+            int documentChunkIndex = 0;
+            for (String chunk : TextChunker.chunkText(text)) {
+                if (cancellationRequested()) return;
+                if (chunk == null || chunk.trim().length() < 5) continue;
+                ChunkEntity chunkEntity = new ChunkEntity();
+                chunkEntity.parentFileId = 0;
+                chunkEntity.filePath = path;
+                chunkEntity.fileName = name;
+                chunkEntity.chunkText = chunk.trim();
+                chunkEntity.normalizedText = normalizeForSearch(chunkEntity.chunkText);
+                chunkEntity.chunkIndex = documentChunkIndex;
+                chunkEntity.indexedAt = System.currentTimeMillis();
+                if (documentChunkIndex % 3 == 0) {
+                    float[] chunkEmbedding = DocumentRuntimeLoader.createDefault()
+                            .getEmbeddingRuntime().generateEmbedding(chunkEntity.chunkText);
+                    if (chunkEmbedding != null) {
+                        chunkEntity.embedding = EmbeddingUtils.floatArrayToBytes(chunkEmbedding);
+                    }
+                }
+                documentChunks.add(chunkEntity);
+                documentChunkIndex++;
+            }
+
+            replaceFileIndex(path, entity, documentChunks, false);
+            if (cancellationRequested()) return;
+            canonicalIndexingPipeline.index(
                     path,
-                    entity,
-                    new ArrayList<>(),
-                    false
+                    documentChunks,
+                    this::cancellationRequested
             );
 
             newFilesIndexed++;
@@ -948,6 +1095,10 @@ public class IndexWorker extends Worker {
             );
 
         } catch (Exception e) {
+
+            if (cancellationRequested()) {
+                return;
+            }
 
             processedFiles++;
             failedFiles++;
@@ -969,6 +1120,13 @@ public class IndexWorker extends Worker {
             File imageFile
     ) {
 
+        if (cancellationRequested()) {
+            return;
+        }
+        if (skipByFileIndexingPolicy(imageFile)) {
+            processedFiles++;
+            return;
+        }
         try {
 
             String path = imageFile.getAbsolutePath();
@@ -988,6 +1146,8 @@ public class IndexWorker extends Worker {
 
                 if (unchanged) {
 
+                    ensureCanonicalIndexed(path);
+
                     processedFiles++;
 
                     sendIndexProgress(
@@ -1001,6 +1161,10 @@ public class IndexWorker extends Worker {
 
             String ocrText =
                     runOcrBlocking(path);
+
+            if (cancellationRequested()) {
+                return;
+            }
 
             if (
                     ocrText != null
@@ -1049,6 +1213,10 @@ public class IndexWorker extends Worker {
                             .createDefault()
                             .getEmbeddingRuntime()
                             .generateEmbedding(combinedText);
+
+            if (cancellationRequested()) {
+                return;
+            }
 
             byte[] embeddingBytes =
                     EmbeddingUtils
@@ -1167,6 +1335,10 @@ public class IndexWorker extends Worker {
 
             for (String chunk : imageChunks) {
 
+                if (cancellationRequested()) {
+                    return;
+                }
+
                 if (
                         chunk == null
                                 ||
@@ -1203,6 +1375,12 @@ public class IndexWorker extends Worker {
                     imageChunkEntities,
                     false
             );
+            if (cancellationRequested()) return;
+            canonicalIndexingPipeline.index(
+                    path,
+                    imageChunkEntities,
+                    this::cancellationRequested
+            );
 
             newFilesIndexed++;
             processedFiles++;
@@ -1233,6 +1411,10 @@ public class IndexWorker extends Worker {
 
         } catch (Exception e) {
 
+            if (cancellationRequested()) {
+                return;
+            }
+
             processedFiles++;
             failedFiles++;
 
@@ -1253,6 +1435,13 @@ public class IndexWorker extends Worker {
             File file
     ) {
 
+        if (cancellationRequested()) {
+            return;
+        }
+        if (skipByFileIndexingPolicy(file)) {
+            processedFiles++;
+            return;
+        }
         try {
 
             String path =
@@ -1277,6 +1466,8 @@ public class IndexWorker extends Worker {
 
                 if (unchanged) {
 
+                    ensureCanonicalIndexed(path);
+
                     scannedPaths.add(path);
 
                     processedFiles++;
@@ -1298,6 +1489,11 @@ public class IndexWorker extends Worker {
 
             String text =
                     stripper.getText(document);
+
+            if (cancellationRequested()) {
+                document.close();
+                return;
+            }
 
             document.close();
 
@@ -1334,6 +1530,10 @@ public class IndexWorker extends Worker {
                             .getEmbeddingRuntime()
                             .generateEmbedding(combinedText);
 
+            if (cancellationRequested()) {
+                return;
+            }
+
             byte[] embeddingBytes =
                     EmbeddingUtils
                             .floatArrayToBytes(embeddingVector);
@@ -1347,6 +1547,10 @@ public class IndexWorker extends Worker {
             int chunkIndex = 0;
 
             for (String chunk : chunks) {
+
+                if (cancellationRequested()) {
+                    return;
+                }
 
                 if (chunk == null) {
                     continue;
@@ -1433,6 +1637,12 @@ public class IndexWorker extends Worker {
                     chunkEntities,
                     true
             );
+            if (cancellationRequested()) return;
+            canonicalIndexingPipeline.index(
+                    path,
+                    chunkEntities,
+                    this::cancellationRequested
+            );
 
             newFilesIndexed++;
             processedFiles++;
@@ -1450,6 +1660,10 @@ public class IndexWorker extends Worker {
             );
 
         } catch (Exception e) {
+
+            if (cancellationRequested()) {
+                return;
+            }
 
             processedFiles++;
             failedFiles++;
@@ -1475,6 +1689,7 @@ public class IndexWorker extends Worker {
             boolean createTokenIndex
     ) {
         database.runInTransaction(() -> {
+            throwIfCancellationRequested();
             database.tokenIndexDao()
                     .deleteByFilePath(filePath);
             database.chunkDao()
@@ -1491,6 +1706,7 @@ public class IndexWorker extends Worker {
                                 && index < chunkIds.length;
                         index++
                 ) {
+                    throwIfCancellationRequested();
                     chunks.get(index).id =
                             (int) chunkIds[index];
                 }
@@ -1501,6 +1717,7 @@ public class IndexWorker extends Worker {
                         new ArrayList<>();
 
                 for (ChunkEntity chunk : chunks) {
+                    throwIfCancellationRequested();
                     if (chunk == null || chunk.normalizedText == null) {
                         continue;
                     }
@@ -1510,12 +1727,14 @@ public class IndexWorker extends Worker {
 
                     for (String word
                             : chunk.normalizedText.split("\\s+")) {
+                        throwIfCancellationRequested();
                         if (word != null && word.length() >= 2) {
                             uniqueWords.add(word);
                         }
                     }
 
                     for (String word : uniqueWords) {
+                        throwIfCancellationRequested();
                         TokenIndexEntity tokenEntity =
                                 new TokenIndexEntity();
                         tokenEntity.token = word;
@@ -1535,6 +1754,172 @@ public class IndexWorker extends Worker {
             database.fileDao()
                     .insertOrUpdate(entity);
         });
+    }
+
+    private boolean closeCanonicalIndexingPipeline() {
+        if (canonicalIndexingPipeline == null) {
+            return true;
+        }
+        try {
+            canonicalIndexingPipeline.close();
+            canonicalIndexingPipeline = null;
+            return true;
+        } catch (Exception e) {
+            android.util.Log.e(
+                    "CANONICAL_INDEX",
+                    "Canonical indexing persistence failed",
+                    e
+            );
+            canonicalIndexingPipeline = null;
+            return false;
+        }
+    }
+
+    private boolean cancellationRequested() {
+        return isStopped() || Thread.currentThread().isInterrupted();
+    }
+
+    private boolean skipByFileIndexingPolicy(File file) {
+        FileIndexingPolicy.Evaluation evaluation =
+                FILE_INDEXING_POLICY.evaluate(file);
+        if (evaluation.shouldIndex()) {
+            return false;
+        }
+        android.util.Log.i(
+                "FILE_INDEX_POLICY",
+                "Skipping path=" + file.getAbsolutePath()
+                        + " | reason=" + evaluation.skipReason()
+                        + " | signals=" + evaluation.signals()
+        );
+        sendIndexProgress("Skipping low-value generated file...", file.getName());
+        return true;
+    }
+
+    private void throwIfCancellationRequested() {
+        if (cancellationRequested()) {
+            throw new java.util.concurrent.CancellationException(
+                    "Index worker cancelled"
+            );
+        }
+    }
+
+    private Result finishCancelledIndexing() {
+        android.util.Log.i(
+                "INDEX_WORKER",
+                "Cancellation honored during normal indexing"
+        );
+        ocrExecutor.shutdownNow();
+        closeCanonicalIndexingPipeline();
+        return Result.retry();
+    }
+
+    private Result reconcileCanonicalFamily(String family) {
+        int indexed = 0;
+        try {
+            while (true) {
+                if (cancellationRequested()) {
+                    closeCanonicalIndexingPipeline();
+                    return Result.retry();
+                }
+                java.util.List<String> paths =
+                        canonicalIndexingPipeline.findPackageMissingFiles(
+                                family,
+                                CANONICAL_RECONCILIATION_BATCH_SIZE
+                        );
+                if (paths.isEmpty()) {
+                    android.util.Log.i(
+                            "CANONICAL_REINDEX",
+                            "family=" + family + " canonicalOnlyFiles=" + indexed
+                    );
+                    return closeCanonicalIndexingPipeline()
+                            ? Result.success()
+                            : Result.retry();
+                }
+                for (String path : paths) {
+                    if (cancellationRequested()) {
+                        closeCanonicalIndexingPipeline();
+                        return Result.retry();
+                    }
+                    canonicalIndexingPipeline.index(
+                            path,
+                            database.chunkDao().getChunksByFilePath(path),
+                            this::cancellationRequested
+                    );
+                    indexed++;
+                }
+            }
+        } catch (Exception error) {
+            if (cancellationRequested()) {
+                android.util.Log.i(
+                        "CANONICAL_REINDEX",
+                        "Cancellation honored family=" + family
+                );
+            } else {
+                android.util.Log.e(
+                        "CANONICAL_REINDEX",
+                        "Targeted canonical reindex failed family=" + family,
+                        error
+                );
+            }
+            closeCanonicalIndexingPipeline();
+            return Result.retry();
+        }
+    }
+
+    private boolean isExcludedAiPackagePath(File file) {
+        String path = normalizedPath(file);
+        if (hasPathSegment(path, AI_PACKAGE_STAGE_DIRECTORY)) {
+            android.util.Log.d(
+                    "INDEX_DISCOVERY",
+                    "AI Package path excluded: " + file.getAbsolutePath()
+            );
+            return true;
+        }
+
+        File filesDirectory = getApplicationContext().getFilesDir();
+        File cacheDirectory = getApplicationContext().getCacheDir();
+        File installedPackagesDirectory =
+                new File(filesDirectory, "ai_packages");
+
+        boolean excluded = isPathAtOrBelow(path, normalizedPath(installedPackagesDirectory))
+                || isPathAtOrBelow(path, normalizedPath(cacheDirectory));
+        if (excluded) {
+            android.util.Log.d(
+                    "INDEX_DISCOVERY",
+                    "AI Package path excluded: " + file.getAbsolutePath()
+            );
+        }
+        return excluded;
+    }
+
+    private static boolean isPathAtOrBelow(String path, String directory) {
+        return path.equals(directory)
+                || path.startsWith(directory + "/");
+    }
+
+    private static boolean hasPathSegment(String path, String segment) {
+        return path.equals(segment)
+                || path.startsWith(segment + "/")
+                || path.endsWith("/" + segment)
+                || path.contains("/" + segment + "/");
+    }
+
+    private static String normalizedPath(File file) {
+        return file.getAbsolutePath()
+                .replace('\\', '/')
+                .toLowerCase(java.util.Locale.ROOT);
+    }
+
+    private void ensureCanonicalIndexed(String filePath) throws Exception {
+        throwIfCancellationRequested();
+        if (canonicalIndexingPipeline.hasFile(filePath)) {
+            return;
+        }
+        canonicalIndexingPipeline.index(
+                filePath,
+                database.chunkDao().getChunksByFilePath(filePath),
+                this::cancellationRequested
+        );
     }
 
     private void repairLegacyIndexRows() {

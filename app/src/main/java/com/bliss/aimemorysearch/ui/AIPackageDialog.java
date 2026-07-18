@@ -138,6 +138,16 @@ public final class AIPackageDialog {
                 R.string.ai_package_done, R.string.ai_package_close);
     }
 
+    public void showReconcilingState() {
+        closingEnabled = false;
+        applyState(R.string.ai_package_installed, true, false, false, false,
+                0, 0);
+        progressStatusText.setText(R.string.ai_package_reconciling_status);
+        progressBar.setIndeterminate(true);
+        progressBytesText.setText(null);
+        progressPercentText.setText(null);
+    }
+
     public void showErrorState(String message) {
         closingEnabled = true;
         applyState(R.string.ai_package_error, false, true, true, true,

@@ -40,16 +40,21 @@ import android.provider.Settings;
 import android.content.Intent;
 
 import com.bliss.aimemorysearch.ai.MiniLMTokenizer;
-import com.bliss.aimemorysearch.ai.VectorUtils;
 import com.github.ybq.android.spinkit.SpinKitView;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.InputStream;
-import java.util.Arrays;
 
 public class MainActivity extends AppCompatActivity {
     private static final int STORAGE_PERMISSION_CODE = 100;
+    private static final String PENDING_SEARCH_STATE = "pending_search_state";
+    private static final String PENDING_QUERY = "pending_query";
+    private static final String PENDING_LANGUAGE = "pending_language";
+    private static final String PENDING_FAMILY = "pending_family";
+    private static final String RECONCILIATION_FAMILY = "reconciliation_family";
+    private static final String RECONCILIATION_PACKAGE_ID = "reconciliation_package_id";
+    private static final String RECONCILIATION_WORK_ID = "reconciliation_work_id";
+    private static final String PACKAGE_OPERATION_FAMILY = "package_operation_family";
+    private static final String PACKAGE_OPERATION_ID = "package_operation_id";
     private EditText searchEdit;
     private AppDatabase database;
     private SharedPreferences prefs;
@@ -748,16 +753,56 @@ public class MainActivity extends AppCompatActivity {
                                     requiredPackageId
                             )
             ) {
-                pendingSearchRequest = request;
+                setPendingSearchRequest(request);
                 showLanguagePackagePrompt(requiredPackageId, false);
                 return;
             }
             languagePackageRouter.activateInstalledPackage(
-                    selectedLanguageFamily
+                    queryLanguageFamily
             );
         }
 
-        executeSearch(request);
+        continueWithCollectionCoverage(request);
+    }
+
+    private void continueWithCollectionCoverage(
+            com.bliss.aimemorysearch.ai.SearchRequest request) {
+        new Thread(() -> {
+            String missingPackageId = null;
+            int missingFiles = 0;
+            String missingLanguage = null;
+            try (com.bliss.aimemorysearch.ai.canonical.CanonicalIndexStore store =
+                         new com.bliss.aimemorysearch.ai.canonical.CanonicalIndexStore(this)) {
+                for (com.bliss.aimemorysearch.ai.canonical.CanonicalIndexStore.LanguageSummary
+                        summary : store.languageSummaries()) {
+                    if (!com.bliss.aimemorysearch.ai.canonical.CanonicalIndexingPipeline
+                            .STATUS_PACKAGE_MISSING.equals(summary.canonicalStatus)) continue;
+                    String packageId = languagePackageRouter.getRequiredPackageId(
+                            summary.translationFamily);
+                    if (packageId != null && !translationPackageManager.isInstalled(packageId)) {
+                        missingPackageId = packageId;
+                        missingFiles = summary.fileCount;
+                        missingLanguage = summary.languageTag;
+                        break;
+                    }
+                }
+            }
+            String finalPackageId = missingPackageId;
+            int finalMissingFiles = missingFiles;
+            String finalMissingLanguage = missingLanguage;
+            runOnUiThread(() -> {
+                if (finalPackageId == null) {
+                    executeSearch(request);
+                    return;
+                }
+                setPendingSearchRequest(request);
+                android.widget.Toast.makeText(this,
+                        getString(R.string.multilingual_collection_package_missing,
+                                finalMissingFiles, finalMissingLanguage),
+                        android.widget.Toast.LENGTH_LONG).show();
+                showLanguagePackagePrompt(finalPackageId, false);
+            });
+        }).start();
     }
 
     private void executeSearch(
@@ -1025,42 +1070,209 @@ public class MainActivity extends AppCompatActivity {
                 .apply();
     }
 
-    private void installLanguagePackageAndResume(
-            String family
-    ) {
-        new Thread(() -> {
-            com.bliss.aimemorysearch.ai.AiPackageLifecycleResult result =
-                    languagePackageRouter.installSelectedPackage(family);
-
-            uiHandler.post(() -> {
-                if (
-                        result.isSuccess()
-                                &&
-                                languagePackageRouter.activateInstalledPackage(
-                                        family
-                                )
-                ) {
-                    resumePendingSearch();
-                    return;
-                }
-
-                android.widget.Toast.makeText(
-                        this,
-                        result.getMessage(),
-                        android.widget.Toast.LENGTH_LONG
-                ).show();
-            });
-        }).start();
-    }
-
     private void resumePendingSearch() {
         com.bliss.aimemorysearch.ai.SearchRequest request =
                 pendingSearchRequest;
         pendingSearchRequest = null;
+        clearPendingSearchState();
 
         if (request != null) {
             executeSearch(request);
         }
+    }
+
+    private void setPendingSearchRequest(
+            com.bliss.aimemorysearch.ai.SearchRequest request
+    ) {
+        pendingSearchRequest = request;
+        if (request == null) {
+            clearPendingSearchState();
+            return;
+        }
+        getSharedPreferences(PENDING_SEARCH_STATE, MODE_PRIVATE).edit()
+                .putString(PENDING_QUERY, request.getOriginalQuery())
+                .putString(PENDING_LANGUAGE, request.getDetectedLanguage())
+                .putString(PENDING_FAMILY, request.getSelectedLanguageFamily())
+                .apply();
+    }
+
+    private void beginCanonicalReconciliation(
+            com.bliss.aimemorysearch.ai.model.AIPackageInfo packageInfo,
+            String family
+    ) {
+        java.util.UUID workId =
+                com.bliss.aimemorysearch.workers.CanonicalReindexWorker.enqueue(
+                        this,
+                        family
+                );
+        getSharedPreferences(PENDING_SEARCH_STATE, MODE_PRIVATE).edit()
+                .putString(RECONCILIATION_FAMILY, family)
+                .putString(RECONCILIATION_PACKAGE_ID, packageInfo.getPackageId())
+                .putString(RECONCILIATION_WORK_ID, workId.toString())
+                .apply();
+        activeAiPackageInfo = packageInfo;
+        aiPackageDialog.bind(packageInfo);
+        aiPackageDialog.showReconcilingState();
+        aiPackageDialog.show();
+
+        observeCanonicalReconciliation(family, workId);
+    }
+
+    private void observeCanonicalReconciliation(
+            String family,
+            java.util.UUID workId
+    ) {
+        if (reconciliationWorkLiveData != null) {
+            reconciliationWorkLiveData.removeObservers(this);
+        }
+        reconciliationWorkLiveData = androidx.work.WorkManager.getInstance(this)
+                .getWorkInfoByIdLiveData(workId);
+        reconciliationWorkLiveData.observe(this, workInfo -> {
+            if (!family.equals(persistedReconciliationFamily())
+                    || workInfo == null) {
+                return;
+            }
+            if (!workInfo.getState().isFinished()) {
+                aiPackageDialog.showReconcilingState();
+                return;
+            }
+            if (workInfo.getState() == androidx.work.WorkInfo.State.SUCCEEDED) {
+                clearReconciliationState();
+                clearPackageOperationState();
+                aiPackageDialog.showInstalledState();
+                closeAiPackageDialog();
+                resumePendingSearch();
+                return;
+            }
+            clearReconciliationState();
+            clearPackageOperationState();
+            aiPackageDialog.showDownloadErrorState(
+                    getString(R.string.ai_package_reconciliation_error)
+            );
+            aiPackageDialog.setPrimaryActionListener(v -> closeAiPackageDialog());
+        });
+    }
+
+    private void restorePendingPackageLifecycle() {
+        android.content.SharedPreferences state =
+                getSharedPreferences(PENDING_SEARCH_STATE, MODE_PRIVATE);
+        restorePendingSearchRequest(state);
+        String family = state.getString(RECONCILIATION_FAMILY, "");
+        String packageId = state.getString(RECONCILIATION_PACKAGE_ID, "");
+        if (family == null || family.isEmpty()) {
+            family = state.getString(PACKAGE_OPERATION_FAMILY, "");
+            packageId = state.getString(PACKAGE_OPERATION_ID, "");
+        }
+        if (family == null || family.isEmpty() || packageId == null
+                || packageId.isEmpty()) {
+            if (pendingSearchRequest != null) {
+                com.bliss.aimemorysearch.ai.SearchRequest request = pendingSearchRequest;
+                uiHandler.post(() -> continueSearch(request));
+            }
+            return;
+        }
+        com.bliss.aimemorysearch.ai.model.AIPackageInfo packageInfo =
+                translationPackageManager.getMetadata(packageId);
+        if (packageInfo == null) {
+            clearReconciliationState();
+            return;
+        }
+        languagePackagePromptVisible = true;
+        activeAiPackageInfo = packageInfo;
+        aiPackageDialog.bind(packageInfo);
+        if (translationPackageManager.isInstalled(packageId)) {
+            aiPackageDialog.showReconcilingState();
+            String persistedWorkId = state.getString(RECONCILIATION_WORK_ID, "");
+            java.util.UUID workId;
+            try {
+                if (persistedWorkId == null || persistedWorkId.isEmpty()) {
+                    throw new IllegalArgumentException("missing reconciliation work id");
+                }
+                workId = java.util.UUID.fromString(persistedWorkId);
+            } catch (IllegalArgumentException invalidWorkId) {
+                workId = com.bliss.aimemorysearch.workers.CanonicalReindexWorker.enqueue(
+                        this,
+                        family
+                );
+                state.edit()
+                        .putString(RECONCILIATION_WORK_ID, workId.toString())
+                        .apply();
+            }
+            observeCanonicalReconciliation(family, workId);
+        } else {
+            aiPackageDialog.showInstallingState();
+        }
+        aiPackageDialog.show();
+    }
+
+    private void restorePendingSearchRequest(
+            android.content.SharedPreferences state
+    ) {
+        String query = state.getString(PENDING_QUERY, "");
+        if (query == null || query.isEmpty()) {
+            return;
+        }
+        com.bliss.aimemorysearch.ai.SearchRequest request =
+                com.bliss.aimemorysearch.ai.QueryUnderstandingEngine
+                        .createSearchRequest(query);
+        request.setDetectedLanguage(state.getString(PENDING_LANGUAGE, ""));
+        request.setSelectedLanguageFamily(state.getString(PENDING_FAMILY, ""));
+        pendingSearchRequest = request;
+    }
+
+    private String persistedReconciliationFamily() {
+        return getSharedPreferences(PENDING_SEARCH_STATE, MODE_PRIVATE)
+                .getString(RECONCILIATION_FAMILY, "");
+    }
+
+    private void clearReconciliationState() {
+        getSharedPreferences(PENDING_SEARCH_STATE, MODE_PRIVATE).edit()
+                .remove(RECONCILIATION_FAMILY)
+                .remove(RECONCILIATION_PACKAGE_ID)
+                .remove(RECONCILIATION_WORK_ID)
+                .apply();
+    }
+
+    private void persistPackageOperation(
+            com.bliss.aimemorysearch.ai.model.AIPackageInfo packageInfo
+    ) {
+        String family = translationFamily(packageInfo);
+        if (family.isEmpty()) {
+            return;
+        }
+        getSharedPreferences(PENDING_SEARCH_STATE, MODE_PRIVATE).edit()
+                .putString(PACKAGE_OPERATION_FAMILY, family)
+                .putString(PACKAGE_OPERATION_ID, packageInfo.getPackageId())
+                .apply();
+    }
+
+    private void clearPackageOperationState() {
+        getSharedPreferences(PENDING_SEARCH_STATE, MODE_PRIVATE).edit()
+                .remove(PACKAGE_OPERATION_FAMILY)
+                .remove(PACKAGE_OPERATION_ID)
+                .apply();
+    }
+
+    private void clearPendingSearchState() {
+        getSharedPreferences(PENDING_SEARCH_STATE, MODE_PRIVATE).edit()
+                .remove(PENDING_QUERY)
+                .remove(PENDING_LANGUAGE)
+                .remove(PENDING_FAMILY)
+                .apply();
+    }
+
+    private static String translationFamily(
+            com.bliss.aimemorysearch.ai.model.AIPackageInfo packageInfo
+    ) {
+        for (String language : packageInfo.getSupportedLanguages()) {
+            com.bliss.aimemorysearch.ai.TranslationModelInfo model =
+                    com.bliss.aimemorysearch.ai.TranslationModelRegistry
+                            .getModelForLanguage(language);
+            if (model != null) {
+                return model.getTranslationFamily();
+            }
+        }
+        return "";
     }
     private void openSearchResults(
             List<FileEntity> results
