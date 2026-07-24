@@ -23,7 +23,10 @@ public class DocumentTextExtractor {
 
         try {
 
-            if (name.endsWith(".txt") || name.endsWith(".csv")) {
+            if (name.endsWith(".txt") || name.endsWith(".csv")
+                    || name.endsWith(".json") || name.endsWith(".xml")
+                    || name.endsWith(".md") || name.endsWith(".html")
+                    || name.endsWith(".htm")) {
                 return readPlainText(file);
             }
 

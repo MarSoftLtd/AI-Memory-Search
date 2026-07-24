@@ -4,6 +4,7 @@ import android.content.Context;
 import android.util.Log;
 
 import java.io.InputStream;
+import java.io.File;
 import java.nio.LongBuffer;
 import java.util.Collections;
 
@@ -33,6 +34,11 @@ public class MobileClipTextEmbeddingEngine {
     public void initialize(
             Context context
     ) {
+        initialize(context, ModelPackageRuntime.requireDirectory(
+                context, ModelPackageRuntime.CLIP_TEXT));
+    }
+
+    public void initialize(Context context, File packageDirectory) {
         android.util.Log.e(
                 "CLIP_TEXT_DEBUG",
                 "INITIALIZE CALLED"
@@ -54,27 +60,16 @@ public class MobileClipTextEmbeddingEngine {
             environment =
                     OrtEnvironment.getEnvironment();
 
-            InputStream inputStream =
-                    context.getAssets()
-                            .open(
-                                    "models/clip/text_model_uint8.onnx"
-                            );
-
-            byte[] modelBytes =
-                    new byte[inputStream.available()];
-
-            inputStream.read(modelBytes);
-
-            inputStream.close();
+            File modelFile = new File(packageDirectory, "text_model_uint8.onnx");
 
             session =
                     environment.createSession(
-                            modelBytes,
+                            modelFile.getAbsolutePath(),
                             new OrtSession.SessionOptions()
                     );
             ClipTokenizer
                     .getInstance()
-                    .initialize(context);
+                    .initialize(packageDirectory);
             
             android.util.Log.e(
                     "CLIP_TEXT_META",
@@ -127,6 +122,24 @@ public class MobileClipTextEmbeddingEngine {
                     e
             );
         }
+    }
+
+    public synchronized boolean isInitialized() {
+        return environment != null
+                && session != null
+                && ClipTokenizer.getInstance().isInitialized();
+    }
+
+    public synchronized void deactivate() {
+        if (session != null) {
+            try {
+                session.close();
+            } catch (Exception ignored) {
+            }
+        }
+        session = null;
+        environment = null;
+        ClipTokenizer.getInstance().deactivate();
     }
 
     public float[] generateEmbedding(

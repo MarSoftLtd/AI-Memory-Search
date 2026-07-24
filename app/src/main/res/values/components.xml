@@ -42,14 +42,25 @@
     <dimen name="component_search_highlight_height">42dp</dimen>
     <dimen name="component_card_highlight_height">70dp</dimen>
     <dimen name="component_stats_height">330dp</dimen>
+    <dimen name="component_stats_primary_height">330dp</dimen>
     <dimen name="component_stats_column_width">100dp</dimen>
     <dimen name="component_invite_width">390dp</dimen>
     <dimen name="component_invite_min_height">180dp</dimen>
     <dimen name="component_dialog_width">320dp</dimen>
+    <dimen name="component_dialog_title_height">56dp</dimen>
+    <dimen name="component_dialog_description_height">64dp</dimen>
     <dimen name="component_result_card_width">300dp</dimen>
     <dimen name="component_result_card_height">500dp</dimen>
     <dimen name="component_result_image_height">300dp</dimen>
 
     <dimen name="component_list_item_radius">22dp</dimen>
     <dimen name="component_feature_card_radius">34dp</dimen>
+
+    <dimen name="dashboard_card_radius">20dp</dimen>
+    <dimen name="dashboard_button_radius">14dp</dimen>
+    <dimen name="dashboard_card_padding">16dp</dimen>
+    <dimen name="dashboard_progress_height">8dp</dimen>
+    <dimen name="dashboard_progress_radius">4dp</dimen>
+    <dimen name="dashboard_overall_progress_height">14dp</dimen>
+    <dimen name="dashboard_overall_progress_radius">7dp</dimen>
 </resources>

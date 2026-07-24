@@ -11,6 +11,8 @@ public class AIPackageUiModel {
         AVAILABLE,
         UPDATE_AVAILABLE,
         DOWNLOADING,
+        PREPARING,
+        ACTIVE,
         DISABLED
     }
 

@@ -32,6 +32,11 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicLong;
 import android.graphics.pdf.PdfRenderer;
 import android.os.ParcelFileDescriptor;
 import java.util.UUID;
@@ -61,12 +66,20 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import com.bliss.aimemorysearch.ai.ImageEmbeddingEngine;
 import com.bliss.aimemorysearch.ai.canonical.CanonicalIndexingPipeline;
+import com.bliss.aimemorysearch.ai.canonical.CanonicalIndexStore;
 import com.bliss.aimemorysearch.indexing.FileIndexingPolicy;
 public class IndexWorker extends Worker {
     public static final String UNIQUE_WORK_NAME = "ai_memory_index_worker_debug";
     public static final String KEY_FILE_PATH = "file_path";
     public static final String KEY_MAINTENANCE = "maintenance";
     public static final String KEY_RECONCILIATION_FAMILY = "reconciliation_family";
+    public static final String USER_SKIP_PREFS = "index_user_skips";
+    public static final String KEY_DECISION_TOKEN = "decision_token";
+    public static final String KEY_AWAITING_DECISION = "awaiting_decision";
+    public static final String KEY_CURRENT_OPERATION = "current_operation";
+    public static final String KEY_OPERATION_ELAPSED_MS = "operation_elapsed_ms";
+    private static final long LONG_OPERATION_THRESHOLD_MS = 30_000L;
+    private static final String PDF_TIMING_TAG = "PDF_PIPELINE_TIMING";
     private static final int CANONICAL_RECONCILIATION_BATCH_SIZE = 64;
     private static final String AI_PACKAGE_STAGE_DIRECTORY =
             "aimemory-package-stage";
@@ -88,11 +101,28 @@ public class IndexWorker extends Worker {
     private int jpegCount = 0;
     private int ocrCount = 0;
     private int embeddingCount = 0;
+    private int documentTotal = 0;
+    private int imageTotal = 0;
+    private int ocrEstimatedTotal = 0;
+    private int embeddingEstimatedTotal = 0;
+    private int documentProcessed = 0;
+    private int imageProcessed = 0;
+    private int libraryDocumentTotal = 0;
     private int totalFilesToIndex = 0;
     private int processedFiles = 0;
     private int failedFiles = 0;
+    private int userSkippedFiles = 0;
+    private long workerStartedAt;
+    private String progressFileName = "";
+    private long progressFileSize = 0L;
+    private String approvedLongFileToken = "";
     private String currentStage = "Preparing...";
     private CanonicalIndexingPipeline canonicalIndexingPipeline;
+    private static final class UserSkippedFileException extends Exception {
+        UserSkippedFileException() {
+            super("Current file skipped by user");
+        }
+    }
     public IndexWorker(
             @NonNull Context context,
             @NonNull WorkerParameters workerParams
@@ -102,6 +132,8 @@ public class IndexWorker extends Worker {
     @NonNull
     @Override
     public Result doWork() {
+
+        workerStartedAt = System.currentTimeMillis();
 
         database = AppDatabase.getInstance(
                 getApplicationContext()
@@ -115,20 +147,6 @@ public class IndexWorker extends Worker {
         if (getInputData().getBoolean(KEY_MAINTENANCE, false)) {
             repairLegacyIndexRows();
             return Result.success();
-        }
-
-        try {
-            canonicalIndexingPipeline =
-                    new CanonicalIndexingPipeline(
-                            getApplicationContext()
-                    );
-        } catch (Exception e) {
-            android.util.Log.e(
-                    "CANONICAL_INDEX",
-                    "Canonical indexing infrastructure initialization failed",
-                    e
-            );
-            return Result.failure();
         }
 
         String reconciliationFamily =
@@ -236,6 +254,8 @@ public class IndexWorker extends Worker {
         scanFolderRecursive(
                 rootFolder
         );
+        libraryDocumentTotal = documentTotal;
+        prefs.edit().putInt("last_discovered_document_total", documentTotal).apply();
         if (cancellationRequested()) {
             return finishCancelledIndexing();
         }
@@ -745,6 +765,10 @@ public class IndexWorker extends Worker {
                 ) {
 
                     processImageFile(file);
+                    if (!cancellationRequested()) {
+                        imageProcessed++;
+                        sendIndexProgress("Image processing completed", file.getName());
+                    }
 
                     continue;
                 }
@@ -752,6 +776,10 @@ public class IndexWorker extends Worker {
                 if (lower.endsWith(".pdf")) {
 
                     processPdf(file);
+                    if (!cancellationRequested()) {
+                        documentProcessed++;
+                        sendIndexProgress("Document processing completed", file.getName());
+                    }
 
                     continue;
                 }
@@ -785,6 +813,10 @@ public class IndexWorker extends Worker {
                 ) {
 
                     processDocumentFile(file);
+                    if (!cancellationRequested()) {
+                        documentProcessed++;
+                        sendIndexProgress("Document processing completed", file.getName());
+                    }
                 }
 
             } catch (Exception e) {
@@ -810,8 +842,10 @@ public class IndexWorker extends Worker {
                 database.chunkDao().deleteByFilePath(deletedPath);
                 database.fileDao().deleteByPath(deletedPath);
             });
-            try {
-                canonicalIndexingPipeline.deleteFile(deletedPath);
+            CanonicalEnrichmentWorker.cancel(getApplicationContext(), deletedPath);
+            try (CanonicalIndexStore store =
+                         new CanonicalIndexStore(getApplicationContext())) {
+                store.deleteFile(deletedPath);
             } catch (Exception e) {
                 failedFiles++;
                 android.util.Log.e("CANONICAL_INDEX",
@@ -832,12 +866,20 @@ public class IndexWorker extends Worker {
                         || lower.endsWith(".bmp")
                         || lower.endsWith(".gif")
         ) {
+            imageTotal = 1;
+            ocrEstimatedTotal = 1;
+            embeddingEstimatedTotal = 1;
             processImageFile(file);
+            if (!cancellationRequested()) imageProcessed = 1;
             return;
         }
 
         if (lower.endsWith(".pdf")) {
+            documentTotal = 1;
+            ocrEstimatedTotal = 1;
+            embeddingEstimatedTotal = 1;
             processPdf(file);
+            if (!cancellationRequested()) documentProcessed = 1;
             return;
         }
 
@@ -857,7 +899,10 @@ public class IndexWorker extends Worker {
                         || lower.endsWith(".ppt")
                         || lower.endsWith(".pptx")
         ) {
+            documentTotal = 1;
+            embeddingEstimatedTotal = 1;
             processDocumentFile(file);
+            if (!cancellationRequested()) documentProcessed = 1;
         }
     }
 
@@ -902,29 +947,18 @@ public class IndexWorker extends Worker {
                         file.getName()
                                 .toLowerCase();
 
-                if (
-                        lower.endsWith(".jpg")
-                                ||
-                                lower.endsWith(".jpeg")
-                                ||
-                                lower.endsWith(".png")
-                                ||
-                                lower.endsWith(".webp")
-                                ||
-                                lower.endsWith(".pdf")
-                                ||
-                                lower.endsWith(".txt")
-                                || lower.endsWith(".html")
-                                || lower.endsWith(".htm")
-                                ||
-                                lower.endsWith(".csv")
-                                ||
-                                lower.endsWith(".docx")
-                                ||
-                                lower.endsWith(".xlsx")
-                ) {
-
+                boolean image = isSupportedImage(lower);
+                boolean document = isSupportedDocument(lower);
+                if (image || document) {
                     totalFilesToIndex++;
+                    embeddingEstimatedTotal++;
+                    if (image) {
+                        imageTotal++;
+                        ocrEstimatedTotal++;
+                    } else {
+                        documentTotal++;
+                        if (lower.endsWith(".pdf")) ocrEstimatedTotal++;
+                    }
                 }
 
             } catch (Exception e) {
@@ -938,6 +972,9 @@ public class IndexWorker extends Worker {
     ) {
 
         if (cancellationRequested()) {
+            return;
+        }
+        if (skipByUserPolicy(file)) {
             return;
         }
         if (skipByFileIndexingPolicy(file)) {
@@ -975,9 +1012,13 @@ public class IndexWorker extends Worker {
                     return;
                 }
             }
-
-            String text =
-                    DocumentTextExtractor.extractText(file);
+            String processingAttemptToken = processingAttemptToken(file);
+            String text = runLongOperation(
+                    file,
+                    "Text extraction",
+                    processingAttemptToken,
+                    () -> DocumentTextExtractor.extractText(file)
+            );
 
             if (cancellationRequested()) {
                 return;
@@ -996,11 +1037,15 @@ public class IndexWorker extends Worker {
                                     + path
                     ).trim();
 
-            float[] embeddingVector =
-                    DocumentRuntimeLoader
-                            .createDefault()
-                            .getEmbeddingRuntime()
-                            .generateEmbedding(combinedText);
+            float[] embeddingVector = runLongOperation(
+                    file,
+                    "Embedding generation",
+                    processingAttemptToken,
+                    () -> DocumentRuntimeLoader
+                        .createDefault()
+                        .getEmbeddingRuntime()
+                        .generateEmbedding(combinedText)
+            );
 
             if (cancellationRequested()) {
                 return;
@@ -1050,35 +1095,48 @@ public class IndexWorker extends Worker {
 
             List<ChunkEntity> documentChunks = new ArrayList<>();
             int documentChunkIndex = 0;
-            for (String chunk : TextChunker.chunkText(text)) {
-                if (cancellationRequested()) return;
-                if (chunk == null || chunk.trim().length() < 5) continue;
-                ChunkEntity chunkEntity = new ChunkEntity();
-                chunkEntity.parentFileId = 0;
-                chunkEntity.filePath = path;
-                chunkEntity.fileName = name;
-                chunkEntity.chunkText = chunk.trim();
-                chunkEntity.normalizedText = normalizeForSearch(chunkEntity.chunkText);
-                chunkEntity.chunkIndex = documentChunkIndex;
-                chunkEntity.indexedAt = System.currentTimeMillis();
-                if (documentChunkIndex % 3 == 0) {
-                    float[] chunkEmbedding = DocumentRuntimeLoader.createDefault()
-                            .getEmbeddingRuntime().generateEmbedding(chunkEntity.chunkText);
-                    if (chunkEmbedding != null) {
-                        chunkEntity.embedding = EmbeddingUtils.floatArrayToBytes(chunkEmbedding);
-                    }
-                }
-                documentChunks.add(chunkEntity);
-                documentChunkIndex++;
-            }
-
-            replaceFileIndex(path, entity, documentChunks, false);
-            if (cancellationRequested()) return;
-            canonicalIndexingPipeline.index(
-                    path,
-                    documentChunks,
-                    this::cancellationRequested
+            final String extractedText = text;
+            List<String> documentChunkTexts = runLongOperation(
+                    file,
+                    "Chunk generation",
+                    processingAttemptToken,
+                    () -> TextChunker.chunkText(extractedText)
             );
+            for (String chunk : documentChunkTexts) {
+                    if (cancellationRequested()) return;
+                    if (chunk == null || chunk.trim().length() < 5) continue;
+                    ChunkEntity chunkEntity = new ChunkEntity();
+                    chunkEntity.parentFileId = 0;
+                    chunkEntity.filePath = path;
+                    chunkEntity.fileName = name;
+                    chunkEntity.chunkText = chunk.trim();
+                    chunkEntity.normalizedText = normalizeForSearch(chunkEntity.chunkText);
+                    chunkEntity.chunkIndex = documentChunkIndex;
+                    chunkEntity.indexedAt = System.currentTimeMillis();
+                    if (documentChunkIndex % 3 == 0) {
+                        final String chunkText = chunkEntity.chunkText;
+                        float[] chunkEmbedding = runLongOperation(
+                                file,
+                                "Chunk embedding generation",
+                                processingAttemptToken,
+                                () -> DocumentRuntimeLoader.createDefault()
+                                        .getEmbeddingRuntime()
+                                        .generateEmbedding(chunkText)
+                        );
+                        if (chunkEmbedding != null) {
+                            chunkEntity.embedding =
+                                    EmbeddingUtils.floatArrayToBytes(chunkEmbedding);
+                        }
+                    }
+                    documentChunks.add(chunkEntity);
+                    documentChunkIndex++;
+                }
+
+            String canonicalGeneration = beginCanonicalGeneration(path);
+            replaceFileIndex(path, entity, documentChunks, false);
+            CanonicalEnrichmentWorker.enqueue(
+                    getApplicationContext(), path, canonicalGeneration);
+            if (cancellationRequested()) return;
 
             newFilesIndexed++;
             processedFiles++;
@@ -1094,6 +1152,8 @@ public class IndexWorker extends Worker {
                     name
             );
 
+        } catch (UserSkippedFileException skipped) {
+            return;
         } catch (Exception e) {
 
             if (cancellationRequested()) {
@@ -1121,6 +1181,9 @@ public class IndexWorker extends Worker {
     ) {
 
         if (cancellationRequested()) {
+            return;
+        }
+        if (skipByUserPolicy(imageFile)) {
             return;
         }
         if (skipByFileIndexingPolicy(imageFile)) {
@@ -1159,8 +1222,13 @@ public class IndexWorker extends Worker {
                 }
             }
 
-            String ocrText =
-                    runOcrBlocking(path);
+            String processingAttemptToken = processingAttemptToken(imageFile);
+            String ocrText = runLongOperation(
+                    imageFile,
+                    "OCR",
+                    processingAttemptToken,
+                    () -> runOcrBlocking(path)
+            );
 
             if (cancellationRequested()) {
                 return;
@@ -1208,11 +1276,15 @@ public class IndexWorker extends Worker {
                                     + path
                     ).trim();
 
-            float[] embeddingVector =
-                    DocumentRuntimeLoader
-                            .createDefault()
-                            .getEmbeddingRuntime()
-                            .generateEmbedding(combinedText);
+            float[] embeddingVector = runLongOperation(
+                    imageFile,
+                    "Embedding generation",
+                    processingAttemptToken,
+                    () -> DocumentRuntimeLoader
+                        .createDefault()
+                        .getEmbeddingRuntime()
+                        .generateEmbedding(combinedText)
+            );
 
             if (cancellationRequested()) {
                 return;
@@ -1323,10 +1395,12 @@ public class IndexWorker extends Worker {
             entity.imageEmbedding =
                     imageEmbeddingBytes;
 
-            List<String> imageChunks =
-                    TextChunker.chunkText(
-                            combinedText
-                    );
+            List<String> imageChunks = runLongOperation(
+                    imageFile,
+                    "Chunk generation",
+                    processingAttemptToken,
+                    () -> TextChunker.chunkText(combinedText)
+            );
 
             List<ChunkEntity> imageChunkEntities =
                     new ArrayList<>();
@@ -1369,18 +1443,16 @@ public class IndexWorker extends Worker {
                 imageChunkIndex++;
             }
 
+            String canonicalGeneration = beginCanonicalGeneration(path);
             replaceFileIndex(
                     path,
                     entity,
                     imageChunkEntities,
                     false
             );
+            CanonicalEnrichmentWorker.enqueue(
+                    getApplicationContext(), path, canonicalGeneration);
             if (cancellationRequested()) return;
-            canonicalIndexingPipeline.index(
-                    path,
-                    imageChunkEntities,
-                    this::cancellationRequested
-            );
 
             newFilesIndexed++;
             processedFiles++;
@@ -1409,6 +1481,8 @@ public class IndexWorker extends Worker {
                     name
             );
 
+        } catch (UserSkippedFileException skipped) {
+            return;
         } catch (Exception e) {
 
             if (cancellationRequested()) {
@@ -1438,6 +1512,9 @@ public class IndexWorker extends Worker {
         if (cancellationRequested()) {
             return;
         }
+        if (skipByUserPolicy(file)) {
+            return;
+        }
         if (skipByFileIndexingPolicy(file)) {
             processedFiles++;
             return;
@@ -1446,6 +1523,9 @@ public class IndexWorker extends Worker {
 
             String path =
                     file.getAbsolutePath();
+            long pdfPipelineStartedAt = android.os.SystemClock.elapsedRealtime();
+            AtomicLong embeddingElapsedMs = new AtomicLong();
+            AtomicLong embeddingCalls = new AtomicLong();
 
             String name =
                     file.getName();
@@ -1480,22 +1560,27 @@ public class IndexWorker extends Worker {
                     return;
                 }
             }
+            String processingAttemptToken = processingAttemptToken(file);
+            String extractionOperation = "PDF loading and text extraction";
 
-            PDDocument document =
-                    PDDocument.load(file);
-
-            PDFTextStripper stripper =
-                    new PDFTextStripper();
-
-            String text =
-                    stripper.getText(document);
-
-            if (cancellationRequested()) {
-                document.close();
-                return;
-            }
-
-            document.close();
+            String text = runLongOperation(
+                    file,
+                    extractionOperation,
+                    processingAttemptToken,
+                    () -> {
+                        long loadStartedAt = android.os.SystemClock.elapsedRealtime();
+                        try (PDDocument document = PDDocument.load(file)) {
+                            logPdfStage(file, "pdf_loading", loadStartedAt);
+                            long extractionStartedAt =
+                                    android.os.SystemClock.elapsedRealtime();
+                            String extracted =
+                                    new PDFTextStripper().getText(document);
+                            logPdfStage(file, "pdf_text_extraction",
+                                    extractionStartedAt);
+                            return extracted;
+                        }
+                    }
+            );
 
             if (
                     text == null
@@ -1503,8 +1588,23 @@ public class IndexWorker extends Worker {
                             text.trim().length() < 10
             ) {
 
-                text =
-                        runPdfOcr(file);
+                extractionOperation = "PDF OCR";
+                text = runLongOperation(
+                        file,
+                        extractionOperation,
+                        processingAttemptToken,
+                        () -> {
+                            long startedAt =
+                                    android.os.SystemClock.elapsedRealtime();
+                            String result = runPdfOcr(file);
+                            logPdfStage(file, "ocr", startedAt);
+                            return result;
+                        }
+                );
+            } else {
+                android.util.Log.i(PDF_TIMING_TAG,
+                        "stage=ocr elapsedMs=0 used=false file="
+                                + file.getAbsolutePath());
             }
 
             if (text == null) {
@@ -1524,11 +1624,21 @@ public class IndexWorker extends Worker {
                                     + path
                     ).trim();
 
-            float[] embeddingVector =
-                    DocumentRuntimeLoader
-                            .createDefault()
-                            .getEmbeddingRuntime()
-                            .generateEmbedding(combinedText);
+            float[] embeddingVector = runLongOperation(
+                    file,
+                    "Embedding generation",
+                    processingAttemptToken,
+                    () -> {
+                        long startedAt = android.os.SystemClock.elapsedRealtime();
+                        float[] result = DocumentRuntimeLoader
+                                .createDefault()
+                                .getEmbeddingRuntime()
+                                .generateEmbedding(combinedText);
+                        embeddingElapsedMs.addAndGet(elapsedSince(startedAt));
+                        embeddingCalls.incrementAndGet();
+                        return result;
+                    }
+            );
 
             if (cancellationRequested()) {
                 return;
@@ -1538,8 +1648,17 @@ public class IndexWorker extends Worker {
                     EmbeddingUtils
                             .floatArrayToBytes(embeddingVector);
 
-            List<String> chunks =
-                    TextChunker.chunkText(combinedText);
+            List<String> chunks = runLongOperation(
+                    file,
+                    "Chunk generation",
+                    processingAttemptToken,
+                    () -> {
+                        long startedAt = android.os.SystemClock.elapsedRealtime();
+                        List<String> result = TextChunker.chunkText(combinedText);
+                        logPdfStage(file, "chunk_generation", startedAt);
+                        return result;
+                    }
+            );
 
             List<ChunkEntity> chunkEntities =
                     new ArrayList<>();
@@ -1548,9 +1667,9 @@ public class IndexWorker extends Worker {
 
             for (String chunk : chunks) {
 
-                if (cancellationRequested()) {
-                    return;
-                }
+                    if (cancellationRequested()) {
+                        return;
+                    }
 
                 if (chunk == null) {
                     continue;
@@ -1584,27 +1703,39 @@ public class IndexWorker extends Worker {
                 chunkEntity.chunkIndex = chunkIndex;
                 chunkEntity.indexedAt = System.currentTimeMillis();
 
-                if (chunkIndex % 3 == 0) {
+                    if (chunkIndex % 3 == 0) {
+                        final String chunkText = chunk;
+                        float[] chunkEmbedding = runLongOperation(
+                                file,
+                                "Chunk embedding generation",
+                                processingAttemptToken,
+                                () -> {
+                                    long startedAt =
+                                            android.os.SystemClock.elapsedRealtime();
+                                    float[] result = DocumentRuntimeLoader
+                                            .createDefault()
+                                            .getEmbeddingRuntime()
+                                            .generateEmbedding(chunkText);
+                                    embeddingElapsedMs.addAndGet(
+                                            elapsedSince(startedAt));
+                                    embeddingCalls.incrementAndGet();
+                                    return result;
+                                }
+                        );
 
-                    float[] chunkEmbedding =
-                            DocumentRuntimeLoader
-                                    .createDefault()
-                                    .getEmbeddingRuntime()
-                                    .generateEmbedding(chunk);
+                        if (chunkEmbedding != null) {
 
-                    if (chunkEmbedding != null) {
-
-                        chunkEntity.embedding =
-                                EmbeddingUtils.floatArrayToBytes(
-                                        chunkEmbedding
-                                );
+                            chunkEntity.embedding =
+                                    EmbeddingUtils.floatArrayToBytes(
+                                            chunkEmbedding
+                                    );
+                        }
                     }
+
+                    chunkEntities.add(chunkEntity);
+
+                    chunkIndex++;
                 }
-
-                chunkEntities.add(chunkEntity);
-
-                chunkIndex++;
-            }
 
             String pdfThumbnail =
                     generatePdfThumbnail(path);
@@ -1631,18 +1762,24 @@ public class IndexWorker extends Worker {
                             embeddingBytes
                     );
 
+            android.util.Log.i(PDF_TIMING_TAG,
+                    "stage=embedding_generation elapsedMs="
+                            + embeddingElapsedMs.get()
+                            + " calls=" + embeddingCalls.get()
+                            + " file=" + file.getAbsolutePath());
+
+            long databaseStartedAt = android.os.SystemClock.elapsedRealtime();
+            String canonicalGeneration = beginCanonicalGeneration(path);
             replaceFileIndex(
                     path,
                     entity,
                     chunkEntities,
                     true
             );
+            logPdfStage(file, "database_writes", databaseStartedAt);
+            CanonicalEnrichmentWorker.enqueue(
+                    getApplicationContext(), path, canonicalGeneration);
             if (cancellationRequested()) return;
-            canonicalIndexingPipeline.index(
-                    path,
-                    chunkEntities,
-                    this::cancellationRequested
-            );
 
             newFilesIndexed++;
             processedFiles++;
@@ -1658,7 +1795,10 @@ public class IndexWorker extends Worker {
                     "Analyzing PDF semantic chunks...",
                     name
             );
+            logPdfStage(file, "total_pdf_pipeline", pdfPipelineStartedAt);
 
+        } catch (UserSkippedFileException skipped) {
+            return;
         } catch (Exception e) {
 
             if (cancellationRequested()) {
@@ -1756,6 +1896,24 @@ public class IndexWorker extends Worker {
         });
     }
 
+    private static boolean isSupportedImage(String lower) {
+        return lower.endsWith(".jpg") || lower.endsWith(".jpeg")
+                || lower.endsWith(".png") || lower.endsWith(".webp")
+                || lower.endsWith(".heic") || lower.endsWith(".heif")
+                || lower.endsWith(".bmp") || lower.endsWith(".gif");
+    }
+
+    private static boolean isSupportedDocument(String lower) {
+        return lower.endsWith(".pdf") || lower.endsWith(".txt")
+                || lower.endsWith(".html") || lower.endsWith(".htm")
+                || lower.endsWith(".csv") || lower.endsWith(".json")
+                || lower.endsWith(".xml") || lower.endsWith(".md")
+                || lower.endsWith(".rtf") || lower.endsWith(".doc")
+                || lower.endsWith(".docx") || lower.endsWith(".xls")
+                || lower.endsWith(".xlsx") || lower.endsWith(".ppt")
+                || lower.endsWith(".pptx");
+    }
+
     private boolean closeCanonicalIndexingPipeline() {
         if (canonicalIndexingPipeline == null) {
             return true;
@@ -1795,6 +1953,185 @@ public class IndexWorker extends Worker {
         return true;
     }
 
+    private boolean skipByUserPolicy(File file) {
+        if (file == null) {
+            return false;
+        }
+        progressFileName = file.getName();
+        progressFileSize = file.length();
+        sendIndexProgress("Preparing file...", file.getName());
+        android.content.SharedPreferences decisions = getApplicationContext()
+                .getSharedPreferences(USER_SKIP_PREFS, Context.MODE_PRIVATE);
+        String token = decisionToken(file);
+        String storedIdentity = decisions.getString("skip." + token, "");
+        if (storedIdentity == null || storedIdentity.isEmpty()) {
+            return false;
+        }
+        if (!storedIdentity.equals(fileIdentity(file))) {
+            decisions.edit().remove("skip." + token).apply();
+            return false;
+        }
+        processedFiles++;
+        userSkippedFiles++;
+        sendIndexProgress("Skipped by user", file.getName());
+        return true;
+    }
+
+    private <T> T runLongOperation(
+            File file,
+            String operation,
+            String processingAttemptToken,
+            Callable<T> operationCall
+    ) throws Exception {
+        long operationStartedAt = android.os.SystemClock.elapsedRealtime();
+        ExecutorService operationExecutor = Executors.newSingleThreadExecutor();
+        Future<T> operationFuture = operationExecutor.submit(operationCall);
+        try {
+            if (processingAttemptToken.equals(approvedLongFileToken)) {
+                return operationFuture.get();
+            }
+            try {
+                return operationFuture.get(
+                        LONG_OPERATION_THRESHOLD_MS,
+                        TimeUnit.MILLISECONDS
+                );
+            } catch (TimeoutException timeout) {
+                // The operation is still running. Give the UI control over it.
+            } catch (ExecutionException failed) {
+                throw operationFailure(failed);
+            } catch (InterruptedException interrupted) {
+                operationFuture.cancel(true);
+                Thread.currentThread().interrupt();
+                throw interrupted;
+            }
+
+            android.content.SharedPreferences decisions = getApplicationContext()
+                    .getSharedPreferences(USER_SKIP_PREFS, Context.MODE_PRIVATE);
+            String decisionKey = "decision." + processingAttemptToken;
+            while (!cancellationRequested()) {
+                String decision = decisions.getString(decisionKey, "");
+                if ("continue".equals(decision)) {
+                    decisions.edit().remove(decisionKey).apply();
+                    approvedLongFileToken = processingAttemptToken;
+                    sendIndexProgress("Continuing current file", file.getName());
+                    try {
+                        return operationFuture.get();
+                    } catch (ExecutionException failed) {
+                        throw operationFailure(failed);
+                    } catch (InterruptedException interrupted) {
+                        operationFuture.cancel(true);
+                        Thread.currentThread().interrupt();
+                        throw interrupted;
+                    }
+                }
+                if ("skip".equals(decision)) {
+                    operationFuture.cancel(true);
+                    decisions.edit()
+                            .putString("skip." + decisionToken(file), fileIdentity(file))
+                            .remove(decisionKey)
+                            .apply();
+                    processedFiles++;
+                    userSkippedFiles++;
+                    sendIndexProgress("Skipped by user", file.getName());
+                    throw new UserSkippedFileException();
+                }
+                publishLongOperationDecision(
+                        file, operation, operationStartedAt, processingAttemptToken);
+                try {
+                    Thread.sleep(250L);
+                } catch (InterruptedException interrupted) {
+                    operationFuture.cancel(true);
+                    decisions.edit().remove(decisionKey).apply();
+                    Thread.currentThread().interrupt();
+                    throw interrupted;
+                }
+            }
+            operationFuture.cancel(true);
+            decisions.edit().remove(decisionKey).apply();
+            throw new InterruptedException("Index worker cancelled");
+        } finally {
+            if (!operationFuture.isDone()) {
+                operationFuture.cancel(true);
+            }
+            operationExecutor.shutdownNow();
+        }
+    }
+
+    private static Exception operationFailure(ExecutionException failed) {
+        Throwable cause = failed.getCause();
+        if (cause instanceof Exception) {
+            return (Exception) cause;
+        }
+        return new RuntimeException(cause);
+    }
+
+    private static long elapsedSince(long startedAt) {
+        return Math.max(0L,
+                android.os.SystemClock.elapsedRealtime() - startedAt);
+    }
+
+    private static void logPdfStage(
+            File file,
+            String stage,
+            long startedAt
+    ) {
+        android.util.Log.i(
+                PDF_TIMING_TAG,
+                "stage=" + stage
+                        + " elapsedMs=" + elapsedSince(startedAt)
+                        + " file=" + (file == null
+                        ? "" : file.getAbsolutePath())
+        );
+    }
+
+    private void publishLongOperationDecision(
+            File file,
+            String operation,
+            long operationStartedAt,
+            String processingAttemptToken
+    ) {
+        progressFileName = file.getName();
+        progressFileSize = file.length();
+        long operationElapsedMs = Math.max(0L,
+                android.os.SystemClock.elapsedRealtime() - operationStartedAt);
+        setProgressAsync(new androidx.work.Data.Builder()
+                .putString("status", "Long operation needs confirmation")
+                .putString("stage", operation)
+                .putString("currentFile", file.getName())
+                .putString(KEY_CURRENT_OPERATION, operation)
+                .putLong(KEY_OPERATION_ELAPSED_MS, operationElapsedMs)
+                .putLong("elapsedMs", Math.max(0L,
+                        System.currentTimeMillis() - workerStartedAt))
+                .putLong("workerStartedAt", workerStartedAt)
+                .putInt("processed", processedFiles)
+                .putInt("total", totalFilesToIndex)
+                .putInt("indexed", newFilesIndexed)
+                .putInt("skipped", skippedFiles())
+                .putInt("skippedByUser", userSkippedFiles)
+                .putBoolean(KEY_AWAITING_DECISION, true)
+                .putString(KEY_DECISION_TOKEN, processingAttemptToken)
+                .build());
+    }
+
+    private static String processingAttemptToken(File file) {
+        return decisionToken(file) + "." + Long.toHexString(
+                android.os.SystemClock.elapsedRealtimeNanos());
+    }
+
+    private static String decisionToken(File file) {
+        return android.util.Base64.encodeToString(
+                file.getAbsolutePath().getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                android.util.Base64.NO_WRAP | android.util.Base64.URL_SAFE);
+    }
+
+    private static String fileIdentity(File file) {
+        return file.length() + ":" + file.lastModified();
+    }
+
+    private int skippedFiles() {
+        return Math.max(0, processedFiles - newFilesIndexed - failedFiles);
+    }
+
     private void throwIfCancellationRequested() {
         if (cancellationRequested()) {
             throw new java.util.concurrent.CancellationException(
@@ -1815,15 +2152,25 @@ public class IndexWorker extends Worker {
 
     private Result reconcileCanonicalFamily(String family) {
         int indexed = 0;
-        try {
+        try (CanonicalIndexStore store =
+                     new CanonicalIndexStore(getApplicationContext())) {
+            libraryDocumentTotal = prefs.getInt("last_discovered_document_total", 0);
+            totalFilesToIndex =
+                    store.countFiles(
+                            family, CanonicalIndexingPipeline.STATUS_PACKAGE_MISSING);
+            processedFiles = 0;
+            newFilesIndexed = 0;
+            progressFileName = family;
+            sendIndexProgress("Updating multilingual search", family);
             while (true) {
                 if (cancellationRequested()) {
                     closeCanonicalIndexingPipeline();
                     return Result.retry();
                 }
                 java.util.List<String> paths =
-                        canonicalIndexingPipeline.findPackageMissingFiles(
+                        store.findFiles(
                                 family,
+                                CanonicalIndexingPipeline.STATUS_PACKAGE_MISSING,
                                 CANONICAL_RECONCILIATION_BATCH_SIZE
                         );
                 if (paths.isEmpty()) {
@@ -1831,8 +2178,26 @@ public class IndexWorker extends Worker {
                             "CANONICAL_REINDEX",
                             "family=" + family + " canonicalOnlyFiles=" + indexed
                     );
+                    long elapsedMs = Math.max(
+                            0L,
+                            System.currentTimeMillis() - workerStartedAt
+                    );
+                    androidx.work.Data completion =
+                            new androidx.work.Data.Builder()
+                                    .putString("status", "Multilingual search updated")
+                                    .putString("stage", "Completed")
+                                    .putString("currentFile", family)
+                                    .putString("fileName", family)
+                                    .putInt("processed", processedFiles)
+                                    .putInt("total", totalFilesToIndex)
+                                    .putInt("indexed", newFilesIndexed)
+                                    .putInt("libraryDocumentTotal", libraryDocumentTotal)
+                                    .putLong("elapsedMs", elapsedMs)
+                                    .putLong("workerStartedAt", workerStartedAt)
+                                    .build();
+                    sendIndexProgress("Multilingual search updated", family);
                     return closeCanonicalIndexingPipeline()
-                            ? Result.success()
+                            ? Result.success(completion)
                             : Result.retry();
                 }
                 for (String path : paths) {
@@ -1840,12 +2205,22 @@ public class IndexWorker extends Worker {
                         closeCanonicalIndexingPipeline();
                         return Result.retry();
                     }
-                    canonicalIndexingPipeline.index(
-                            path,
-                            database.chunkDao().getChunksByFilePath(path),
-                            this::cancellationRequested
+                    progressFileName = new java.io.File(path).getName();
+                    sendIndexProgress(
+                            "Updating multilingual search",
+                            progressFileName
                     );
+                    String generation = CanonicalEnrichmentWorker.newGeneration();
+                    store.markPending(path, generation);
+                    CanonicalEnrichmentWorker.enqueue(
+                            getApplicationContext(), path, generation);
                     indexed++;
+                    processedFiles = indexed;
+                    newFilesIndexed = indexed;
+                    sendIndexProgress(
+                            "Updating multilingual search",
+                            progressFileName
+                    );
                 }
             }
         } catch (Exception error) {
@@ -1912,14 +2287,28 @@ public class IndexWorker extends Worker {
 
     private void ensureCanonicalIndexed(String filePath) throws Exception {
         throwIfCancellationRequested();
-        if (canonicalIndexingPipeline.hasFile(filePath)) {
-            return;
+        String generation;
+        try (CanonicalIndexStore store =
+                     new CanonicalIndexStore(getApplicationContext())) {
+            if (store.hasFile(filePath) && store.hasLanguageMetadata(filePath)) {
+                return;
+            }
+            generation = store.pendingGeneration(filePath);
+            if (generation == null) {
+                generation = CanonicalEnrichmentWorker.newGeneration();
+                store.markPending(filePath, generation);
+            }
         }
-        canonicalIndexingPipeline.index(
-                filePath,
-                database.chunkDao().getChunksByFilePath(filePath),
-                this::cancellationRequested
-        );
+        CanonicalEnrichmentWorker.enqueue(getApplicationContext(), filePath, generation);
+    }
+
+    private String beginCanonicalGeneration(String filePath) {
+        String generation = CanonicalEnrichmentWorker.newGeneration();
+        try (CanonicalIndexStore store =
+                     new CanonicalIndexStore(getApplicationContext())) {
+            store.markPending(filePath, generation);
+        }
+        return generation;
     }
 
     private void repairLegacyIndexRows() {
@@ -1971,6 +2360,16 @@ public class IndexWorker extends Worker {
     ) {
 
         currentStage = status;
+        long elapsedMs = Math.max(0L, System.currentTimeMillis() - workerStartedAt);
+        boolean reconciliation = getInputData().getString(KEY_RECONCILIATION_FAMILY) != null;
+        int reportedProcessed = reconciliation
+                ? processedFiles : documentProcessed + imageProcessed;
+        int reportedTotal = reconciliation
+                ? totalFilesToIndex : documentTotal + imageTotal;
+        double speed = elapsedMs > 0L ? reportedProcessed * 1000d / elapsedMs : 0d;
+        long etaSeconds = speed > 0d
+                ? (long) Math.max(0d, (reportedTotal - reportedProcessed) / speed)
+                : 0L;
 
         setProgressAsync(
                 new androidx.work.Data.Builder()
@@ -1988,11 +2387,11 @@ public class IndexWorker extends Worker {
                         )
                         .putInt(
                                 "processed",
-                                processedFiles
+                                reportedProcessed
                         )
                         .putInt(
                                 "total",
-                                totalFilesToIndex
+                                reportedTotal
                         )
                         .putInt(
                                 "pdfCount",
@@ -2010,6 +2409,23 @@ public class IndexWorker extends Worker {
                                 "embeddingCount",
                                 embeddingCount
                         )
+                        .putInt("documentTotal", documentTotal)
+                        .putInt("imageTotal", imageTotal)
+                        .putInt("ocrEstimatedTotal", ocrEstimatedTotal)
+                        .putInt("embeddingEstimatedTotal", embeddingEstimatedTotal)
+                        .putInt("documentProcessed", documentProcessed)
+                        .putInt("imageProcessed", imageProcessed)
+                        .putInt("libraryDocumentTotal", libraryDocumentTotal)
+                        .putString("fileName", progressFileName)
+                        .putLong("fileSize", progressFileSize)
+                        .putLong("elapsedMs", elapsedMs)
+                        .putLong("workerStartedAt", workerStartedAt)
+                        .putLong("etaSeconds", etaSeconds)
+                        .putDouble("speed", speed)
+                        .putInt("indexed", newFilesIndexed)
+                        .putInt("skipped", skippedFiles())
+                        .putInt("skippedByUser", userSkippedFiles)
+                        .putBoolean(KEY_AWAITING_DECISION, false)
                         .build()
         );
     }

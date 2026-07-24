@@ -110,11 +110,9 @@ public class AIPackageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
             packageHolder.progress.setProgress(progress);
         }
 
-        packageHolder.chevron.setVisibility(
-                aiPackage.getState() == AIPackageUiModel.State.DISABLED
-                        ? View.GONE
-                        : View.VISIBLE
-        );
+        // Rows are status summaries until a package-management action is wired.
+        // Do not present a false navigation affordance.
+        packageHolder.chevron.setVisibility(View.GONE);
     }
 
     @Override
@@ -145,6 +143,12 @@ public class AIPackageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHold
                 break;
             case DOWNLOADING:
                 stringRes = R.string.ai_package_status_downloading;
+                break;
+            case PREPARING:
+                stringRes = R.string.ai_package_status_preparing;
+                break;
+            case ACTIVE:
+                stringRes = R.string.ai_package_status_active;
                 break;
             case DISABLED:
                 stringRes = R.string.ai_package_status_disabled;

@@ -209,7 +209,7 @@ def loadPackageDefinition = { File sourceDirectory ->
             payloadDirectory,
             manifestValues.packageType as String
     )
-    String outputBaseName = "${archiveBaseName}-${version}"
+    String outputBaseName = "${manifestValues.packageId}-${version}"
     [
             key                 : sourceDirectory.name,
             sourceDirectory     : sourceDirectory,

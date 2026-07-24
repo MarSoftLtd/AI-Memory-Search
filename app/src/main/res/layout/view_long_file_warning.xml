@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/indexLongFileWarningCard"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:elevation="@dimen/elevation_overlay"
+    android:translationZ="@dimen/elevation_overlay"
+    android:visibility="gone"
+    app:cardBackgroundColor="@color/color_long_file_warning"
+    app:cardCornerRadius="@dimen/dashboard_card_radius"
+    app:cardElevation="@dimen/elevation_modal"
+    app:strokeColor="@color/color_warning_border"
+    app:strokeWidth="@dimen/border_width_strong">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="@dimen/dashboard_card_padding">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/dashboard_large_file_title"
+            android:textColor="@color/color_warning"
+            android:textSize="@dimen/text_subtitle"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/indexLongFileWarningText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_8"
+            android:lineSpacingExtra="@dimen/spacing_4"
+            android:textColor="@color/color_text_primary"
+            android:textSize="@dimen/text_caption" />
+
+        <LinearLayout
+            android:id="@+id/indexLongFileActions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_16"
+            android:gravity="end"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/indexSkipButton"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/index_skip"
+                android:textAllCaps="false"
+                android:textColor="@color/color_text_secondary" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/indexContinueButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/spacing_8"
+                android:text="@string/index_continue"
+                android:textAllCaps="false"
+                app:backgroundTint="@color/color_accent_blue"
+                app:cornerRadius="@dimen/dashboard_button_radius" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

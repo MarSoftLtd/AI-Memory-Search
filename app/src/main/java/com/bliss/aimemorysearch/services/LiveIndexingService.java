@@ -27,6 +27,8 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public class LiveIndexingService extends Service {
+    private static final String CHANNEL_ID = "live_index_channel";
+    private static final int NOTIFICATION_ID = 1001;
 
     private final List<FileObserver> observers =
             new ArrayList<>();
@@ -35,6 +37,9 @@ public class LiveIndexingService extends Service {
             new Handler();
 
     private long latestImageTimestamp = 0;
+    private androidx.lifecycle.LiveData<List<androidx.work.WorkInfo>> workInfoLiveData;
+    private final androidx.lifecycle.Observer<List<androidx.work.WorkInfo>> workObserver =
+            this::updateIndexNotification;
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -53,6 +58,7 @@ public class LiveIndexingService extends Service {
         super.onCreate();
 
         startForegroundServiceInternal();
+        observeIndexWork();
 
         initializeLatestTimestamp();
 
@@ -163,14 +169,11 @@ public class LiveIndexingService extends Service {
 
     private void startForegroundServiceInternal() {
 
-        String channelId =
-                "live_index_channel";
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 
             NotificationChannel channel =
                     new NotificationChannel(
-                            channelId,
+                            CHANNEL_ID,
                             "Live Indexing",
                             NotificationManager.IMPORTANCE_LOW
                     );
@@ -191,7 +194,7 @@ public class LiveIndexingService extends Service {
         Notification notification =
                 new NotificationCompat.Builder(
                         this,
-                        channelId
+                        CHANNEL_ID
                 )
                         .setContentTitle(
                                 "AI Memory Search"
@@ -206,9 +209,59 @@ public class LiveIndexingService extends Service {
                         .build();
 
         startForeground(
-                1001,
+                NOTIFICATION_ID,
                 notification
         );
+    }
+
+    private void observeIndexWork() {
+        workInfoLiveData = WorkManager.getInstance(this)
+                .getWorkInfosForUniqueWorkLiveData("ai_memory_index_worker_debug");
+        workInfoLiveData.observeForever(workObserver);
+    }
+
+    private void updateIndexNotification(List<androidx.work.WorkInfo> workInfos) {
+        androidx.work.WorkInfo active = null;
+        if (workInfos != null) {
+            for (androidx.work.WorkInfo info : workInfos) {
+                if (info.getState() == androidx.work.WorkInfo.State.RUNNING) {
+                    active = info;
+                    break;
+                }
+            }
+        }
+        String title = "AI Memory Search";
+        String content = "Watching for new files";
+        int progress = 0;
+        boolean showProgress = false;
+        if (active != null) {
+            androidx.work.Data data = active.getProgress();
+            int processed = data.getInt("processed", 0);
+            int total = data.getInt("total", 0);
+            String phase = data.getString("stage");
+            boolean reconciliation = active.getTags().contains(
+                    com.bliss.aimemorysearch.workers.CanonicalReindexWorker
+                            .RECONCILIATION_TAG);
+            title = reconciliation
+                    ? "Preparing multilingual search"
+                    : "Indexing your library";
+            content = phase == null || phase.isEmpty()
+                    ? (processed + " of " + total)
+                    : phase + (total > 0 ? " · " + processed + " of " + total : "");
+            if (total > 0) {
+                progress = Math.max(0, Math.min(100, processed * 100 / total));
+                showProgress = true;
+            }
+        }
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
+                .setContentTitle(title)
+                .setContentText(content)
+                .setSmallIcon(android.R.drawable.ic_menu_search)
+                .setOnlyAlertOnce(true)
+                .setOngoing(true);
+        if (showProgress) builder.setProgress(100, progress, false);
+        NotificationManager manager = getSystemService(NotificationManager.class);
+        if (manager != null) manager.notify(NOTIFICATION_ID, builder.build());
     }
 
     private void startWatching() {
@@ -329,6 +382,10 @@ public class LiveIndexingService extends Service {
 
     @Override
     public void onDestroy() {
+
+        if (workInfoLiveData != null) {
+            workInfoLiveData.removeObserver(workObserver);
+        }
 
         super.onDestroy();
 

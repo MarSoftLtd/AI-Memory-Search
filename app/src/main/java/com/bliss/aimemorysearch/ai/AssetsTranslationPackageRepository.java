@@ -65,6 +65,22 @@ public final class AssetsTranslationPackageRepository
         return cachedBundles.get(bundleId);
     }
 
+    public List<AIPackageInfo> getBundlePackages(String bundleId) {
+        AIPackageBundleInfo bundle = findBundleById(bundleId);
+        if (bundle == null) {
+            return Collections.emptyList();
+        }
+        List<AIPackageInfo> packages = new ArrayList<>();
+        for (String packageId : bundle.getPackageIds()) {
+            AIPackageInfo packageInfo = findByPackageId(packageId);
+            if (packageInfo == null) {
+                return Collections.emptyList();
+            }
+            packages.add(packageInfo);
+        }
+        return Collections.unmodifiableList(packages);
+    }
+
     private synchronized void ensureLoaded() {
         if (cachedPackages != null && cachedBundles != null) {
             return;

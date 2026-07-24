@@ -6,6 +6,8 @@ import android.util.Log;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -61,6 +63,11 @@ public class ClipTokenizer {
     public synchronized void initialize(
             Context context
     ) {
+        initialize(ModelPackageRuntime.requireDirectory(
+                context, ModelPackageRuntime.CLIP_TEXT));
+    }
+
+    public synchronized void initialize(File packageDirectory) {
 
         if (loaded) {
             return;
@@ -70,9 +77,9 @@ public class ClipTokenizer {
 
             buildByteEncoder();
 
-            loadVocab(context);
+            loadVocab(packageDirectory);
 
-            loadMerges(context);
+            loadMerges(packageDirectory);
 
             if (vocab.containsKey("<|startoftext|>")) {
                 startTokenId =
@@ -102,6 +109,18 @@ public class ClipTokenizer {
                     e
             );
         }
+    }
+
+    public synchronized boolean isInitialized() {
+        return loaded && !vocab.isEmpty() && !bpeRanks.isEmpty();
+    }
+
+    public synchronized void deactivate() {
+        loaded = false;
+        vocab.clear();
+        bpeRanks.clear();
+        byteEncoder.clear();
+        cache.clear();
     }
 
     public long[] encode(
@@ -173,13 +192,12 @@ public class ClipTokenizer {
     }
 
     private void loadVocab(
-            Context context
+            File packageDirectory
     ) throws Exception {
 
         String json =
                 readAsset(
-                        context,
-                        "models/clip/vocab.json"
+                        new File(packageDirectory, "vocab.json")
                 );
 
         JSONObject object =
@@ -201,16 +219,13 @@ public class ClipTokenizer {
     }
 
     private void loadMerges(
-            Context context
+            File packageDirectory
     ) throws Exception {
 
         BufferedReader reader =
                 new BufferedReader(
                         new InputStreamReader(
-                                context.getAssets()
-                                        .open(
-                                                "models/clip/merges.txt"
-                                        ),
+                                new FileInputStream(new File(packageDirectory, "merges.txt")),
                                 StandardCharsets.UTF_8
                         )
                 );
@@ -243,15 +258,13 @@ public class ClipTokenizer {
     }
 
     private String readAsset(
-            Context context,
-            String path
+            File file
     ) throws Exception {
 
         BufferedReader reader =
                 new BufferedReader(
                         new InputStreamReader(
-                                context.getAssets()
-                                        .open(path),
+                                new FileInputStream(file),
                                 StandardCharsets.UTF_8
                         )
                 );

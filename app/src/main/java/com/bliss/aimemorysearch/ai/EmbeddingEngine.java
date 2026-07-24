@@ -4,6 +4,7 @@ import ai.onnxruntime.OnnxTensor;
 import ai.onnxruntime.OrtEnvironment;
 import ai.onnxruntime.OrtSession;
 import java.io.InputStream;
+import java.io.File;
 public class EmbeddingEngine implements TextEmbeddingEngine {
 
     private static EmbeddingEngine instance;
@@ -23,31 +24,28 @@ public class EmbeddingEngine implements TextEmbeddingEngine {
 
     public void initialize(Context context) {
 
+        initialize(context, ModelPackageRuntime.requireDirectory(
+                context, ModelPackageRuntime.EMBEDDING_CORE));
+    }
+
+    public void initialize(Context context, File packageDirectory) {
+
         try {
             MiniLMTokenizer
                     .getInstance()
-                    .initialize(context);
+                    .initialize(new File(packageDirectory, "vocab.txt"));
 
             ortEnvironment =
                     OrtEnvironment.getEnvironment();
 
-            InputStream inputStream =
-                    context.getAssets()
-                            .open("models/model.onnx");
-
-            byte[] modelBytes =
-                    new byte[inputStream.available()];
-
-            inputStream.read(modelBytes);
-
-            inputStream.close();
+            File modelFile = new File(packageDirectory, "model.onnx");
 
             OrtSession.SessionOptions options =
                     new OrtSession.SessionOptions();
 
             ortSession =
                     ortEnvironment.createSession(
-                            modelBytes,
+                            modelFile.getAbsolutePath(),
                             options
                     );
 
@@ -59,6 +57,23 @@ public class EmbeddingEngine implements TextEmbeddingEngine {
                     e
             );
         }
+    }
+    public synchronized boolean isInitialized() {
+        return ortEnvironment != null
+                && ortSession != null
+                && MiniLMTokenizer.getInstance().isInitialized();
+    }
+    public synchronized void deactivate() {
+        if (ortSession != null) {
+            try {
+                ortSession.close();
+            } catch (Exception ignored) {
+            }
+        }
+        ortSession = null;
+        ortEnvironment = null;
+        embeddingCache.clear();
+        MiniLMTokenizer.getInstance().deactivate();
     }
     public float[] generateEmbedding(
             String text

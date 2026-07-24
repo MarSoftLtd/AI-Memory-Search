@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/permissionCard"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:alpha="0"
+    android:visibility="gone"
+    app:cardBackgroundColor="@color/color_surface_modal"
+    app:cardCornerRadius="@dimen/dashboard_card_radius"
+    app:cardElevation="@dimen/elevation_card"
+    app:strokeColor="@android:color/white"
+    app:strokeWidth="@dimen/border_width">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="@dimen/spacing_24">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/permission_title"
+            android:textColor="@color/color_text_primary"
+            android:textSize="@dimen/text_title"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_8"
+            android:lineSpacingExtra="@dimen/spacing_4"
+            android:text="@string/permission_body"
+            android:textColor="@color/color_text_secondary"
+            android:textSize="@dimen/text_body" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnGrantAccess"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/component_button_height"
+            android:layout_marginTop="@dimen/spacing_24"
+            android:text="@string/grant_access"
+            android:textAllCaps="false"
+            android:textColor="@color/color_text_primary"
+            android:textSize="@dimen/text_body"
+            android:textStyle="bold"
+            app:backgroundTint="@color/color_accent_blue"
+            app:cornerRadius="@dimen/dashboard_button_radius"
+            app:rippleColor="@color/color_surface_overlay" />
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

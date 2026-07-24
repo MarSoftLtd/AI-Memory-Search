@@ -32,6 +32,21 @@ public interface ChunkDao {
             String token,
             int limit
     );
+
+    @Query("SELECT * FROM chunks WHERE filePath IN (:filePaths) "
+            + "AND chunkIndex IN (:chunkIndexes)")
+    List<ChunkEntity> getChunksByStableIdentities(
+            List<String> filePaths,
+            List<Integer> chunkIndexes
+    );
+
+    @Query("SELECT * FROM chunks WHERE filePath = :filePath ORDER BY chunkIndex")
+    List<ChunkEntity> getChunksByFilePath(String filePath);
+
+    @Query("SELECT id,parentFileId,filePath,fileName,chunkText,normalizedText,"
+            + "NULL AS embedding,chunkIndex,indexedAt FROM chunks "
+            + "WHERE filePath = :filePath ORDER BY chunkIndex")
+    List<ChunkEntity> getCanonicalChunksByFilePath(String filePath);
     @Query(
             "SELECT normalizedText FROM chunks " +
                     "WHERE normalizedText LIKE :prefix || '%' " +

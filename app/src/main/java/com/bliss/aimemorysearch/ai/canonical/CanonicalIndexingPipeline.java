@@ -86,8 +86,33 @@ public final class CanonicalIndexingPipeline implements AutoCloseable {
         }
     }
 
+    public IndexingStats indexGeneration(
+            String filePath,
+            String generation,
+            List<ChunkEntity> chunks,
+            BooleanSupplier cancellationRequested
+    ) throws Exception {
+        throwIfCancelled(cancellationRequested);
+        synchronized (DATABASE_LOCK) {
+            throwIfCancelled(cancellationRequested);
+            if (!indexStore.isCurrentGeneration(filePath, generation)) {
+                return null;
+            }
+            return indexLocked(filePath, generation, chunks, cancellationRequested);
+        }
+    }
+
     private IndexingStats indexLocked(
             String filePath,
+            List<ChunkEntity> chunks,
+            BooleanSupplier cancellationRequested
+    ) throws Exception {
+        return indexLocked(filePath, null, chunks, cancellationRequested);
+    }
+
+    private IndexingStats indexLocked(
+            String filePath,
+            String generation,
             List<ChunkEntity> chunks,
             BooleanSupplier cancellationRequested
     ) throws Exception {
@@ -96,11 +121,13 @@ public final class CanonicalIndexingPipeline implements AutoCloseable {
             throw new IllegalArgumentException("filePath must not be empty");
         }
         if (chunks == null || chunks.isEmpty()) {
-            CanonicalIndexStore.StoreStats storeStats = indexStore.replaceFile(
-                    filePath, new LinkedHashMap<>(), java.util.Collections.singletonList(
+            CanonicalIndexStore.StoreStats storeStats = publish(
+                    filePath, generation, new LinkedHashMap<>(),
+                    java.util.Collections.singletonList(
                             new CanonicalIndexStore.LanguageMetadata("und", "none",
                                     contentKind(filePath), 0, 0, 0f, STATUS_UNDETERMINED,
                                     0, 0, "none")));
+            if (storeStats == null) return null;
             return logStats(filePath, "und", "none", "none", 0f,
                     0, 0, 0, storeStats);
         }
@@ -180,11 +207,6 @@ public final class CanonicalIndexingPipeline implements AutoCloseable {
             }
             language.add(contextualUnit.length(), detection.confidence,
                     frequencies.size(), scope.translate && !frequencies.isEmpty());
-            Log.d(TAG, "Original chunk=" + contextualUnit
-                    + " | detectedLanguage=" + detection.language
-                    + " | confidence=" + detection.confidence
-                    + " | translationPackage=" + scope.packageLabel
-                    + " | canonicalVocabularyEntries=" + frequencies.size());
         }
 
         List<CanonicalIndexStore.LanguageMetadata> metadataRows = new ArrayList<>();
@@ -193,12 +215,24 @@ public final class CanonicalIndexingPipeline implements AutoCloseable {
             metadataRows.add(language.toImmutable());
         }
         throwIfCancelled(cancellationRequested);
-        CanonicalIndexStore.StoreStats storeStats = indexStore.replaceFile(
-                filePath, chunkEvidence, metadataRows);
+        CanonicalIndexStore.StoreStats storeStats = publish(
+                filePath, generation, chunkEvidence, metadataRows);
+        if (storeStats == null) return null;
         throwIfCancelled(cancellationRequested);
         return logStats(filePath, lastDetection.language, lastScope.family,
                 lastScope.packageLabel, lastDetection.confidence,
                 cacheHits, cacheMisses, translatedUnits, storeStats);
+    }
+
+    private CanonicalIndexStore.StoreStats publish(
+            String filePath,
+            String generation,
+            Map<Integer, Map<CanonicalHash, Integer>> evidence,
+            List<CanonicalIndexStore.LanguageMetadata> metadata
+    ) throws IOException {
+        return generation == null
+                ? indexStore.replaceFile(filePath, evidence, metadata)
+                : indexStore.replaceFileIfCurrent(filePath, generation, evidence, metadata);
     }
 
     private static void throwIfCancelled(BooleanSupplier cancellationRequested) {
@@ -222,6 +256,12 @@ public final class CanonicalIndexingPipeline implements AutoCloseable {
     public List<String> findPackageMissingFiles(String family, int limit) {
         synchronized (DATABASE_LOCK) {
             return indexStore.findFiles(family, STATUS_PACKAGE_MISSING, limit);
+        }
+    }
+
+    public int countPackageMissingFiles(String family) {
+        synchronized (DATABASE_LOCK) {
+            return indexStore.countFiles(family, STATUS_PACKAGE_MISSING);
         }
     }
 

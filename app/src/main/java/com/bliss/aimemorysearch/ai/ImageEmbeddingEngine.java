@@ -5,9 +5,8 @@ import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.util.Log;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.io.File;
 import java.nio.FloatBuffer;
 import java.util.Collections;
 
@@ -19,15 +18,6 @@ public class ImageEmbeddingEngine {
 
     private static final String TAG_INIT = "MOBILECLIP_INIT";
     private static final String TAG_IMAGE = "MOBILECLIP_IMAGE";
-
-    private static final String ASSET_MODEL_PATH =
-            "models/clip/vision_model_q4f16.onnx";
-
-    private static final String LOCAL_MODEL_DIR =
-            "models/clip";
-
-    private static final String LOCAL_MODEL_NAME =
-            "vision_model_q4f16.onnx";
 
     private static ImageEmbeddingEngine instance;
 
@@ -46,6 +36,11 @@ public class ImageEmbeddingEngine {
     public synchronized void initialize(
             Context context
     ) {
+        initialize(ModelPackageRuntime.requireDirectory(
+                context, ModelPackageRuntime.CLIP_VISION));
+    }
+
+    public synchronized void initialize(File packageDirectory) {
 
         if (session != null) {
             return;
@@ -56,10 +51,7 @@ public class ImageEmbeddingEngine {
             environment =
                     OrtEnvironment.getEnvironment();
 
-            File modelFile =
-                    copyAssetModelToInternalFile(
-                            context
-                    );
+            File modelFile = new File(packageDirectory, "vision_model_q4f16.onnx");
 
             OrtSession.SessionOptions options =
                     new OrtSession.SessionOptions();
@@ -74,6 +66,21 @@ public class ImageEmbeddingEngine {
             
             session = null;
         }
+    }
+
+    public synchronized boolean isInitialized() {
+        return environment != null && session != null;
+    }
+
+    public synchronized void deactivate() {
+        if (session != null) {
+            try {
+                session.close();
+            } catch (Exception ignored) {
+            }
+        }
+        session = null;
+        environment = null;
     }
 
     public float[] generateEmbedding(
@@ -173,63 +180,6 @@ public class ImageEmbeddingEngine {
         }
 
         return null;
-    }
-
-    private File copyAssetModelToInternalFile(
-            Context context
-    ) throws Exception {
-
-        File modelDir =
-                new File(
-                        context.getFilesDir(),
-                        LOCAL_MODEL_DIR
-                );
-
-        if (!modelDir.exists()) {
-            modelDir.mkdirs();
-        }
-
-        File modelFile =
-                new File(
-                        modelDir,
-                        LOCAL_MODEL_NAME
-                );
-        if (
-                modelFile.exists()
-                        &&
-                        modelFile.length() > 10 * 1024 * 1024
-        ) {
-            return modelFile;
-        }
-        InputStream inputStream =
-                context.getAssets()
-                        .open(
-                                ASSET_MODEL_PATH
-                        );
-        FileOutputStream outputStream =
-                new FileOutputStream(
-                        modelFile,
-                        false
-                );
-
-        byte[] buffer =
-                new byte[1024 * 1024];
-        int read;
-
-        while (
-                (read = inputStream.read(buffer)) != -1
-        ) {
-
-            outputStream.write(
-                    buffer,
-                    0,
-                    read
-            );
-        }
-        outputStream.flush();
-        outputStream.close();
-        inputStream.close();
-        return modelFile;
     }
 
     private float[] preprocessImage(

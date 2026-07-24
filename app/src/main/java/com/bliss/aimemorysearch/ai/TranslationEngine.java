@@ -8,6 +8,8 @@ public final class TranslationEngine {
 
     private final Context context;
     private final TranslationRuntimeLoader runtimeLoader;
+    private String cachedPackageIdentity = "";
+    private TranslationPackage cachedTranslationPackage;
 
     private TranslationEngine(
             Context context
@@ -47,7 +49,6 @@ public final class TranslationEngine {
             String text,
             String selectedLanguageFamily
     ) {
-        android.util.Log.d("MULTILINGUAL_PIPELINE", "TranslationEngine input: " + text);
         if (
                 selectedLanguageFamily == null
                         ||
@@ -88,7 +89,6 @@ public final class TranslationEngine {
         ).translate(
                 text
         );
-        android.util.Log.d("MULTILINGUAL_PIPELINE", "TranslationEngine output: " + translated);
         return translated;
     }
 
@@ -98,37 +98,40 @@ public final class TranslationEngine {
     ) {
 
         try {
-            java.io.File packageDirectory =
-                    new AiStorageManager(context)
-                            .getInstalledPackageDirectory(packageInfo);
-            TranslationPackageLayout layout =
-                    new TranslationPackageLayout(packageDirectory);
-            TranslationPackageValidator validator =
-                    new TranslationPackageValidator();
+            String packageIdentity = packageInfo.getPackageId()
+                    + "\u0000" + packageInfo.getVersion();
+            if (!packageIdentity.equals(cachedPackageIdentity)
+                    || cachedTranslationPackage == null) {
+                java.io.File packageDirectory =
+                        new AiStorageManager(context)
+                                .getInstalledPackageDirectory(packageInfo);
+                TranslationPackageLayout layout =
+                        new TranslationPackageLayout(packageDirectory);
+                TranslationPackageValidator validator =
+                        new TranslationPackageValidator();
 
-            if (!validator.isValid(layout)) {
-                throw new IllegalStateException(
-                        "Installed language package is invalid"
-                );
-            }
-
-            TranslationPackageManifest manifest =
-                    new TranslationPackageManifestReader()
-                            .read(layout);
-            TranslationPackage translationPackage =
-                    new TranslationPackage(
-                            modelId,
-                            packageDirectory,
-                            manifest,
-                            true
+                if (!validator.isValid(layout)) {
+                    throw new IllegalStateException(
+                            "Installed language package is invalid"
                     );
+                }
 
-            android.util.Log.d("MULTILINGUAL_PIPELINE", "Translation package directory: " + translationPackage.getDirectory()
-                    + " | installed=" + translationPackage.isInstalled());
+                TranslationPackageManifest manifest =
+                        new TranslationPackageManifestReader()
+                                .read(layout);
+                cachedTranslationPackage =
+                        new TranslationPackage(
+                                modelId,
+                                packageDirectory,
+                                manifest,
+                                true
+                        );
+                cachedPackageIdentity = packageIdentity;
+            }
 
             return runtimeLoader.loadRuntime(
                     modelId,
-                    translationPackage
+                    cachedTranslationPackage
             );
         } catch (Exception e) {
             android.util.Log.e("MULTILINGUAL_PIPELINE", "Translation runtime/package initialization failed", e);

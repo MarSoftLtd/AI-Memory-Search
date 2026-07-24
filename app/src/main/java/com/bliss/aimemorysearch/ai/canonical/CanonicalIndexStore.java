@@ -16,11 +16,16 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
 
 /** Compact chunk-level canonical index with bounded term lookup. */
 public final class CanonicalIndexStore extends SQLiteOpenHelper {
     public static final String DATABASE_NAME = "canonical_index.db";
-    private static final int DATABASE_VERSION = 4;
+    private static final int DATABASE_VERSION = 5;
+    private static final String STATE_PENDING = "PENDING";
+    private static final String STATE_PUBLISHED = "PUBLISHED";
     private static final int EVIDENCE_FORMAT_VERSION = 1;
     private static final int FIELD_BODY = 1;
 
@@ -30,7 +35,8 @@ public final class CanonicalIndexStore extends SQLiteOpenHelper {
 
     @Override
     public void onCreate(SQLiteDatabase database) {
-        database.execSQL("CREATE TABLE canonical_files (file_path TEXT PRIMARY KEY) WITHOUT ROWID");
+        database.execSQL("CREATE TABLE canonical_files (file_path TEXT PRIMARY KEY,"
+                + "generation TEXT NOT NULL,state TEXT NOT NULL) WITHOUT ROWID");
         database.execSQL("CREATE TABLE canonical_chunks ("
                 + "file_path TEXT NOT NULL,chunk_index INTEGER NOT NULL,"
                 + "term_hashes BLOB NOT NULL,PRIMARY KEY(file_path,chunk_index))");
@@ -55,8 +61,18 @@ public final class CanonicalIndexStore extends SQLiteOpenHelper {
                     + "(file_path TEXT PRIMARY KEY) WITHOUT ROWID");
             oldVersion = 3;
         }
-        if (oldVersion == 3 && newVersion == 4) {
+        if (oldVersion == 3) {
             createLanguageMetadataTable(database);
+            oldVersion = 4;
+        }
+        if (oldVersion == 4) {
+            database.execSQL("ALTER TABLE canonical_files ADD COLUMN generation "
+                    + "TEXT NOT NULL DEFAULT ''");
+            database.execSQL("ALTER TABLE canonical_files ADD COLUMN state "
+                    + "TEXT NOT NULL DEFAULT 'PUBLISHED'");
+            oldVersion = 5;
+        }
+        if (oldVersion == newVersion) {
             return;
         }
         throw new IllegalStateException("Unsupported canonical index migration "
@@ -75,16 +91,89 @@ public final class CanonicalIndexStore extends SQLiteOpenHelper {
             Map<Integer, Map<CanonicalHash, Integer>> chunkEvidence,
             List<LanguageMetadata> languageMetadata
     ) throws IOException {
-        if (filePath == null || filePath.trim().isEmpty() || chunkEvidence == null) {
+        String generation = UUID.randomUUID().toString();
+        markPending(filePath, generation);
+        StoreStats stats = replaceFileIfCurrent(
+                filePath, generation, chunkEvidence, languageMetadata);
+        if (stats == null) {
+            throw new IOException("Canonical generation was superseded");
+        }
+        return stats;
+    }
+
+    /**
+     * Makes a generation authoritative before the primary Room transaction commits.
+     * Existing evidence is retained but hidden until this generation is published.
+     */
+    public void markPending(String filePath, String generation) {
+        requireIdentity(filePath, generation);
+        SQLiteDatabase database = getWritableDatabase();
+        database.beginTransaction();
+        try {
+            database.execSQL("INSERT OR REPLACE INTO canonical_files"
+                            + "(file_path,generation,state) VALUES(?,?,?)",
+                    new Object[]{filePath, generation, STATE_PENDING});
+            database.delete("canonical_file_languages", "file_path=?",
+                    new String[]{filePath});
+            database.setTransactionSuccessful();
+        } finally {
+            database.endTransaction();
+        }
+    }
+
+    public String pendingGeneration(String filePath) {
+        try (Cursor cursor = getReadableDatabase().rawQuery(
+                "SELECT generation FROM canonical_files WHERE file_path=? AND state=? LIMIT 1",
+                new String[]{filePath, STATE_PENDING})) {
+            return cursor.moveToFirst() ? cursor.getString(0) : null;
+        }
+    }
+
+    public Map<String, String> pendingGenerations() {
+        Map<String, String> generations = new LinkedHashMap<>();
+        try (Cursor cursor = getReadableDatabase().rawQuery(
+                "SELECT file_path,generation FROM canonical_files WHERE state=? "
+                        + "ORDER BY file_path",
+                new String[]{STATE_PENDING})) {
+            while (cursor.moveToNext()) {
+                generations.put(cursor.getString(0), cursor.getString(1));
+            }
+        }
+        return generations;
+    }
+
+    public boolean isCurrentGeneration(String filePath, String generation) {
+        try (Cursor cursor = getReadableDatabase().rawQuery(
+                "SELECT 1 FROM canonical_files WHERE file_path=? AND generation=? LIMIT 1",
+                new String[]{filePath, generation})) {
+            return cursor.moveToFirst();
+        }
+    }
+
+    /**
+     * Atomically replaces evidence only if no newer primary index has claimed the file.
+     * A null result means this computation is stale and was discarded.
+     */
+    public StoreStats replaceFileIfCurrent(
+            String filePath,
+            String generation,
+            Map<Integer, Map<CanonicalHash, Integer>> chunkEvidence,
+            List<LanguageMetadata> languageMetadata
+    ) throws IOException {
+        requireIdentity(filePath, generation);
+        if (chunkEvidence == null) {
             throw new IllegalArgumentException("file chunk evidence is required");
         }
         SQLiteDatabase database = getWritableDatabase();
         database.beginTransaction();
         try {
+            if (!isCurrentGeneration(database, filePath, generation)) {
+                return null;
+            }
             deleteFile(database, filePath);
             int hashCount = 0;
             long evidenceBytes = 0L;
-            List<CanonicalHash> affectedHashes = new ArrayList<>();
+            Map<CanonicalHash, List<CanonicalPosting>> additions = new LinkedHashMap<>();
             List<Integer> chunkIndexes = new ArrayList<>(chunkEvidence.keySet());
             Collections.sort(chunkIndexes);
             for (Integer chunkIndex : chunkIndexes) {
@@ -102,9 +191,9 @@ public final class CanonicalIndexStore extends SQLiteOpenHelper {
                     if (hash == null || frequency == null || frequency <= 0) {
                         throw new IllegalArgumentException("canonical frequencies must be positive");
                     }
-                    addPosting(database, hash,
-                            new CanonicalPosting(filePath, chunkIndex, frequency, FIELD_BODY));
-                    affectedHashes.add(hash);
+                    additions.computeIfAbsent(hash, ignored -> new ArrayList<>())
+                            .add(new CanonicalPosting(
+                                    filePath, chunkIndex, frequency, FIELD_BODY));
                 }
                 byte[] encodedHashes = encodeHashes(hashes);
                 database.execSQL("INSERT INTO canonical_chunks "
@@ -113,8 +202,17 @@ public final class CanonicalIndexStore extends SQLiteOpenHelper {
                 hashCount += hashes.size();
                 evidenceBytes += encodedHashes.length;
             }
-            database.execSQL("INSERT OR REPLACE INTO canonical_files(file_path) VALUES(?)",
-                    new Object[]{filePath});
+            List<CanonicalHash> additionHashes = new ArrayList<>(additions.keySet());
+            Collections.sort(additionHashes);
+            for (CanonicalHash hash : additionHashes) {
+                List<CanonicalPosting> postings = readPostings(database, hash);
+                postings.removeIf(posting -> posting.getFilePath().equals(filePath));
+                postings.addAll(additions.get(hash));
+                writePostings(database, hash, postings);
+            }
+            database.execSQL("INSERT OR REPLACE INTO canonical_files"
+                            + "(file_path,generation,state) VALUES(?,?,?)",
+                    new Object[]{filePath, generation, STATE_PUBLISHED});
             for (LanguageMetadata metadata : languageMetadata) {
                 database.execSQL("INSERT INTO canonical_file_languages "
                                 + "(file_path,language_tag,translation_family,content_kind,"
@@ -129,8 +227,7 @@ public final class CanonicalIndexStore extends SQLiteOpenHelper {
                                 metadata.packageVersion});
             }
             database.setTransactionSuccessful();
-            return new StoreStats(chunkIndexes.size(), hashCount, evidenceBytes,
-                    postingBytes(database, affectedHashes));
+            return new StoreStats(chunkIndexes.size(), hashCount, evidenceBytes, 0L);
         } finally {
             database.endTransaction();
         }
@@ -147,10 +244,26 @@ public final class CanonicalIndexStore extends SQLiteOpenHelper {
         }
     }
 
+    public boolean deleteFileIfCurrent(String filePath, String generation) throws IOException {
+        requireIdentity(filePath, generation);
+        SQLiteDatabase database = getWritableDatabase();
+        database.beginTransaction();
+        try {
+            if (!isCurrentGeneration(database, filePath, generation)) {
+                return false;
+            }
+            deleteFile(database, filePath);
+            database.setTransactionSuccessful();
+            return true;
+        } finally {
+            database.endTransaction();
+        }
+    }
+
     public boolean hasFile(String filePath) {
         try (Cursor cursor = getReadableDatabase().rawQuery(
-                "SELECT 1 FROM canonical_files WHERE file_path=? LIMIT 1",
-                new String[]{filePath})) {
+                "SELECT 1 FROM canonical_files WHERE file_path=? AND state=? LIMIT 1",
+                new String[]{filePath, STATE_PUBLISHED})) {
             return cursor.moveToFirst();
         }
     }
@@ -175,6 +288,15 @@ public final class CanonicalIndexStore extends SQLiteOpenHelper {
             while (cursor.moveToNext()) paths.add(cursor.getString(0));
         }
         return paths;
+    }
+
+    public int countFiles(String family, String status) {
+        try (Cursor cursor = getReadableDatabase().rawQuery(
+                "SELECT COUNT(DISTINCT file_path) FROM canonical_file_languages "
+                        + "WHERE translation_family=? AND canonical_status=?",
+                new String[]{family, status})) {
+            return cursor.moveToFirst() ? cursor.getInt(0) : 0;
+        }
     }
 
     public List<LanguageSummary> languageSummaries() {
@@ -231,6 +353,7 @@ public final class CanonicalIndexStore extends SQLiteOpenHelper {
             return Collections.emptyList();
         }
         LinkedHashMap<String, MutableMatch> merged = new LinkedHashMap<>();
+        Set<String> publishedFiles = publishedFiles(getReadableDatabase());
         List<CanonicalHash> unique = new ArrayList<>();
         for (CanonicalHash hash : hashes) {
             if (hash != null && !unique.contains(hash)) {
@@ -239,6 +362,9 @@ public final class CanonicalIndexStore extends SQLiteOpenHelper {
         }
         for (CanonicalHash hash : unique) {
             for (CanonicalPosting posting : readPostings(getReadableDatabase(), hash)) {
+                if (!publishedFiles.contains(posting.getFilePath())) {
+                    continue;
+                }
                 String key = posting.getFilePath() + '\u0000' + posting.getChunkIndex();
                 MutableMatch match = merged.get(key);
                 if (match == null) {
@@ -270,19 +396,59 @@ public final class CanonicalIndexStore extends SQLiteOpenHelper {
     }
 
     private static void deleteFile(SQLiteDatabase database, String filePath) throws IOException {
+        java.util.LinkedHashSet<CanonicalHash> affectedHashes =
+                new java.util.LinkedHashSet<>();
         try (Cursor cursor = database.rawQuery(
                 "SELECT chunk_index,term_hashes FROM canonical_chunks WHERE file_path=?",
                 new String[]{filePath})) {
             while (cursor.moveToNext()) {
-                int chunkIndex = cursor.getInt(0);
-                for (CanonicalHash hash : decodeHashes(cursor.getBlob(1))) {
-                    removePosting(database, hash, filePath, chunkIndex);
-                }
+                affectedHashes.addAll(decodeHashes(cursor.getBlob(1)));
+            }
+        }
+        List<CanonicalHash> sortedHashes = new ArrayList<>(affectedHashes);
+        Collections.sort(sortedHashes);
+        for (CanonicalHash hash : sortedHashes) {
+            List<CanonicalPosting> postings = readPostings(database, hash);
+            postings.removeIf(posting -> posting.getFilePath().equals(filePath));
+            if (postings.isEmpty()) {
+                database.delete("canonical_postings", "hash_high=? AND hash_low=?",
+                        new String[]{Long.toString(hash.getHigh()),
+                                Long.toString(hash.getLow())});
+            } else {
+                writePostings(database, hash, postings);
             }
         }
         database.delete("canonical_chunks", "file_path=?", new String[]{filePath});
         database.delete("canonical_file_languages", "file_path=?", new String[]{filePath});
         database.delete("canonical_files", "file_path=?", new String[]{filePath});
+    }
+
+    private static boolean isCurrentGeneration(
+            SQLiteDatabase database, String filePath, String generation) {
+        try (Cursor cursor = database.rawQuery(
+                "SELECT 1 FROM canonical_files WHERE file_path=? AND generation=? LIMIT 1",
+                new String[]{filePath, generation})) {
+            return cursor.moveToFirst();
+        }
+    }
+
+    private static Set<String> publishedFiles(SQLiteDatabase database) {
+        Set<String> paths = new HashSet<>();
+        try (Cursor cursor = database.rawQuery(
+                "SELECT file_path FROM canonical_files WHERE state=?",
+                new String[]{STATE_PUBLISHED})) {
+            while (cursor.moveToNext()) {
+                paths.add(cursor.getString(0));
+            }
+        }
+        return paths;
+    }
+
+    private static void requireIdentity(String filePath, String generation) {
+        if (filePath == null || filePath.trim().isEmpty()
+                || generation == null || generation.trim().isEmpty()) {
+            throw new IllegalArgumentException("file path and generation are required");
+        }
     }
 
     private static void createLanguageMetadataTable(SQLiteDatabase database) {
@@ -336,22 +502,6 @@ public final class CanonicalIndexStore extends SQLiteOpenHelper {
                         + "(hash_high,hash_low,postings) VALUES(?,?,?)",
                 new Object[]{hash.getHigh(), hash.getLow(),
                         CanonicalPostingCodec.encode(postings)});
-    }
-
-    private static long postingBytes(SQLiteDatabase database, List<CanonicalHash> hashes) {
-        long bytes = 0L;
-        List<CanonicalHash> unique = new ArrayList<>();
-        for (CanonicalHash hash : hashes) {
-            if (!unique.contains(hash)) unique.add(hash);
-        }
-        for (CanonicalHash hash : unique) {
-            try (Cursor cursor = database.rawQuery(
-                    "SELECT length(postings) FROM canonical_postings WHERE hash_high=? AND hash_low=?",
-                    new String[]{Long.toString(hash.getHigh()), Long.toString(hash.getLow())})) {
-                if (cursor.moveToFirst()) bytes += cursor.getLong(0);
-            }
-        }
-        return bytes;
     }
 
     private static byte[] encodeHashes(List<CanonicalHash> hashes) {

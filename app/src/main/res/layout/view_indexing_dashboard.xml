@@ -1,0 +1,381 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/indexStatsCard"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:cardBackgroundColor="@color/color_surface"
+        app:cardCornerRadius="@dimen/dashboard_card_radius"
+        app:cardElevation="@dimen/elevation_card"
+        app:strokeColor="@color/color_border_subtle"
+        app:strokeWidth="@dimen/border_width">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="@dimen/dashboard_card_padding">
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <TextView
+                    android:id="@+id/indexSectionTitle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:text="@string/indexing_title_running"
+                    android:textColor="@color/color_text_primary"
+                    android:textSize="@dimen/text_title"
+                    android:textStyle="bold"
+                    app:layout_constraintEnd_toStartOf="@id/indexLoader"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_4"
+                    android:text="@string/dashboard_indexing_description"
+                    android:textColor="@color/color_text_muted"
+                    android:textSize="@dimen/text_caption"
+                    app:layout_constraintEnd_toStartOf="@id/indexLoader"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/indexSectionTitle" />
+
+                <com.bliss.aimemorysearch.ui.FourDotLoaderView
+                    android:id="@+id/indexLoader"
+                    android:layout_width="@dimen/component_loader_size"
+                    android:layout_height="@dimen/component_loader_size"
+                    android:visibility="gone"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/border_width"
+                android:layout_marginTop="@dimen/spacing_16"
+                android:background="@color/color_border_subtle" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_16"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/pdfCountText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="@string/documents_count_initial"
+                    android:textColor="@color/color_text_primary"
+                    android:textSize="@dimen/text_label"
+                    android:textStyle="bold" />
+
+                <com.google.android.material.progressindicator.LinearProgressIndicator
+                    android:id="@+id/pdfGauge"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_8"
+                    android:max="100"
+                    android:progress="0"
+                    app:indicatorColor="@color/color_accent_secondary"
+                    app:trackColor="@color/color_progress_track"
+                    app:trackCornerRadius="@dimen/dashboard_progress_radius"
+                    app:trackThickness="@dimen/dashboard_progress_height" />
+
+                <TextView
+                    android:id="@+id/jpgCountText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_16"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="@string/images_count_initial"
+                    android:textColor="@color/color_text_primary"
+                    android:textSize="@dimen/text_label"
+                    android:textStyle="bold" />
+
+                <com.google.android.material.progressindicator.LinearProgressIndicator
+                    android:id="@+id/jpgGauge"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_8"
+                    android:max="100"
+                    android:progress="0"
+                    app:indicatorColor="@color/color_accent_violet"
+                    app:trackColor="@color/color_progress_track"
+                    app:trackCornerRadius="@dimen/dashboard_progress_radius"
+                    app:trackThickness="@dimen/dashboard_progress_height" />
+
+                <TextView
+                    android:id="@+id/ocrCountText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_16"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="@string/text_detected_count_initial"
+                    android:textColor="@color/color_text_primary"
+                    android:textSize="@dimen/text_label"
+                    android:textStyle="bold" />
+
+                <com.google.android.material.progressindicator.LinearProgressIndicator
+                    android:id="@+id/ocrGauge"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_8"
+                    android:max="100"
+                    android:progress="0"
+                    app:indicatorColor="@color/color_success"
+                    app:trackColor="@color/color_progress_track"
+                    app:trackCornerRadius="@dimen/dashboard_progress_radius"
+                    app:trackThickness="@dimen/dashboard_progress_height" />
+
+                <TextView
+                    android:id="@+id/embeddingCountText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_16"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="@string/ai_indexed_count_initial"
+                    android:textColor="@color/color_text_primary"
+                    android:textSize="@dimen/text_label"
+                    android:textStyle="bold" />
+
+                <com.google.android.material.progressindicator.LinearProgressIndicator
+                    android:id="@+id/embeddingGauge"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_8"
+                    android:max="100"
+                    android:progress="0"
+                    app:indicatorColor="@color/color_accent"
+                    app:trackColor="@color/color_progress_track"
+                    app:trackCornerRadius="@dimen/dashboard_progress_radius"
+                    app:trackThickness="@dimen/dashboard_progress_height" />
+
+            </LinearLayout>
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_24"
+                app:cardBackgroundColor="@color/color_surface_secondary"
+                app:cardCornerRadius="@dimen/dashboard_card_radius"
+                app:cardElevation="@dimen/elevation_none"
+                app:strokeColor="@color/color_border"
+                app:strokeWidth="@dimen/border_width">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="@dimen/spacing_16">
+
+                    <androidx.constraintlayout.widget.ConstraintLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                        <TextView
+                            android:id="@+id/overallProgressLabel"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:text="@string/dashboard_overall_progress"
+                            android:textColor="@color/color_text_primary"
+                            android:textSize="@dimen/text_subtitle"
+                            android:textStyle="bold"
+                            app:layout_constraintEnd_toStartOf="@id/indexOverallProgressText"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintTop_toTopOf="parent" />
+
+                        <TextView
+                            android:id="@+id/indexOverallProgressText"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:gravity="end"
+                            android:textColor="@color/color_accent"
+                            android:textSize="@dimen/text_title"
+                            android:textStyle="bold"
+                            android:visibility="gone"
+                            app:layout_constraintBaseline_toBaselineOf="@id/overallProgressLabel"
+                            app:layout_constraintEnd_toEndOf="parent" />
+
+                    </androidx.constraintlayout.widget.ConstraintLayout>
+
+                    <com.google.android.material.progressindicator.LinearProgressIndicator
+                        android:id="@+id/indexOverallProgress"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/spacing_16"
+                        android:indeterminate="true"
+                        android:max="100"
+                        android:visibility="gone"
+                        app:indicatorColor="@color/color_accent"
+                        app:trackColor="@color/color_progress_track"
+                        app:trackCornerRadius="@dimen/dashboard_overall_progress_radius"
+                        app:trackThickness="@dimen/dashboard_overall_progress_height" />
+
+                    <androidx.constraintlayout.widget.ConstraintLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/spacing_12">
+
+                        <TextView
+                            android:id="@+id/indexStateText"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:ellipsize="end"
+                            android:maxLines="1"
+                            android:text="@string/index_state_idle"
+                            android:textColor="@color/color_text_secondary"
+                            android:textSize="@dimen/text_caption"
+                            app:layout_constraintEnd_toStartOf="@id/indexedCountText"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintTop_toTopOf="parent" />
+
+                        <TextView
+                            android:id="@+id/indexedCountText"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="@dimen/spacing_8"
+                            android:text="—"
+                            android:textColor="@color/color_text_soft"
+                            android:textSize="@dimen/text_caption"
+                            android:textStyle="bold"
+                            app:layout_constraintBaseline_toBaselineOf="@id/indexStateText"
+                            app:layout_constraintEnd_toEndOf="parent" />
+
+                    </androidx.constraintlayout.widget.ConstraintLayout>
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_16"
+                app:cardBackgroundColor="@color/color_surface_secondary"
+                app:cardCornerRadius="@dimen/dashboard_card_radius"
+                app:cardElevation="@dimen/elevation_none">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="@dimen/spacing_16">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/dashboard_runtime_status"
+                        android:textColor="@color/color_text_primary"
+                        android:textSize="@dimen/text_subtitle"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/stageText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/spacing_12"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="@string/stage_idle"
+                        android:textColor="@color/color_text_secondary"
+                        android:textSize="@dimen/text_label"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/liveIndexingText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/spacing_4"
+                        android:ellipsize="end"
+                        android:maxLines="2"
+                        android:text="@string/idle"
+                        android:textColor="@color/color_accent_soft"
+                        android:textSize="@dimen/text_caption" />
+
+                    <LinearLayout
+                        android:id="@+id/indexLiveInfoPanel"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/spacing_12"
+                        android:orientation="vertical"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:id="@+id/indexLiveInfoText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:lineSpacingExtra="@dimen/spacing_4"
+                            android:maxLines="9"
+                            android:text="@string/index_live_info_initial"
+                            android:textColor="@color/color_text_secondary"
+                            android:textSize="@dimen/text_caption" />
+
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="@dimen/border_width"
+                        android:layout_marginTop="@dimen/spacing_16"
+                        android:background="@color/color_border_subtle" />
+
+                    <androidx.constraintlayout.widget.ConstraintLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/spacing_12">
+
+                        <TextView
+                            android:id="@+id/speedText"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:ellipsize="end"
+                            android:maxLines="1"
+                            android:text="@string/speed_initial"
+                            android:textColor="@color/color_text_primary"
+                            android:textSize="@dimen/text_caption"
+                            android:textStyle="bold"
+                            app:layout_constraintEnd_toStartOf="@id/etaText"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintTop_toTopOf="parent" />
+
+                        <TextView
+                            android:id="@+id/etaText"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="@dimen/spacing_8"
+                            android:ellipsize="end"
+                            android:maxLines="1"
+                            android:text="@string/eta_initial"
+                            android:textColor="@color/color_accent_soft"
+                            android:textSize="@dimen/text_caption"
+                            android:textStyle="bold"
+                            app:layout_constraintBaseline_toBaselineOf="@id/speedText"
+                            app:layout_constraintEnd_toEndOf="parent" />
+
+                    </androidx.constraintlayout.widget.ConstraintLayout>
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+        </LinearLayout>
+
+    </com.google.android.material.card.MaterialCardView>
+
+</LinearLayout>

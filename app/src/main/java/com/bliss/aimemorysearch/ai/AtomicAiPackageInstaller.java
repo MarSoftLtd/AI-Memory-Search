@@ -5,9 +5,12 @@ import android.content.Context;
 import com.bliss.aimemorysearch.ai.model.AIPackageInfo;
 
 import org.json.JSONObject;
+import org.json.JSONArray;
 
 import java.io.BufferedOutputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -19,6 +22,10 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 public final class AtomicAiPackageInstaller {
+    public interface ProgressListener {
+        void onExtractionProgress(long extractedBytes, long totalBytes);
+    }
+
     public enum FailureReason {
         INVALID_PACKAGE,
         INVALID_MANIFEST,
@@ -49,7 +56,7 @@ public final class AtomicAiPackageInstaller {
 
     private static final int SUPPORTED_PACKAGE_FORMAT_VERSION = 1;
     private static final int BUFFER_SIZE = 64 * 1024;
-    private static final String[] REQUIRED_FILES = {
+    private static final String[] TRANSLATION_REQUIRED_FILES = {
             ManifestFileNames.MANIFEST,
             ManifestFileNames.CONFIG,
             ManifestFileNames.MODEL,
@@ -67,6 +74,14 @@ public final class AtomicAiPackageInstaller {
     }
 
     public Result install(AIPackageInfo packageInfo, File packageFile) {
+        return install(packageInfo, packageFile, null);
+    }
+
+    public Result install(
+            AIPackageInfo packageInfo,
+            File packageFile,
+            ProgressListener progressListener
+    ) {
         Objects.requireNonNull(packageInfo, "packageInfo");
         if (!isSafePackageId(packageInfo.getPackageId())
                 || packageFile == null
@@ -95,15 +110,18 @@ public final class AtomicAiPackageInstaller {
                 return failure(FailureReason.INSTALLATION);
             }
 
-            extract(archive, temporaryDirectory);
-            if (!hasRequiredFiles(temporaryDirectory)) {
+            extract(
+                    archive,
+                    temporaryDirectory,
+                    progressListener,
+                    totalUncompressedBytes(archive)
+            );
+            if (!hasRequiredFiles(temporaryDirectory, packageInfo)) {
                 return failure(FailureReason.INVALID_CONTENTS);
             }
             FailureReason extractedManifestFailure = validateManifest(
-                    new JSONObject(Files.readString(
-                            new File(temporaryDirectory, ManifestFileNames.MANIFEST).toPath(),
-                            StandardCharsets.UTF_8
-                    )),
+                    new JSONObject(readUtf8(
+                            new File(temporaryDirectory, ManifestFileNames.MANIFEST))),
                     packageInfo
             );
             if (extractedManifestFailure != null) {
@@ -130,7 +148,7 @@ public final class AtomicAiPackageInstaller {
             ZipFile archive,
             AIPackageInfo packageInfo
     ) throws Exception {
-        for (String requiredFile : REQUIRED_FILES) {
+        for (String requiredFile : requiredFiles(archive, packageInfo)) {
             ZipEntry entry = archive.getEntry(requiredFile);
             if (entry == null || entry.isDirectory()) {
                 return FailureReason.INVALID_CONTENTS;
@@ -138,7 +156,7 @@ public final class AtomicAiPackageInstaller {
         }
         ZipEntry manifestEntry = archive.getEntry(ManifestFileNames.MANIFEST);
         try (InputStream input = archive.getInputStream(manifestEntry)) {
-            String manifestJson = new String(input.readAllBytes(), StandardCharsets.UTF_8);
+            String manifestJson = readUtf8(input);
             return validateManifest(new JSONObject(manifestJson), packageInfo);
         }
     }
@@ -161,9 +179,15 @@ public final class AtomicAiPackageInstaller {
         return null;
     }
 
-    private static void extract(ZipFile archive, File targetDirectory) throws Exception {
+    private static void extract(
+            ZipFile archive,
+            File targetDirectory,
+            ProgressListener progressListener,
+            long totalBytes
+    ) throws Exception {
         String canonicalRoot = targetDirectory.getCanonicalPath() + File.separator;
         java.util.Enumeration<? extends ZipEntry> entries = archive.entries();
+        long extractedBytes = 0L;
         while (entries.hasMoreElements()) {
             ZipEntry entry = entries.nextElement();
             File outputFile = new File(targetDirectory, entry.getName());
@@ -188,19 +212,110 @@ public final class AtomicAiPackageInstaller {
                 int count;
                 while ((count = input.read(buffer)) != -1) {
                     output.write(buffer, 0, count);
+                    extractedBytes += count;
+                    if (progressListener != null) {
+                        progressListener.onExtractionProgress(
+                                extractedBytes,
+                                totalBytes
+                        );
+                    }
                 }
             }
         }
     }
 
-    private static boolean hasRequiredFiles(File directory) {
-        for (String requiredFile : REQUIRED_FILES) {
+    private static long totalUncompressedBytes(ZipFile archive) {
+        long totalBytes = 0L;
+        java.util.Enumeration<? extends ZipEntry> entries = archive.entries();
+        while (entries.hasMoreElements()) {
+            ZipEntry entry = entries.nextElement();
+            if (entry.isDirectory() || entry.getSize() < 0L) {
+                return 0L;
+            }
+            totalBytes += entry.getSize();
+        }
+        return totalBytes;
+    }
+
+    private static boolean hasRequiredFiles(
+            File directory,
+            AIPackageInfo packageInfo
+    ) throws Exception {
+        for (String requiredFile : requiredFiles(directory, packageInfo)) {
             File file = new File(directory, requiredFile);
             if (!file.isFile()) {
                 return false;
             }
         }
         return true;
+    }
+
+    private static String[] requiredFiles(ZipFile archive, AIPackageInfo packageInfo)
+            throws Exception {
+        if (packageInfo.getPackageType() == AiPackageType.TRANSLATION) {
+            return TRANSLATION_REQUIRED_FILES;
+        }
+        if (packageInfo.getPackageType() != AiPackageType.MODEL) {
+            throw new IllegalArgumentException("Unsupported AI package type");
+        }
+        ZipEntry configEntry = archive.getEntry(ManifestFileNames.CONFIG);
+        if (configEntry == null || configEntry.isDirectory()) {
+            throw new IllegalArgumentException("MODEL package config.json is missing");
+        }
+        try (InputStream input = archive.getInputStream(configEntry)) {
+            return requiredFiles(new JSONObject(
+                    readUtf8(input)
+            ));
+        }
+    }
+
+    private static String[] requiredFiles(File directory, AIPackageInfo packageInfo)
+            throws Exception {
+        if (packageInfo.getPackageType() == AiPackageType.TRANSLATION) {
+            return TRANSLATION_REQUIRED_FILES;
+        }
+        if (packageInfo.getPackageType() != AiPackageType.MODEL) {
+            throw new IllegalArgumentException("Unsupported AI package type");
+        }
+        File config = new File(directory, ManifestFileNames.CONFIG);
+        if (!config.isFile()) {
+            throw new IllegalArgumentException("MODEL package config.json is missing");
+        }
+        return requiredFiles(new JSONObject(readUtf8(config)));
+    }
+
+    private static String readUtf8(File file) throws Exception {
+        try (InputStream input = new FileInputStream(file)) {
+            return readUtf8(input);
+        }
+    }
+
+    private static String readUtf8(InputStream input) throws Exception {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        byte[] buffer = new byte[BUFFER_SIZE];
+        int count;
+        while ((count = input.read(buffer)) != -1) output.write(buffer, 0, count);
+        return output.toString(StandardCharsets.UTF_8.name());
+    }
+
+    private static String[] requiredFiles(JSONObject config) throws Exception {
+        JSONArray values = config.getJSONArray("requiredFiles");
+        if (values.length() == 0) {
+            throw new IllegalArgumentException("MODEL package requiredFiles is empty");
+        }
+        String[] files = new String[values.length() + 2];
+        files[0] = ManifestFileNames.MANIFEST;
+        files[1] = ManifestFileNames.CONFIG;
+        for (int index = 0; index < values.length(); index++) {
+            String name = values.getString(index);
+            if (name.isEmpty() || name.contains("/") || name.contains("\\")
+                    || name.equals(ManifestFileNames.MANIFEST)
+                    || name.equals(ManifestFileNames.CONFIG)) {
+                throw new IllegalArgumentException("Invalid MODEL required file: " + name);
+            }
+            files[index + 2] = name;
+        }
+        return files;
     }
 
     private static void atomicMove(File source, File target) throws Exception {
@@ -238,4 +353,3 @@ public final class AtomicAiPackageInstaller {
         file.delete();
     }
 }
-

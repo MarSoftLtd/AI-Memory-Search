@@ -1,0 +1,4973 @@
+{
+  "methodology": {
+    "documents": 20,
+    "queries": 120,
+    "languages": [
+      "de",
+      "el",
+      "en",
+      "fr",
+      "ro",
+      "tr"
+    ],
+    "e5_query_format": "query: <text>",
+    "e5_passage_format": "passage: <text>",
+    "ranking": "exhaustive cosine over temporary in-memory passage embeddings",
+    "production_database_used": false
+  },
+  "models": [
+    {
+      "model": "official_multilingual_e5",
+      "metrics": {
+        "count": 120,
+        "recall_at_1": 0.21666666666666667,
+        "recall_at_5": 0.4583333333333333,
+        "recall_at_10": 0.6333333333333333,
+        "mrr": 0.34317125781425317
+      },
+      "metrics_by_language": {
+        "de": {
+          "count": 20,
+          "recall_at_1": 0.1,
+          "recall_at_5": 0.3,
+          "recall_at_10": 0.5,
+          "mrr": 0.21242141329602632
+        },
+        "el": {
+          "count": 20,
+          "recall_at_1": 0.1,
+          "recall_at_5": 0.3,
+          "recall_at_10": 0.5,
+          "mrr": 0.2069713108528898
+        },
+        "en": {
+          "count": 20,
+          "recall_at_1": 0.2,
+          "recall_at_5": 0.45,
+          "recall_at_10": 0.65,
+          "mrr": 0.32991207622786567
+        },
+        "fr": {
+          "count": 20,
+          "recall_at_1": 0.1,
+          "recall_at_5": 0.35,
+          "recall_at_10": 0.55,
+          "mrr": 0.24610461025902203
+        },
+        "ro": {
+          "count": 20,
+          "recall_at_1": 0.65,
+          "recall_at_5": 0.85,
+          "recall_at_10": 0.9,
+          "mrr": 0.757177033492823
+        },
+        "tr": {
+          "count": 20,
+          "recall_at_1": 0.15,
+          "recall_at_5": 0.5,
+          "recall_at_10": 0.7,
+          "mrr": 0.30644110275689224
+        }
+      },
+      "timing_ms": {
+        "passage_total": 210.7842998811975,
+        "passage_mean": 10.539214994059876,
+        "passage_p50": 10.987449990352616,
+        "passage_p95": 12.761625013081357,
+        "query_mean": 4.77433583146194,
+        "query_p50": 4.772549989866093,
+        "query_p95": 6.494229982490651
+      },
+      "failures": [
+        {
+          "query": "factura de apă",
+          "language": "ro",
+          "expected": "water_bill",
+          "rank": 6,
+          "expected_score": 0.8461311512026124,
+          "top": [
+            {
+              "id": "electricity_bill",
+              "score": 0.8578834848702093
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.857472887716785
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8560500044511328
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.8510841314980349
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.8466964890221038
+            }
+          ]
+        },
+        {
+          "query": "water bill",
+          "language": "en",
+          "expected": "water_bill",
+          "rank": 12,
+          "expected_score": 0.8381928546523936,
+          "top": [
+            {
+              "id": "salary_slip",
+              "score": 0.8633412470793059
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.8496215685422874
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8454154941890422
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.8448350723871288
+            },
+            {
+              "id": "purchase_receipt",
+              "score": 0.844045478063286
+            }
+          ]
+        },
+        {
+          "query": "Wasserrechnung",
+          "language": "de",
+          "expected": "water_bill",
+          "rank": 14,
+          "expected_score": 0.8301160152460828,
+          "top": [
+            {
+              "id": "salary_slip",
+              "score": 0.8494458645856997
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.84700557935769
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.8456165777364817
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8433392924612404
+            },
+            {
+              "id": "house_insurance",
+              "score": 0.8430838021861344
+            }
+          ]
+        },
+        {
+          "query": "facture d'eau",
+          "language": "fr",
+          "expected": "water_bill",
+          "rank": 13,
+          "expected_score": 0.8281287322839652,
+          "top": [
+            {
+              "id": "flight_ticket",
+              "score": 0.8471252561184417
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8431026225230673
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8430548626593408
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.8429182379528617
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.8416087215815569
+            }
+          ]
+        },
+        {
+          "query": "λογαριασμός νερού",
+          "language": "el",
+          "expected": "water_bill",
+          "rank": 16,
+          "expected_score": 0.8364988163845809,
+          "top": [
+            {
+              "id": "electricity_bill",
+              "score": 0.857972751209307
+            },
+            {
+              "id": "internet_bill",
+              "score": 0.85317371263265
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8527834773971629
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8524921238530305
+            },
+            {
+              "id": "mobile_bill",
+              "score": 0.8511852769391074
+            }
+          ]
+        },
+        {
+          "query": "su faturası",
+          "language": "tr",
+          "expected": "water_bill",
+          "rank": 15,
+          "expected_score": 0.8428317107584563,
+          "top": [
+            {
+              "id": "train_ticket",
+              "score": 0.8630908705431368
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.8627245177405665
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.8605691527921655
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.8602908143912704
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8594089539489695
+            }
+          ]
+        },
+        {
+          "query": "gas bill",
+          "language": "en",
+          "expected": "gas_bill",
+          "rank": 11,
+          "expected_score": 0.8380186797122069,
+          "top": [
+            {
+              "id": "train_ticket",
+              "score": 0.856909547309163
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8557076690221592
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.8541499316770635
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.8525415881897056
+            },
+            {
+              "id": "service_contract",
+              "score": 0.8463252750811758
+            }
+          ]
+        },
+        {
+          "query": "Gasrechnung",
+          "language": "de",
+          "expected": "gas_bill",
+          "rank": 17,
+          "expected_score": 0.8266377854179258,
+          "top": [
+            {
+              "id": "salary_slip",
+              "score": 0.8549659319934573
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8482344819133848
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.8479874415153981
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.8479588219088467
+            },
+            {
+              "id": "service_contract",
+              "score": 0.8468483787885406
+            }
+          ]
+        },
+        {
+          "query": "facture de gaz",
+          "language": "fr",
+          "expected": "gas_bill",
+          "rank": 14,
+          "expected_score": 0.8521745617872751,
+          "top": [
+            {
+              "id": "salary_slip",
+              "score": 0.882840681204736
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.871376269277601
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8713579951959164
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.8696647125627617
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.8634967006114687
+            }
+          ]
+        },
+        {
+          "query": "λογαριασμός φυσικού αερίου",
+          "language": "el",
+          "expected": "gas_bill",
+          "rank": 20,
+          "expected_score": 0.8273122685538086,
+          "top": [
+            {
+              "id": "flight_ticket",
+              "score": 0.8585094989282132
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.8561603248329598
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.8538079358239576
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8535652618298283
+            },
+            {
+              "id": "tax_notice",
+              "score": 0.8533621881262788
+            }
+          ]
+        },
+        {
+          "query": "doğal gaz faturası",
+          "language": "tr",
+          "expected": "gas_bill",
+          "rank": 10,
+          "expected_score": 0.8525698020903858,
+          "top": [
+            {
+              "id": "salary_slip",
+              "score": 0.8680385715785044
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.867539742082878
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.8672286873477044
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8672016307544461
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.8634739674223985
+            }
+          ]
+        },
+        {
+          "query": "factura de electricitate",
+          "language": "ro",
+          "expected": "electricity_bill",
+          "rank": 11,
+          "expected_score": 0.8297137398340342,
+          "top": [
+            {
+              "id": "purchase_receipt",
+              "score": 0.874379407896889
+            },
+            {
+              "id": "gas_bill",
+              "score": 0.8625996298111858
+            },
+            {
+              "id": "mobile_bill",
+              "score": 0.8589227460794653
+            },
+            {
+              "id": "tax_notice",
+              "score": 0.8576780587497812
+            },
+            {
+              "id": "internet_bill",
+              "score": 0.8483838812579709
+            }
+          ]
+        },
+        {
+          "query": "electricity bill",
+          "language": "en",
+          "expected": "electricity_bill",
+          "rank": 4,
+          "expected_score": 0.8534342663234231,
+          "top": [
+            {
+              "id": "salary_slip",
+              "score": 0.8606777977278527
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.8602670218763522
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8567703025803781
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.8534342663234231
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.852141928520233
+            }
+          ]
+        },
+        {
+          "query": "Stromrechnung",
+          "language": "de",
+          "expected": "electricity_bill",
+          "rank": 4,
+          "expected_score": 0.8479583712910528,
+          "top": [
+            {
+              "id": "salary_slip",
+              "score": 0.8544447960669056
+            },
+            {
+              "id": "rental_contract",
+              "score": 0.8535549255997872
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.8527231926464387
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.8479583712910528
+            },
+            {
+              "id": "service_contract",
+              "score": 0.8478566717396387
+            }
+          ]
+        },
+        {
+          "query": "facture d'électricité",
+          "language": "fr",
+          "expected": "electricity_bill",
+          "rank": 3,
+          "expected_score": 0.8633034698729256,
+          "top": [
+            {
+              "id": "train_ticket",
+              "score": 0.87177662567149
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8707160652268573
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.8633034698729256
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.862435225069142
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.862299364139516
+            }
+          ]
+        },
+        {
+          "query": "λογαριασμός ρεύματος",
+          "language": "el",
+          "expected": "electricity_bill",
+          "rank": 4,
+          "expected_score": 0.8526136658793824,
+          "top": [
+            {
+              "id": "train_ticket",
+              "score": 0.8584909775732219
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.8560224822788147
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8538852166191883
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.8526136658793824
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.8521734673615579
+            }
+          ]
+        },
+        {
+          "query": "elektrik faturası",
+          "language": "tr",
+          "expected": "electricity_bill",
+          "rank": 6,
+          "expected_score": 0.850639140403342,
+          "top": [
+            {
+              "id": "employment_contract",
+              "score": 0.864871677109813
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8609022482729645
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8606192661198154
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.8594391761355817
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.8541882333796765
+            }
+          ]
+        },
+        {
+          "query": "Internetrechnung",
+          "language": "de",
+          "expected": "internet_bill",
+          "rank": 19,
+          "expected_score": 0.8219443940960867,
+          "top": [
+            {
+              "id": "salary_slip",
+              "score": 0.8610554601098654
+            },
+            {
+              "id": "service_contract",
+              "score": 0.8557532752079793
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.8549798826860053
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.8537948777679217
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.8537294101130528
+            }
+          ]
+        },
+        {
+          "query": "λογαριασμός διαδικτύου",
+          "language": "el",
+          "expected": "internet_bill",
+          "rank": 20,
+          "expected_score": 0.8188542661835391,
+          "top": [
+            {
+              "id": "hotel_booking",
+              "score": 0.8562570362676694
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8466622630220652
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.8461844562584392
+            },
+            {
+              "id": "service_contract",
+              "score": 0.8440176061938356
+            },
+            {
+              "id": "rental_contract",
+              "score": 0.842913386403211
+            }
+          ]
+        },
+        {
+          "query": "factura de telefon",
+          "language": "ro",
+          "expected": "mobile_bill",
+          "rank": 19,
+          "expected_score": 0.8177906293597739,
+          "top": [
+            {
+              "id": "train_ticket",
+              "score": 0.8475333536452214
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8465242252748924
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.8401572975956354
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.838493693222214
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.8321586069032141
+            }
+          ]
+        },
+        {
+          "query": "mobile phone bill",
+          "language": "en",
+          "expected": "mobile_bill",
+          "rank": 16,
+          "expected_score": 0.8339048925580457,
+          "top": [
+            {
+              "id": "employment_contract",
+              "score": 0.8557891134997293
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8551759264654506
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.8496501184864168
+            },
+            {
+              "id": "rental_contract",
+              "score": 0.8482620581602631
+            },
+            {
+              "id": "gas_bill",
+              "score": 0.8474820679513702
+            }
+          ]
+        },
+        {
+          "query": "Mobilfunkrechnung",
+          "language": "de",
+          "expected": "mobile_bill",
+          "rank": 6,
+          "expected_score": 0.8516660059595946,
+          "top": [
+            {
+              "id": "gas_bill",
+              "score": 0.8699465266503217
+            },
+            {
+              "id": "tax_notice",
+              "score": 0.8663005742000689
+            },
+            {
+              "id": "purchase_receipt",
+              "score": 0.8630687785333224
+            },
+            {
+              "id": "service_contract",
+              "score": 0.8535837302611593
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.852375217308714
+            }
+          ]
+        },
+        {
+          "query": "facture de téléphone portable",
+          "language": "fr",
+          "expected": "mobile_bill",
+          "rank": 20,
+          "expected_score": 0.8255018305695483,
+          "top": [
+            {
+              "id": "salary_slip",
+              "score": 0.8600105364218638
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.8553759542519637
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8548512137611276
+            },
+            {
+              "id": "service_contract",
+              "score": 0.8522645136332533
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.847209917160361
+            }
+          ]
+        },
+        {
+          "query": "λογαριασμός κινητού τηλεφώνου",
+          "language": "el",
+          "expected": "mobile_bill",
+          "rank": 16,
+          "expected_score": 0.8504705455529131,
+          "top": [
+            {
+              "id": "electricity_bill",
+              "score": 0.8787844555581023
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8775912243204491
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8745026379566141
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.8728786092837906
+            },
+            {
+              "id": "service_contract",
+              "score": 0.8723908063317374
+            }
+          ]
+        },
+        {
+          "query": "cep telefonu faturası",
+          "language": "tr",
+          "expected": "mobile_bill",
+          "rank": 20,
+          "expected_score": 0.8318495875001622,
+          "top": [
+            {
+              "id": "employment_contract",
+              "score": 0.8676811363204431
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8660524678052741
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8626777112628813
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.8605733552673314
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.8592461395290252
+            }
+          ]
+        },
+        {
+          "query": "employment contract",
+          "language": "en",
+          "expected": "employment_contract",
+          "rank": 10,
+          "expected_score": 0.8277522787180319,
+          "top": [
+            {
+              "id": "train_ticket",
+              "score": 0.8386972670361938
+            },
+            {
+              "id": "tax_notice",
+              "score": 0.8357860310986975
+            },
+            {
+              "id": "dog_vet",
+              "score": 0.8344853657310174
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.8332686922054169
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8319124836876415
+            }
+          ]
+        },
+        {
+          "query": "Arbeitsvertrag",
+          "language": "de",
+          "expected": "employment_contract",
+          "rank": 4,
+          "expected_score": 0.8531549394844214,
+          "top": [
+            {
+              "id": "flight_ticket",
+              "score": 0.86156949004903
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8610885860705293
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.859486589598634
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.8531549394844214
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.8525056446438066
+            }
+          ]
+        },
+        {
+          "query": "contrat de travail",
+          "language": "fr",
+          "expected": "employment_contract",
+          "rank": 6,
+          "expected_score": 0.829526408390423,
+          "top": [
+            {
+              "id": "rental_contract",
+              "score": 0.8415540832312067
+            },
+            {
+              "id": "dog_vet",
+              "score": 0.8362426128568295
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.8326211403448368
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8322240827373981
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8299324828447382
+            }
+          ]
+        },
+        {
+          "query": "σύμβαση εργασίας",
+          "language": "el",
+          "expected": "employment_contract",
+          "rank": 7,
+          "expected_score": 0.8481849365343863,
+          "top": [
+            {
+              "id": "salary_slip",
+              "score": 0.8626930395243282
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.854446596625025
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.8536512006519917
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.8521540308909482
+            },
+            {
+              "id": "house_insurance",
+              "score": 0.8511249226392085
+            }
+          ]
+        },
+        {
+          "query": "iş sözleşmesi",
+          "language": "tr",
+          "expected": "employment_contract",
+          "rank": 2,
+          "expected_score": 0.839580686135595,
+          "top": [
+            {
+              "id": "hotel_booking",
+              "score": 0.8466948244110012
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.839580686135595
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.8383890429751168
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8382094005428364
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8342473175228771
+            }
+          ]
+        },
+        {
+          "query": "apartment rental contract",
+          "language": "en",
+          "expected": "rental_contract",
+          "rank": 10,
+          "expected_score": 0.848874513511138,
+          "top": [
+            {
+              "id": "electricity_bill",
+              "score": 0.8622903213905613
+            },
+            {
+              "id": "tax_notice",
+              "score": 0.860514102992562
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8585845360648984
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.8572742625779939
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.85569649587246
+            }
+          ]
+        },
+        {
+          "query": "Mietvertrag für Wohnung",
+          "language": "de",
+          "expected": "rental_contract",
+          "rank": 12,
+          "expected_score": 0.8527005424207084,
+          "top": [
+            {
+              "id": "flight_ticket",
+              "score": 0.8798489242597725
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8788582923935003
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.868129396556475
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.86706026645108
+            },
+            {
+              "id": "house_insurance",
+              "score": 0.8644725963626916
+            }
+          ]
+        },
+        {
+          "query": "συμβόλαιο ενοικίασης διαμερίσματος",
+          "language": "el",
+          "expected": "rental_contract",
+          "rank": 14,
+          "expected_score": 0.8653134285498456,
+          "top": [
+            {
+              "id": "salary_slip",
+              "score": 0.8990853169345292
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.8894052862816805
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8868868238351154
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.8796788185483724
+            },
+            {
+              "id": "cat_vet",
+              "score": 0.877076480428642
+            }
+          ]
+        },
+        {
+          "query": "daire kira sözleşmesi",
+          "language": "tr",
+          "expected": "rental_contract",
+          "rank": 4,
+          "expected_score": 0.8315647205586281,
+          "top": [
+            {
+              "id": "hotel_booking",
+              "score": 0.8404168757390156
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.8365599380044269
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8358952443665099
+            },
+            {
+              "id": "rental_contract",
+              "score": 0.8315647205586281
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.8304586201343833
+            }
+          ]
+        },
+        {
+          "query": "service agreement",
+          "language": "en",
+          "expected": "service_contract",
+          "rank": 9,
+          "expected_score": 0.8427065562411824,
+          "top": [
+            {
+              "id": "salary_slip",
+              "score": 0.8591111989433879
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8586745616686051
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.8511370909921824
+            },
+            {
+              "id": "water_bill",
+              "score": 0.8485881605726275
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.8458047544606846
+            }
+          ]
+        },
+        {
+          "query": "Dienstleistungsvertrag",
+          "language": "de",
+          "expected": "service_contract",
+          "rank": 9,
+          "expected_score": 0.8432867298772253,
+          "top": [
+            {
+              "id": "salary_slip",
+              "score": 0.8606845789579056
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8597494543622121
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.8561890732904776
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.854664035911485
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.8546422715658917
+            }
+          ]
+        },
+        {
+          "query": "contrat de prestation de services",
+          "language": "fr",
+          "expected": "service_contract",
+          "rank": 7,
+          "expected_score": 0.84021509549615,
+          "top": [
+            {
+              "id": "train_ticket",
+              "score": 0.8546324717311213
+            },
+            {
+              "id": "rental_contract",
+              "score": 0.8509477377140909
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.8470499480594489
+            },
+            {
+              "id": "medical_test",
+              "score": 0.8441499701660542
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8429071101155704
+            }
+          ]
+        },
+        {
+          "query": "Tierarztakte für Hund",
+          "language": "de",
+          "expected": "dog_vet",
+          "rank": 8,
+          "expected_score": 0.8529751654917311,
+          "top": [
+            {
+              "id": "train_ticket",
+              "score": 0.863036634615058
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.8622211060695897
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8588808225860979
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.8583073723032508
+            },
+            {
+              "id": "service_contract",
+              "score": 0.853970019631475
+            }
+          ]
+        },
+        {
+          "query": "dossier vétérinaire du chien",
+          "language": "fr",
+          "expected": "dog_vet",
+          "rank": 11,
+          "expected_score": 0.8423096576147686,
+          "top": [
+            {
+              "id": "salary_slip",
+              "score": 0.865787267178688
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.8627037127655652
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.8616568142175565
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8596804069218816
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.8590452038705638
+            }
+          ]
+        },
+        {
+          "query": "κτηνιατρικός φάκελος σκύλου",
+          "language": "el",
+          "expected": "dog_vet",
+          "rank": 7,
+          "expected_score": 0.8692795923488426,
+          "top": [
+            {
+              "id": "train_ticket",
+              "score": 0.8873459988461458
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8804231384806255
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.8756370084999043
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.8753471605760362
+            },
+            {
+              "id": "service_contract",
+              "score": 0.8749923621095466
+            }
+          ]
+        },
+        {
+          "query": "köpek veteriner kaydı",
+          "language": "tr",
+          "expected": "dog_vet",
+          "rank": 14,
+          "expected_score": 0.830111929699347,
+          "top": [
+            {
+              "id": "salary_slip",
+              "score": 0.8525807379849033
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.8481654388299256
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.8436349829508998
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.8425694948604757
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8394065539105147
+            }
+          ]
+        },
+        {
+          "query": "cat veterinary record",
+          "language": "en",
+          "expected": "cat_vet",
+          "rank": 5,
+          "expected_score": 0.8638037609006393,
+          "top": [
+            {
+              "id": "electricity_bill",
+              "score": 0.8707978275898245
+            },
+            {
+              "id": "dog_vet",
+              "score": 0.8692302854943273
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.8645766035280777
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8638684977657696
+            },
+            {
+              "id": "cat_vet",
+              "score": 0.8638037609006393
+            }
+          ]
+        },
+        {
+          "query": "Tierarztakte für Katze",
+          "language": "de",
+          "expected": "cat_vet",
+          "rank": 9,
+          "expected_score": 0.8573737241761226,
+          "top": [
+            {
+              "id": "salary_slip",
+              "score": 0.8741985374994032
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.8691841459673285
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8685920141758021
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.8679781492228567
+            },
+            {
+              "id": "dog_vet",
+              "score": 0.8649563912280172
+            }
+          ]
+        },
+        {
+          "query": "dossier vétérinaire du chat",
+          "language": "fr",
+          "expected": "cat_vet",
+          "rank": 18,
+          "expected_score": 0.8307306344738947,
+          "top": [
+            {
+              "id": "flight_ticket",
+              "score": 0.8607175329260008
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.8570283105054775
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8557893928929765
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.8548338869532301
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8541524758796553
+            }
+          ]
+        },
+        {
+          "query": "κτηνιατρικός φάκελος γάτας",
+          "language": "el",
+          "expected": "cat_vet",
+          "rank": 5,
+          "expected_score": 0.8821307196181571,
+          "top": [
+            {
+              "id": "salary_slip",
+              "score": 0.8959047271842793
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8875333440629105
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.8846735584952712
+            },
+            {
+              "id": "dog_vet",
+              "score": 0.8823453314150584
+            },
+            {
+              "id": "cat_vet",
+              "score": 0.8821307196181571
+            }
+          ]
+        },
+        {
+          "query": "kedi veteriner kaydı",
+          "language": "tr",
+          "expected": "cat_vet",
+          "rank": 10,
+          "expected_score": 0.8490188149652413,
+          "top": [
+            {
+              "id": "salary_slip",
+              "score": 0.8587013102514234
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8586495764020781
+            },
+            {
+              "id": "purchase_receipt",
+              "score": 0.8559067026016387
+            },
+            {
+              "id": "service_contract",
+              "score": 0.8554995486876074
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.853178640130119
+            }
+          ]
+        },
+        {
+          "query": "house insurance policy",
+          "language": "en",
+          "expected": "house_insurance",
+          "rank": 5,
+          "expected_score": 0.832267987994981,
+          "top": [
+            {
+              "id": "hotel_booking",
+              "score": 0.837539540460247
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.8370777860666214
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8362116972260826
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8327121481434265
+            },
+            {
+              "id": "house_insurance",
+              "score": 0.832267987994981
+            }
+          ]
+        },
+        {
+          "query": "Hausversicherung",
+          "language": "de",
+          "expected": "house_insurance",
+          "rank": 12,
+          "expected_score": 0.8263780477133267,
+          "top": [
+            {
+              "id": "purchase_receipt",
+              "score": 0.849703742334033
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8468839893373712
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.8428104026225566
+            },
+            {
+              "id": "dog_vet",
+              "score": 0.8395487447542017
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.839129545863229
+            }
+          ]
+        },
+        {
+          "query": "assurance habitation",
+          "language": "fr",
+          "expected": "house_insurance",
+          "rank": 12,
+          "expected_score": 0.8375893343210437,
+          "top": [
+            {
+              "id": "flight_ticket",
+              "score": 0.8577834195867943
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.856738615578442
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.8545522431071694
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8540489801189107
+            },
+            {
+              "id": "service_contract",
+              "score": 0.8497506360072051
+            }
+          ]
+        },
+        {
+          "query": "ασφάλιση κατοικίας",
+          "language": "el",
+          "expected": "house_insurance",
+          "rank": 19,
+          "expected_score": 0.8387790159582038,
+          "top": [
+            {
+              "id": "salary_slip",
+              "score": 0.8646371875022222
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8622634737016799
+            },
+            {
+              "id": "service_contract",
+              "score": 0.8619273518755702
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.8616660652191843
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.860239767589281
+            }
+          ]
+        },
+        {
+          "query": "ev sigortası",
+          "language": "tr",
+          "expected": "house_insurance",
+          "rank": 4,
+          "expected_score": 0.8414976152594238,
+          "top": [
+            {
+              "id": "hotel_booking",
+              "score": 0.8507646417485095
+            },
+            {
+              "id": "service_contract",
+              "score": 0.8475478783725303
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8429043795046807
+            },
+            {
+              "id": "house_insurance",
+              "score": 0.8414976152594238
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8411142482265525
+            }
+          ]
+        },
+        {
+          "query": "rezervare la hotel",
+          "language": "ro",
+          "expected": "hotel_booking",
+          "rank": 2,
+          "expected_score": 0.8691646150163932,
+          "top": [
+            {
+              "id": "train_ticket",
+              "score": 0.8720250028828395
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.8691646150163932
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.8634270740018606
+            },
+            {
+              "id": "dog_vet",
+              "score": 0.8357804786336674
+            },
+            {
+              "id": "house_insurance",
+              "score": 0.8330704027678193
+            }
+          ]
+        },
+        {
+          "query": "Hotelreservierung",
+          "language": "de",
+          "expected": "hotel_booking",
+          "rank": 3,
+          "expected_score": 0.8546930648121958,
+          "top": [
+            {
+              "id": "train_ticket",
+              "score": 0.8636983275926247
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.860670423020303
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.8546930648121958
+            },
+            {
+              "id": "house_insurance",
+              "score": 0.8472464749037492
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8409323118711882
+            }
+          ]
+        },
+        {
+          "query": "réservation d'hôtel",
+          "language": "fr",
+          "expected": "hotel_booking",
+          "rank": 3,
+          "expected_score": 0.842323611795849,
+          "top": [
+            {
+              "id": "salary_slip",
+              "score": 0.8459072375240944
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8427931192484215
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.842323611795849
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.8419034596990861
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.8418735856759076
+            }
+          ]
+        },
+        {
+          "query": "κράτηση ξενοδοχείου",
+          "language": "el",
+          "expected": "hotel_booking",
+          "rank": 5,
+          "expected_score": 0.8337982463408535,
+          "top": [
+            {
+              "id": "service_contract",
+              "score": 0.8458050868482376
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8446401192389795
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.8386100649877519
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8358278467844428
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.8337982463408535
+            }
+          ]
+        },
+        {
+          "query": "otel rezervasyonu",
+          "language": "tr",
+          "expected": "hotel_booking",
+          "rank": 3,
+          "expected_score": 0.8430766812354349,
+          "top": [
+            {
+              "id": "salary_slip",
+              "score": 0.8612162915437194
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.845389219295202
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.8430766812354349
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.8410841105018942
+            },
+            {
+              "id": "service_contract",
+              "score": 0.8410528607099257
+            }
+          ]
+        },
+        {
+          "query": "car service estimate",
+          "language": "en",
+          "expected": "car_service",
+          "rank": 8,
+          "expected_score": 0.8401271113780702,
+          "top": [
+            {
+              "id": "train_ticket",
+              "score": 0.8581452083677792
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8509548783423235
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.8506131258087153
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.8482547755424434
+            },
+            {
+              "id": "purchase_receipt",
+              "score": 0.8451237976394644
+            }
+          ]
+        },
+        {
+          "query": "Kostenvoranschlag Autowerkstatt",
+          "language": "de",
+          "expected": "car_service",
+          "rank": 17,
+          "expected_score": 0.8371628679226624,
+          "top": [
+            {
+              "id": "train_ticket",
+              "score": 0.8760738105778542
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.8585058971579834
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8549741630048013
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.8520941656006294
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.8519491037777815
+            }
+          ]
+        },
+        {
+          "query": "devis entretien voiture",
+          "language": "fr",
+          "expected": "car_service",
+          "rank": 16,
+          "expected_score": 0.8326856265867179,
+          "top": [
+            {
+              "id": "flight_ticket",
+              "score": 0.8662740278749804
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8646258680879876
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.8597517646672099
+            },
+            {
+              "id": "house_insurance",
+              "score": 0.854592545601245
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8542701207173652
+            }
+          ]
+        },
+        {
+          "query": "προσφορά συνεργείου αυτοκινήτου",
+          "language": "el",
+          "expected": "car_service",
+          "rank": 6,
+          "expected_score": 0.8656208252154312,
+          "top": [
+            {
+              "id": "train_ticket",
+              "score": 0.8793624286005233
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.8729685338426328
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8719697875448218
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.8697299907219804
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.8656386969401995
+            }
+          ]
+        },
+        {
+          "query": "araba servis fiyat teklifi",
+          "language": "tr",
+          "expected": "car_service",
+          "rank": 14,
+          "expected_score": 0.8343962041177324,
+          "top": [
+            {
+              "id": "salary_slip",
+              "score": 0.8542393092277152
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8503084541504239
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.8494895724164219
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.8476782043788704
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.8462392676293833
+            }
+          ]
+        },
+        {
+          "query": "bilet de tren",
+          "language": "ro",
+          "expected": "train_ticket",
+          "rank": 3,
+          "expected_score": 0.8532646410201095,
+          "top": [
+            {
+              "id": "salary_slip",
+              "score": 0.8563081987795811
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.8553727961125981
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8532646410201095
+            },
+            {
+              "id": "rental_contract",
+              "score": 0.8509756674962398
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.8506650964250791
+            }
+          ]
+        },
+        {
+          "query": "train ticket",
+          "language": "en",
+          "expected": "train_ticket",
+          "rank": 2,
+          "expected_score": 0.862574709600829,
+          "top": [
+            {
+              "id": "flight_ticket",
+              "score": 0.8646684996485277
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.862574709600829
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8610125075557901
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.8504862230568351
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.8496769101853698
+            }
+          ]
+        },
+        {
+          "query": "billet de train",
+          "language": "fr",
+          "expected": "train_ticket",
+          "rank": 3,
+          "expected_score": 0.8575893273600967,
+          "top": [
+            {
+              "id": "salary_slip",
+              "score": 0.8688104940551002
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.8626541375414036
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8575893273600967
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.855762357918002
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.8552376497228331
+            }
+          ]
+        },
+        {
+          "query": "tren bileti",
+          "language": "tr",
+          "expected": "train_ticket",
+          "rank": 2,
+          "expected_score": 0.8553879391277989,
+          "top": [
+            {
+              "id": "flight_ticket",
+              "score": 0.8556691700459743
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8553879391277989
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8550289644400264
+            },
+            {
+              "id": "rental_contract",
+              "score": 0.8494905058458623
+            },
+            {
+              "id": "dog_vet",
+              "score": 0.8491832882510295
+            }
+          ]
+        },
+        {
+          "query": "bilet de avion",
+          "language": "ro",
+          "expected": "flight_ticket",
+          "rank": 2,
+          "expected_score": 0.8505597610673838,
+          "top": [
+            {
+              "id": "salary_slip",
+              "score": 0.8567232791021175
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.8505597610673838
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.8489136924581189
+            },
+            {
+              "id": "service_contract",
+              "score": 0.8483524350043748
+            },
+            {
+              "id": "rental_contract",
+              "score": 0.8471218430660674
+            }
+          ]
+        },
+        {
+          "query": "flight ticket",
+          "language": "en",
+          "expected": "flight_ticket",
+          "rank": 2,
+          "expected_score": 0.8395570553335088,
+          "top": [
+            {
+              "id": "salary_slip",
+              "score": 0.8560404794942047
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.8395570553335088
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.8341834630359038
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.8341322683466057
+            },
+            {
+              "id": "dog_vet",
+              "score": 0.8332050956496996
+            }
+          ]
+        },
+        {
+          "query": "Flugticket",
+          "language": "de",
+          "expected": "flight_ticket",
+          "rank": 11,
+          "expected_score": 0.8427821544520075,
+          "top": [
+            {
+              "id": "train_ticket",
+              "score": 0.8578241888901899
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8573002729377401
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.854917920927645
+            },
+            {
+              "id": "service_contract",
+              "score": 0.8476039841715812
+            },
+            {
+              "id": "rental_contract",
+              "score": 0.8473762542779285
+            }
+          ]
+        },
+        {
+          "query": "billet d'avion",
+          "language": "fr",
+          "expected": "flight_ticket",
+          "rank": 2,
+          "expected_score": 0.8528465737328873,
+          "top": [
+            {
+              "id": "salary_slip",
+              "score": 0.8562200963562859
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.8528465737328873
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.852492844339345
+            },
+            {
+              "id": "tax_notice",
+              "score": 0.8455943982780889
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8452400109312305
+            }
+          ]
+        },
+        {
+          "query": "αεροπορικό εισιτήριο",
+          "language": "el",
+          "expected": "flight_ticket",
+          "rank": 9,
+          "expected_score": 0.8479164501341852,
+          "top": [
+            {
+              "id": "train_ticket",
+              "score": 0.8578906606289103
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.8577517460494586
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8558680799133699
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.8543064901716841
+            },
+            {
+              "id": "service_contract",
+              "score": 0.8536986959206668
+            }
+          ]
+        },
+        {
+          "query": "uçak bileti",
+          "language": "tr",
+          "expected": "flight_ticket",
+          "rank": 5,
+          "expected_score": 0.8451153460294941,
+          "top": [
+            {
+              "id": "salary_slip",
+              "score": 0.8530114979924099
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8483008015133369
+            },
+            {
+              "id": "rental_contract",
+              "score": 0.847536325090957
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.8464587791154928
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.8451153460294941
+            }
+          ]
+        },
+        {
+          "query": "bank account statement",
+          "language": "en",
+          "expected": "bank_statement",
+          "rank": 16,
+          "expected_score": 0.8209270266237924,
+          "top": [
+            {
+              "id": "flight_ticket",
+              "score": 0.8470394907813568
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8429387256132125
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.8428083156878867
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.8344935801359098
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8342476087868735
+            }
+          ]
+        },
+        {
+          "query": "Kontoauszug",
+          "language": "de",
+          "expected": "bank_statement",
+          "rank": 16,
+          "expected_score": 0.831128441818408,
+          "top": [
+            {
+              "id": "service_contract",
+              "score": 0.8539262647199064
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8530741101882129
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.8483476649895603
+            },
+            {
+              "id": "rental_contract",
+              "score": 0.8477105308215276
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.8441362590087411
+            }
+          ]
+        },
+        {
+          "query": "relevé de compte bancaire",
+          "language": "fr",
+          "expected": "bank_statement",
+          "rank": 14,
+          "expected_score": 0.8435623249862624,
+          "top": [
+            {
+              "id": "train_ticket",
+              "score": 0.8634161349836443
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.8630180860479095
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8628802570647034
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.8596225549691278
+            },
+            {
+              "id": "service_contract",
+              "score": 0.8578146528959677
+            }
+          ]
+        },
+        {
+          "query": "αντίγραφο τραπεζικού λογαριασμού",
+          "language": "el",
+          "expected": "bank_statement",
+          "rank": 20,
+          "expected_score": 0.8346225459278929,
+          "top": [
+            {
+              "id": "train_ticket",
+              "score": 0.8659869172775743
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.862110644753155
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.8598649042494109
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8561092731059441
+            },
+            {
+              "id": "car_service",
+              "score": 0.8558564066787966
+            }
+          ]
+        },
+        {
+          "query": "banka hesap özeti",
+          "language": "tr",
+          "expected": "bank_statement",
+          "rank": 10,
+          "expected_score": 0.8268693341987211,
+          "top": [
+            {
+              "id": "flight_ticket",
+              "score": 0.8541735668084207
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8495467616041006
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.84846194666329
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.8349460201634864
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.8345233605307177
+            }
+          ]
+        },
+        {
+          "query": "fiche de paie",
+          "language": "fr",
+          "expected": "salary_slip",
+          "rank": 5,
+          "expected_score": 0.846894190819703,
+          "top": [
+            {
+              "id": "train_ticket",
+              "score": 0.8575170747162753
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.8563551243413684
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.8551987526453642
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.8476842355423345
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.846894190819703
+            }
+          ]
+        },
+        {
+          "query": "εκκαθαριστικό μισθοδοσίας",
+          "language": "el",
+          "expected": "salary_slip",
+          "rank": 3,
+          "expected_score": 0.8768284057323235,
+          "top": [
+            {
+              "id": "train_ticket",
+              "score": 0.8793990081651764
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.8788257092889974
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8768284057323235
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.8752027339387494
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.8700664814434159
+            }
+          ]
+        },
+        {
+          "query": "medical laboratory test results",
+          "language": "en",
+          "expected": "medical_test",
+          "rank": 12,
+          "expected_score": 0.8447573429659764,
+          "top": [
+            {
+              "id": "dog_vet",
+              "score": 0.8913012915425722
+            },
+            {
+              "id": "cat_vet",
+              "score": 0.8688025320536016
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.8676320249093892
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8660231381076269
+            },
+            {
+              "id": "bank_statement",
+              "score": 0.8649819148034765
+            }
+          ]
+        },
+        {
+          "query": "medizinische Laborergebnisse",
+          "language": "de",
+          "expected": "medical_test",
+          "rank": 16,
+          "expected_score": 0.8295957746673284,
+          "top": [
+            {
+              "id": "salary_slip",
+              "score": 0.8570392265937652
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8518713012468545
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.8486833367506528
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.847789093254819
+            },
+            {
+              "id": "mobile_bill",
+              "score": 0.845830288407729
+            }
+          ]
+        },
+        {
+          "query": "résultats d'analyses médicales",
+          "language": "fr",
+          "expected": "medical_test",
+          "rank": 17,
+          "expected_score": 0.8326909355792643,
+          "top": [
+            {
+              "id": "flight_ticket",
+              "score": 0.8619669117649799
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8607832628269791
+            },
+            {
+              "id": "car_service",
+              "score": 0.8549730601629187
+            },
+            {
+              "id": "service_contract",
+              "score": 0.8542352687343415
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.8528761371611833
+            }
+          ]
+        },
+        {
+          "query": "αποτελέσματα ιατρικών εξετάσεων",
+          "language": "el",
+          "expected": "medical_test",
+          "rank": 20,
+          "expected_score": 0.8179970910103525,
+          "top": [
+            {
+              "id": "electricity_bill",
+              "score": 0.8541315543267096
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.8537681030295214
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8532031695365881
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.8516406732318695
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8505181305473571
+            }
+          ]
+        },
+        {
+          "query": "tıbbi laboratuvar sonuçları",
+          "language": "tr",
+          "expected": "medical_test",
+          "rank": 15,
+          "expected_score": 0.8311384016685873,
+          "top": [
+            {
+              "id": "train_ticket",
+              "score": 0.8586499923181667
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.8515197044220951
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8497577456800526
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.8476480525683696
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.8448211955040466
+            }
+          ]
+        },
+        {
+          "query": "grocery purchase receipt",
+          "language": "en",
+          "expected": "purchase_receipt",
+          "rank": 19,
+          "expected_score": 0.8385663216128889,
+          "top": [
+            {
+              "id": "flight_ticket",
+              "score": 0.8746450950786177
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.873530084752049
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.8629538059360566
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.8621174500938097
+            },
+            {
+              "id": "tax_notice",
+              "score": 0.8587118642916134
+            }
+          ]
+        },
+        {
+          "query": "Kassenbon für Lebensmittel",
+          "language": "de",
+          "expected": "purchase_receipt",
+          "rank": 13,
+          "expected_score": 0.8458281538186259,
+          "top": [
+            {
+              "id": "train_ticket",
+              "score": 0.8801539239648442
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.8651766751480339
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.8606519807857325
+            },
+            {
+              "id": "service_contract",
+              "score": 0.8606371133759894
+            },
+            {
+              "id": "car_service",
+              "score": 0.8580173159256554
+            }
+          ]
+        },
+        {
+          "query": "ticket de caisse courses",
+          "language": "fr",
+          "expected": "purchase_receipt",
+          "rank": 8,
+          "expected_score": 0.8330350421071573,
+          "top": [
+            {
+              "id": "train_ticket",
+              "score": 0.8489386641699546
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.8472867339188355
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8421740376610727
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.8420859377838292
+            },
+            {
+              "id": "house_insurance",
+              "score": 0.837705214018418
+            }
+          ]
+        },
+        {
+          "query": "απόδειξη αγοράς τροφίμων",
+          "language": "el",
+          "expected": "purchase_receipt",
+          "rank": 19,
+          "expected_score": 0.8229212099864824,
+          "top": [
+            {
+              "id": "salary_slip",
+              "score": 0.8531932239546508
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8530326343977331
+            },
+            {
+              "id": "car_service",
+              "score": 0.8511207298538507
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.8469740769477533
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.8460898214332466
+            }
+          ]
+        },
+        {
+          "query": "market alışveriş fişi",
+          "language": "tr",
+          "expected": "purchase_receipt",
+          "rank": 19,
+          "expected_score": 0.827366562515792,
+          "top": [
+            {
+              "id": "employment_contract",
+              "score": 0.8569673843872384
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8524668380992395
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.852040884717555
+            },
+            {
+              "id": "tax_notice",
+              "score": 0.847364446523139
+            },
+            {
+              "id": "dog_vet",
+              "score": 0.8470166370950263
+            }
+          ]
+        },
+        {
+          "query": "decizie impozit pe proprietate",
+          "language": "ro",
+          "expected": "tax_notice",
+          "rank": 2,
+          "expected_score": 0.8580147465079045,
+          "top": [
+            {
+              "id": "train_ticket",
+              "score": 0.8588399590228906
+            },
+            {
+              "id": "tax_notice",
+              "score": 0.8580147465079045
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.8489930836842919
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.8488137774584511
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.8473203017101656
+            }
+          ]
+        },
+        {
+          "query": "property tax assessment notice",
+          "language": "en",
+          "expected": "tax_notice",
+          "rank": 13,
+          "expected_score": 0.832776952329334,
+          "top": [
+            {
+              "id": "salary_slip",
+              "score": 0.8673173018363182
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8539926536415505
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.8489188418631476
+            },
+            {
+              "id": "service_contract",
+              "score": 0.8460383795808513
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.8447438389076923
+            }
+          ]
+        },
+        {
+          "query": "Grundsteuerbescheid",
+          "language": "de",
+          "expected": "tax_notice",
+          "rank": 5,
+          "expected_score": 0.8654765440876877,
+          "top": [
+            {
+              "id": "flight_ticket",
+              "score": 0.8784592832498835
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8738791660253926
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.8689424804860698
+            },
+            {
+              "id": "bank_statement",
+              "score": 0.8669154273421176
+            },
+            {
+              "id": "tax_notice",
+              "score": 0.8654765440876877
+            }
+          ]
+        },
+        {
+          "query": "avis d'imposition foncière",
+          "language": "fr",
+          "expected": "tax_notice",
+          "rank": 6,
+          "expected_score": 0.8446445478752391,
+          "top": [
+            {
+              "id": "salary_slip",
+              "score": 0.8623362325809903
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.8618070939528254
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8528696206655879
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.8484584813332965
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.8456769149868246
+            }
+          ]
+        },
+        {
+          "query": "ειδοποίηση φόρου ακίνητης περιουσίας",
+          "language": "el",
+          "expected": "tax_notice",
+          "rank": 11,
+          "expected_score": 0.8591233017331297,
+          "top": [
+            {
+              "id": "rental_contract",
+              "score": 0.8816470867299921
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.8727779265078852
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.8720273215128714
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.867385029984994
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.8671387318756784
+            }
+          ]
+        },
+        {
+          "query": "emlak vergisi bildirimi",
+          "language": "tr",
+          "expected": "tax_notice",
+          "rank": 4,
+          "expected_score": 0.8468891005777406,
+          "top": [
+            {
+              "id": "employment_contract",
+              "score": 0.8596068687653606
+            },
+            {
+              "id": "rental_contract",
+              "score": 0.8524815311428727
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.8494612649256846
+            },
+            {
+              "id": "tax_notice",
+              "score": 0.8468891005777406
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.8459148671250285
+            }
+          ]
+        }
+      ],
+      "model_load_ms": 1051.488499972038
+    },
+    {
+      "model": "production_embedding_core",
+      "metrics": {
+        "count": 120,
+        "recall_at_1": 0.4,
+        "recall_at_5": 0.6333333333333333,
+        "recall_at_10": 0.7666666666666667,
+        "mrr": 0.5183015342071069
+      },
+      "metrics_by_language": {
+        "de": {
+          "count": 20,
+          "recall_at_1": 0.3,
+          "recall_at_5": 0.5,
+          "recall_at_10": 0.7,
+          "mrr": 0.3998062558356676
+        },
+        "el": {
+          "count": 20,
+          "recall_at_1": 0.05,
+          "recall_at_5": 0.25,
+          "recall_at_10": 0.5,
+          "mrr": 0.1798869828571841
+        },
+        "en": {
+          "count": 20,
+          "recall_at_1": 0.5,
+          "recall_at_5": 0.8,
+          "recall_at_10": 0.8,
+          "mrr": 0.6311693861693862
+        },
+        "fr": {
+          "count": 20,
+          "recall_at_1": 0.45,
+          "recall_at_5": 0.6,
+          "recall_at_10": 0.8,
+          "mrr": 0.5688905049199167
+        },
+        "ro": {
+          "count": 20,
+          "recall_at_1": 0.9,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 0.95
+        },
+        "tr": {
+          "count": 20,
+          "recall_at_1": 0.2,
+          "recall_at_5": 0.65,
+          "recall_at_10": 0.8,
+          "mrr": 0.38005607546048725
+        }
+      },
+      "timing_ms": {
+        "passage_total": 430.8864999911748,
+        "passage_mean": 21.54432499955874,
+        "passage_p50": 21.762199990916997,
+        "passage_p95": 24.783989985007793,
+        "query_mean": 21.78971999625598,
+        "query_p50": 21.928949980065227,
+        "query_p95": 26.260854993597604
+      },
+      "failures": [
+        {
+          "query": "water bill",
+          "language": "en",
+          "expected": "water_bill",
+          "rank": 4,
+          "expected_score": 0.1481540823733719,
+          "top": [
+            {
+              "id": "electricity_bill",
+              "score": 0.25073756074279574
+            },
+            {
+              "id": "tax_notice",
+              "score": 0.19886193218953127
+            },
+            {
+              "id": "car_service",
+              "score": 0.17032324920554803
+            },
+            {
+              "id": "water_bill",
+              "score": 0.1481540823733719
+            },
+            {
+              "id": "purchase_receipt",
+              "score": 0.13581367158390356
+            }
+          ]
+        },
+        {
+          "query": "Wasserrechnung",
+          "language": "de",
+          "expected": "water_bill",
+          "rank": 16,
+          "expected_score": 0.14179488796557554,
+          "top": [
+            {
+              "id": "flight_ticket",
+              "score": 0.21150350802383464
+            },
+            {
+              "id": "house_insurance",
+              "score": 0.21104511263597378
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.20624173430444398
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.2020666872227084
+            },
+            {
+              "id": "gas_bill",
+              "score": 0.20196658198951936
+            }
+          ]
+        },
+        {
+          "query": "facture d'eau",
+          "language": "fr",
+          "expected": "water_bill",
+          "rank": 2,
+          "expected_score": 0.47192531624041917,
+          "top": [
+            {
+              "id": "gas_bill",
+              "score": 0.4999416806226893
+            },
+            {
+              "id": "water_bill",
+              "score": 0.47192531624041917
+            },
+            {
+              "id": "purchase_receipt",
+              "score": 0.4140405625693051
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.40099830142097087
+            },
+            {
+              "id": "house_insurance",
+              "score": 0.38895186897408757
+            }
+          ]
+        },
+        {
+          "query": "λογαριασμός νερού",
+          "language": "el",
+          "expected": "water_bill",
+          "rank": 15,
+          "expected_score": 0.03927152124695896,
+          "top": [
+            {
+              "id": "employment_contract",
+              "score": 0.12502763809823875
+            },
+            {
+              "id": "dog_vet",
+              "score": 0.11128565654180572
+            },
+            {
+              "id": "purchase_receipt",
+              "score": 0.08425179621457524
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.08303431691318693
+            },
+            {
+              "id": "internet_bill",
+              "score": 0.08057930328441057
+            }
+          ]
+        },
+        {
+          "query": "su faturası",
+          "language": "tr",
+          "expected": "water_bill",
+          "rank": 5,
+          "expected_score": 0.2014771358782641,
+          "top": [
+            {
+              "id": "bank_statement",
+              "score": 0.23223385699313148
+            },
+            {
+              "id": "car_service",
+              "score": 0.22487809542459533
+            },
+            {
+              "id": "gas_bill",
+              "score": 0.21155553190486787
+            },
+            {
+              "id": "house_insurance",
+              "score": 0.2078117466578514
+            },
+            {
+              "id": "water_bill",
+              "score": 0.2014771358782641
+            }
+          ]
+        },
+        {
+          "query": "gas bill",
+          "language": "en",
+          "expected": "gas_bill",
+          "rank": 15,
+          "expected_score": 0.053472474691565824,
+          "top": [
+            {
+              "id": "electricity_bill",
+              "score": 0.30537797457090937
+            },
+            {
+              "id": "tax_notice",
+              "score": 0.19906127254731407
+            },
+            {
+              "id": "purchase_receipt",
+              "score": 0.19043214596870284
+            },
+            {
+              "id": "car_service",
+              "score": 0.15266881611177835
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.1388784847614161
+            }
+          ]
+        },
+        {
+          "query": "Gasrechnung",
+          "language": "de",
+          "expected": "gas_bill",
+          "rank": 15,
+          "expected_score": 0.15821979331128705,
+          "top": [
+            {
+              "id": "medical_test",
+              "score": 0.29978775655970125
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.2842992696021486
+            },
+            {
+              "id": "house_insurance",
+              "score": 0.28320077652648223
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.2826922428293065
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.27646364658246014
+            }
+          ]
+        },
+        {
+          "query": "λογαριασμός φυσικού αερίου",
+          "language": "el",
+          "expected": "gas_bill",
+          "rank": 16,
+          "expected_score": 0.037845209102003737,
+          "top": [
+            {
+              "id": "employment_contract",
+              "score": 0.12502763809823875
+            },
+            {
+              "id": "dog_vet",
+              "score": 0.11128565654180572
+            },
+            {
+              "id": "purchase_receipt",
+              "score": 0.08425179621457524
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.08303431691318693
+            },
+            {
+              "id": "internet_bill",
+              "score": 0.08057930328441057
+            }
+          ]
+        },
+        {
+          "query": "doğal gaz faturası",
+          "language": "tr",
+          "expected": "gas_bill",
+          "rank": 6,
+          "expected_score": 0.18375555092067727,
+          "top": [
+            {
+              "id": "cat_vet",
+              "score": 0.27201219969886187
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.21389590814021553
+            },
+            {
+              "id": "bank_statement",
+              "score": 0.20639217119627626
+            },
+            {
+              "id": "water_bill",
+              "score": 0.1999980627225031
+            },
+            {
+              "id": "car_service",
+              "score": 0.1984974532014246
+            }
+          ]
+        },
+        {
+          "query": "Stromrechnung",
+          "language": "de",
+          "expected": "electricity_bill",
+          "rank": 18,
+          "expected_score": 0.03299574067505392,
+          "top": [
+            {
+              "id": "medical_test",
+              "score": 0.2585158032042056
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.1550695646986067
+            },
+            {
+              "id": "cat_vet",
+              "score": 0.15235353680060582
+            },
+            {
+              "id": "dog_vet",
+              "score": 0.1333026091538308
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.13159410147499084
+            }
+          ]
+        },
+        {
+          "query": "λογαριασμός ρεύματος",
+          "language": "el",
+          "expected": "electricity_bill",
+          "rank": 11,
+          "expected_score": 0.0536244259326178,
+          "top": [
+            {
+              "id": "employment_contract",
+              "score": 0.12502763809823875
+            },
+            {
+              "id": "dog_vet",
+              "score": 0.11128565654180572
+            },
+            {
+              "id": "purchase_receipt",
+              "score": 0.08425179621457524
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.08303431691318693
+            },
+            {
+              "id": "internet_bill",
+              "score": 0.08057930328441057
+            }
+          ]
+        },
+        {
+          "query": "elektrik faturası",
+          "language": "tr",
+          "expected": "electricity_bill",
+          "rank": 20,
+          "expected_score": 0.05538624367020043,
+          "top": [
+            {
+              "id": "train_ticket",
+              "score": 0.21284271106648595
+            },
+            {
+              "id": "car_service",
+              "score": 0.18743578087672877
+            },
+            {
+              "id": "bank_statement",
+              "score": 0.18221121441286448
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.15788330420041713
+            },
+            {
+              "id": "water_bill",
+              "score": 0.1522065709782216
+            }
+          ]
+        },
+        {
+          "query": "λογαριασμός διαδικτύου",
+          "language": "el",
+          "expected": "internet_bill",
+          "rank": 5,
+          "expected_score": 0.08057930328441057,
+          "top": [
+            {
+              "id": "employment_contract",
+              "score": 0.12502763809823875
+            },
+            {
+              "id": "dog_vet",
+              "score": 0.11128565654180572
+            },
+            {
+              "id": "purchase_receipt",
+              "score": 0.08425179621457524
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.08303431691318693
+            },
+            {
+              "id": "internet_bill",
+              "score": 0.08057930328441057
+            }
+          ]
+        },
+        {
+          "query": "λογαριασμός κινητού τηλεφώνου",
+          "language": "el",
+          "expected": "mobile_bill",
+          "rank": 13,
+          "expected_score": 0.04377475440273618,
+          "top": [
+            {
+              "id": "employment_contract",
+              "score": 0.12502763809823875
+            },
+            {
+              "id": "dog_vet",
+              "score": 0.11128565654180572
+            },
+            {
+              "id": "purchase_receipt",
+              "score": 0.08425179621457524
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.08303431691318693
+            },
+            {
+              "id": "internet_bill",
+              "score": 0.08057930328441057
+            }
+          ]
+        },
+        {
+          "query": "contract de muncă",
+          "language": "ro",
+          "expected": "employment_contract",
+          "rank": 2,
+          "expected_score": 0.4370502322262728,
+          "top": [
+            {
+              "id": "rental_contract",
+              "score": 0.4388219088987158
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.4370502322262728
+            },
+            {
+              "id": "service_contract",
+              "score": 0.4181689086563566
+            },
+            {
+              "id": "bank_statement",
+              "score": 0.4058015513961606
+            },
+            {
+              "id": "water_bill",
+              "score": 0.374509856216827
+            }
+          ]
+        },
+        {
+          "query": "employment contract",
+          "language": "en",
+          "expected": "employment_contract",
+          "rank": 2,
+          "expected_score": 0.3316880748424173,
+          "top": [
+            {
+              "id": "service_contract",
+              "score": 0.3631732780336529
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.3316880748424173
+            },
+            {
+              "id": "rental_contract",
+              "score": 0.26311613942389767
+            },
+            {
+              "id": "medical_test",
+              "score": 0.194024587449729
+            },
+            {
+              "id": "tax_notice",
+              "score": 0.16448394433231078
+            }
+          ]
+        },
+        {
+          "query": "Arbeitsvertrag",
+          "language": "de",
+          "expected": "employment_contract",
+          "rank": 5,
+          "expected_score": 0.22642533088917194,
+          "top": [
+            {
+              "id": "flight_ticket",
+              "score": 0.2580609837277855
+            },
+            {
+              "id": "purchase_receipt",
+              "score": 0.24775173477783566
+            },
+            {
+              "id": "dog_vet",
+              "score": 0.24364826625894942
+            },
+            {
+              "id": "house_insurance",
+              "score": 0.23237811844196707
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.22642533088917194
+            }
+          ]
+        },
+        {
+          "query": "contrat de travail",
+          "language": "fr",
+          "expected": "employment_contract",
+          "rank": 17,
+          "expected_score": 0.2966006584959593,
+          "top": [
+            {
+              "id": "mobile_bill",
+              "score": 0.42178123892836694
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.42022843778899754
+            },
+            {
+              "id": "dog_vet",
+              "score": 0.40347467908036727
+            },
+            {
+              "id": "service_contract",
+              "score": 0.3998906448329701
+            },
+            {
+              "id": "gas_bill",
+              "score": 0.39679271845874453
+            }
+          ]
+        },
+        {
+          "query": "iş sözleşmesi",
+          "language": "tr",
+          "expected": "employment_contract",
+          "rank": 16,
+          "expected_score": 0.04256185748263493,
+          "top": [
+            {
+              "id": "salary_slip",
+              "score": 0.17098324210530202
+            },
+            {
+              "id": "cat_vet",
+              "score": 0.1581265622670393
+            },
+            {
+              "id": "service_contract",
+              "score": 0.15549919496784864
+            },
+            {
+              "id": "gas_bill",
+              "score": 0.15143078669840676
+            },
+            {
+              "id": "water_bill",
+              "score": 0.12635431294760185
+            }
+          ]
+        },
+        {
+          "query": "Mietvertrag für Wohnung",
+          "language": "de",
+          "expected": "rental_contract",
+          "rank": 12,
+          "expected_score": 0.20102402296483107,
+          "top": [
+            {
+              "id": "bank_statement",
+              "score": 0.27558477933030967
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.27516587326558406
+            },
+            {
+              "id": "purchase_receipt",
+              "score": 0.2743048363686049
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.2726962895729152
+            },
+            {
+              "id": "cat_vet",
+              "score": 0.25688739416670786
+            }
+          ]
+        },
+        {
+          "query": "contrat de location appartement",
+          "language": "fr",
+          "expected": "rental_contract",
+          "rank": 13,
+          "expected_score": 0.31032484635131813,
+          "top": [
+            {
+              "id": "flight_ticket",
+              "score": 0.4389717979424511
+            },
+            {
+              "id": "gas_bill",
+              "score": 0.3926456696797971
+            },
+            {
+              "id": "mobile_bill",
+              "score": 0.39013299577737104
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.389783183868279
+            },
+            {
+              "id": "house_insurance",
+              "score": 0.36836230798730246
+            }
+          ]
+        },
+        {
+          "query": "συμβόλαιο ενοικίασης διαμερίσματος",
+          "language": "el",
+          "expected": "rental_contract",
+          "rank": 19,
+          "expected_score": 0.012531559480706132,
+          "top": [
+            {
+              "id": "employment_contract",
+              "score": 0.12502763809823875
+            },
+            {
+              "id": "dog_vet",
+              "score": 0.11128565654180572
+            },
+            {
+              "id": "purchase_receipt",
+              "score": 0.08425179621457524
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.08303431691318693
+            },
+            {
+              "id": "internet_bill",
+              "score": 0.08057930328441057
+            }
+          ]
+        },
+        {
+          "query": "daire kira sözleşmesi",
+          "language": "tr",
+          "expected": "rental_contract",
+          "rank": 9,
+          "expected_score": 0.24442713902319507,
+          "top": [
+            {
+              "id": "gas_bill",
+              "score": 0.31046099105641184
+            },
+            {
+              "id": "water_bill",
+              "score": 0.30141388662848145
+            },
+            {
+              "id": "house_insurance",
+              "score": 0.2778911057194835
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.2750298935900354
+            },
+            {
+              "id": "car_service",
+              "score": 0.2634016872714716
+            }
+          ]
+        },
+        {
+          "query": "σύμβαση παροχής υπηρεσιών",
+          "language": "el",
+          "expected": "service_contract",
+          "rank": 6,
+          "expected_score": 0.07844118181161455,
+          "top": [
+            {
+              "id": "employment_contract",
+              "score": 0.12502763809823875
+            },
+            {
+              "id": "dog_vet",
+              "score": 0.11128565654180572
+            },
+            {
+              "id": "purchase_receipt",
+              "score": 0.08425179621457524
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.08303431691318693
+            },
+            {
+              "id": "internet_bill",
+              "score": 0.08057930328441057
+            }
+          ]
+        },
+        {
+          "query": "hizmet sözleşmesi",
+          "language": "tr",
+          "expected": "service_contract",
+          "rank": 2,
+          "expected_score": 0.30915339751704224,
+          "top": [
+            {
+              "id": "car_service",
+              "score": 0.31671453229047697
+            },
+            {
+              "id": "service_contract",
+              "score": 0.30915339751704224
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.3076076295499095
+            },
+            {
+              "id": "cat_vet",
+              "score": 0.2863940342327399
+            },
+            {
+              "id": "gas_bill",
+              "score": 0.264076917570531
+            }
+          ]
+        },
+        {
+          "query": "Tierarztakte für Hund",
+          "language": "de",
+          "expected": "dog_vet",
+          "rank": 17,
+          "expected_score": 0.17720283315660917,
+          "top": [
+            {
+              "id": "purchase_receipt",
+              "score": 0.29152012390543475
+            },
+            {
+              "id": "service_contract",
+              "score": 0.29024740724851694
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.28795867535492836
+            },
+            {
+              "id": "car_service",
+              "score": 0.28578209078677774
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.2755528335114923
+            }
+          ]
+        },
+        {
+          "query": "κτηνιατρικός φάκελος σκύλου",
+          "language": "el",
+          "expected": "dog_vet",
+          "rank": 2,
+          "expected_score": 0.11128565654180572,
+          "top": [
+            {
+              "id": "employment_contract",
+              "score": 0.12502763809823875
+            },
+            {
+              "id": "dog_vet",
+              "score": 0.11128565654180572
+            },
+            {
+              "id": "purchase_receipt",
+              "score": 0.08425179621457524
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.08303431691318693
+            },
+            {
+              "id": "internet_bill",
+              "score": 0.08057930328441057
+            }
+          ]
+        },
+        {
+          "query": "cat veterinary record",
+          "language": "en",
+          "expected": "cat_vet",
+          "rank": 2,
+          "expected_score": 0.2762869357296658,
+          "top": [
+            {
+              "id": "dog_vet",
+              "score": 0.30838997248643873
+            },
+            {
+              "id": "cat_vet",
+              "score": 0.2762869357296658
+            },
+            {
+              "id": "service_contract",
+              "score": 0.16308708630883803
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.14622590627144108
+            },
+            {
+              "id": "house_insurance",
+              "score": 0.10155284690629869
+            }
+          ]
+        },
+        {
+          "query": "Tierarztakte für Katze",
+          "language": "de",
+          "expected": "cat_vet",
+          "rank": 7,
+          "expected_score": 0.24901167338204314,
+          "top": [
+            {
+              "id": "car_service",
+              "score": 0.32668987274465255
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.28770078478146655
+            },
+            {
+              "id": "purchase_receipt",
+              "score": 0.2863621323922554
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.2830867334187177
+            },
+            {
+              "id": "service_contract",
+              "score": 0.2693271889406667
+            }
+          ]
+        },
+        {
+          "query": "dossier vétérinaire du chat",
+          "language": "fr",
+          "expected": "cat_vet",
+          "rank": 2,
+          "expected_score": 0.4609609343093055,
+          "top": [
+            {
+              "id": "dog_vet",
+              "score": 0.5057198574744477
+            },
+            {
+              "id": "cat_vet",
+              "score": 0.4609609343093055
+            },
+            {
+              "id": "service_contract",
+              "score": 0.4065342200224694
+            },
+            {
+              "id": "mobile_bill",
+              "score": 0.36439816231587097
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.34545711642538973
+            }
+          ]
+        },
+        {
+          "query": "κτηνιατρικός φάκελος γάτας",
+          "language": "el",
+          "expected": "cat_vet",
+          "rank": 12,
+          "expected_score": 0.047653135914136995,
+          "top": [
+            {
+              "id": "employment_contract",
+              "score": 0.12502763809823875
+            },
+            {
+              "id": "dog_vet",
+              "score": 0.11128565654180572
+            },
+            {
+              "id": "purchase_receipt",
+              "score": 0.08425179621457524
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.08303431691318693
+            },
+            {
+              "id": "internet_bill",
+              "score": 0.08057930328441057
+            }
+          ]
+        },
+        {
+          "query": "kedi veteriner kaydı",
+          "language": "tr",
+          "expected": "cat_vet",
+          "rank": 2,
+          "expected_score": 0.2423519617623328,
+          "top": [
+            {
+              "id": "dog_vet",
+              "score": 0.26655907514476834
+            },
+            {
+              "id": "cat_vet",
+              "score": 0.2423519617623328
+            },
+            {
+              "id": "purchase_receipt",
+              "score": 0.2411100963489564
+            },
+            {
+              "id": "bank_statement",
+              "score": 0.2329741275284099
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.21952465322004372
+            }
+          ]
+        },
+        {
+          "query": "house insurance policy",
+          "language": "en",
+          "expected": "house_insurance",
+          "rank": 3,
+          "expected_score": 0.16844267726775383,
+          "top": [
+            {
+              "id": "tax_notice",
+              "score": 0.222398246978532
+            },
+            {
+              "id": "purchase_receipt",
+              "score": 0.1791420943486049
+            },
+            {
+              "id": "house_insurance",
+              "score": 0.16844267726775383
+            },
+            {
+              "id": "electricity_bill",
+              "score": 0.15453624806506047
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.13018947841232636
+            }
+          ]
+        },
+        {
+          "query": "Hausversicherung",
+          "language": "de",
+          "expected": "house_insurance",
+          "rank": 3,
+          "expected_score": 0.24449942778999784,
+          "top": [
+            {
+              "id": "medical_test",
+              "score": 0.2661116224685849
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.25536157707668644
+            },
+            {
+              "id": "house_insurance",
+              "score": 0.24449942778999784
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.23501836165231693
+            },
+            {
+              "id": "car_service",
+              "score": 0.21550288843863874
+            }
+          ]
+        },
+        {
+          "query": "assurance habitation",
+          "language": "fr",
+          "expected": "house_insurance",
+          "rank": 7,
+          "expected_score": 0.20876648389057884,
+          "top": [
+            {
+              "id": "train_ticket",
+              "score": 0.26347641382911857
+            },
+            {
+              "id": "service_contract",
+              "score": 0.2359070443186555
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.22739876382490076
+            },
+            {
+              "id": "dog_vet",
+              "score": 0.2215600737077195
+            },
+            {
+              "id": "gas_bill",
+              "score": 0.21166719524472566
+            }
+          ]
+        },
+        {
+          "query": "ασφάλιση κατοικίας",
+          "language": "el",
+          "expected": "house_insurance",
+          "rank": 14,
+          "expected_score": 0.04172067205105677,
+          "top": [
+            {
+              "id": "employment_contract",
+              "score": 0.12502763809823875
+            },
+            {
+              "id": "dog_vet",
+              "score": 0.11128565654180572
+            },
+            {
+              "id": "purchase_receipt",
+              "score": 0.08425179621457524
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.08303431691318693
+            },
+            {
+              "id": "internet_bill",
+              "score": 0.08057930328441057
+            }
+          ]
+        },
+        {
+          "query": "ev sigortası",
+          "language": "tr",
+          "expected": "house_insurance",
+          "rank": 9,
+          "expected_score": 0.3607266479287685,
+          "top": [
+            {
+              "id": "train_ticket",
+              "score": 0.41533240639535807
+            },
+            {
+              "id": "bank_statement",
+              "score": 0.4037653936993883
+            },
+            {
+              "id": "car_service",
+              "score": 0.38215778920108906
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.37927480740492614
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.37564597024571345
+            }
+          ]
+        },
+        {
+          "query": "κράτηση ξενοδοχείου",
+          "language": "el",
+          "expected": "hotel_booking",
+          "rank": 8,
+          "expected_score": 0.07163492337970834,
+          "top": [
+            {
+              "id": "employment_contract",
+              "score": 0.12502763809823875
+            },
+            {
+              "id": "dog_vet",
+              "score": 0.11128565654180572
+            },
+            {
+              "id": "purchase_receipt",
+              "score": 0.08425179621457524
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.08303431691318693
+            },
+            {
+              "id": "internet_bill",
+              "score": 0.08057930328441057
+            }
+          ]
+        },
+        {
+          "query": "otel rezervasyonu",
+          "language": "tr",
+          "expected": "hotel_booking",
+          "rank": 4,
+          "expected_score": 0.33603501356538223,
+          "top": [
+            {
+              "id": "train_ticket",
+              "score": 0.4173624698090532
+            },
+            {
+              "id": "rental_contract",
+              "score": 0.3420447640147308
+            },
+            {
+              "id": "gas_bill",
+              "score": 0.3409839584841297
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.33603501356538223
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.33023530839755477
+            }
+          ]
+        },
+        {
+          "query": "car service estimate",
+          "language": "en",
+          "expected": "car_service",
+          "rank": 2,
+          "expected_score": 0.29733186321424165,
+          "top": [
+            {
+              "id": "electricity_bill",
+              "score": 0.29964353003176925
+            },
+            {
+              "id": "car_service",
+              "score": 0.29733186321424165
+            },
+            {
+              "id": "purchase_receipt",
+              "score": 0.2513727903013601
+            },
+            {
+              "id": "mobile_bill",
+              "score": 0.2511941197758222
+            },
+            {
+              "id": "tax_notice",
+              "score": 0.20015201735243654
+            }
+          ]
+        },
+        {
+          "query": "προσφορά συνεργείου αυτοκινήτου",
+          "language": "el",
+          "expected": "car_service",
+          "rank": 18,
+          "expected_score": 0.01682699613031575,
+          "top": [
+            {
+              "id": "employment_contract",
+              "score": 0.12502763809823875
+            },
+            {
+              "id": "dog_vet",
+              "score": 0.11128565654180572
+            },
+            {
+              "id": "purchase_receipt",
+              "score": 0.08425179621457524
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.08303431691318693
+            },
+            {
+              "id": "internet_bill",
+              "score": 0.08057930328441057
+            }
+          ]
+        },
+        {
+          "query": "araba servis fiyat teklifi",
+          "language": "tr",
+          "expected": "car_service",
+          "rank": 2,
+          "expected_score": 0.3520609088947292,
+          "top": [
+            {
+              "id": "water_bill",
+              "score": 0.36850490441443157
+            },
+            {
+              "id": "car_service",
+              "score": 0.3520609088947292
+            },
+            {
+              "id": "gas_bill",
+              "score": 0.3218431988558488
+            },
+            {
+              "id": "tax_notice",
+              "score": 0.32062433826691406
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.3187101743213243
+            }
+          ]
+        },
+        {
+          "query": "train ticket",
+          "language": "en",
+          "expected": "train_ticket",
+          "rank": 13,
+          "expected_score": 0.057991377678869235,
+          "top": [
+            {
+              "id": "bank_statement",
+              "score": 0.16204694247133933
+            },
+            {
+              "id": "gas_bill",
+              "score": 0.13718315431371322
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.13715440551270533
+            },
+            {
+              "id": "water_bill",
+              "score": 0.13268628000420057
+            },
+            {
+              "id": "mobile_bill",
+              "score": 0.12555866357207446
+            }
+          ]
+        },
+        {
+          "query": "Bahnfahrkarte",
+          "language": "de",
+          "expected": "train_ticket",
+          "rank": 4,
+          "expected_score": 0.22592304413189807,
+          "top": [
+            {
+              "id": "flight_ticket",
+              "score": 0.2728119701561714
+            },
+            {
+              "id": "water_bill",
+              "score": 0.25942660266215467
+            },
+            {
+              "id": "house_insurance",
+              "score": 0.2408316074935259
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.22592304413189807
+            },
+            {
+              "id": "gas_bill",
+              "score": 0.20866442123210138
+            }
+          ]
+        },
+        {
+          "query": "billet de train",
+          "language": "fr",
+          "expected": "train_ticket",
+          "rank": 6,
+          "expected_score": 0.2770698070248856,
+          "top": [
+            {
+              "id": "flight_ticket",
+              "score": 0.3161288574622716
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.29243336355222155
+            },
+            {
+              "id": "car_service",
+              "score": 0.29070784042207776
+            },
+            {
+              "id": "gas_bill",
+              "score": 0.2882227508510946
+            },
+            {
+              "id": "mobile_bill",
+              "score": 0.2856615464871015
+            }
+          ]
+        },
+        {
+          "query": "εισιτήριο τρένου",
+          "language": "el",
+          "expected": "train_ticket",
+          "rank": 4,
+          "expected_score": 0.08303431691318693,
+          "top": [
+            {
+              "id": "employment_contract",
+              "score": 0.12502763809823875
+            },
+            {
+              "id": "dog_vet",
+              "score": 0.11128565654180572
+            },
+            {
+              "id": "purchase_receipt",
+              "score": 0.08425179621457524
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.08303431691318693
+            },
+            {
+              "id": "internet_bill",
+              "score": 0.08057930328441057
+            }
+          ]
+        },
+        {
+          "query": "flight ticket",
+          "language": "en",
+          "expected": "flight_ticket",
+          "rank": 4,
+          "expected_score": 0.1279715678607211,
+          "top": [
+            {
+              "id": "mobile_bill",
+              "score": 0.16799316189986307
+            },
+            {
+              "id": "internet_bill",
+              "score": 0.15587633141203533
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.13904391791657433
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.1279715678607211
+            },
+            {
+              "id": "bank_statement",
+              "score": 0.12017191446488831
+            }
+          ]
+        },
+        {
+          "query": "Flugticket",
+          "language": "de",
+          "expected": "flight_ticket",
+          "rank": 8,
+          "expected_score": 0.08496002293609321,
+          "top": [
+            {
+              "id": "dog_vet",
+              "score": 0.15106633718364237
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.14455359477320334
+            },
+            {
+              "id": "bank_statement",
+              "score": 0.13679505871754494
+            },
+            {
+              "id": "medical_test",
+              "score": 0.11722372122383504
+            },
+            {
+              "id": "cat_vet",
+              "score": 0.10882467103799498
+            }
+          ]
+        },
+        {
+          "query": "αεροπορικό εισιτήριο",
+          "language": "el",
+          "expected": "flight_ticket",
+          "rank": 17,
+          "expected_score": 0.022654884392722317,
+          "top": [
+            {
+              "id": "employment_contract",
+              "score": 0.12502763809823875
+            },
+            {
+              "id": "dog_vet",
+              "score": 0.11128565654180572
+            },
+            {
+              "id": "purchase_receipt",
+              "score": 0.08425179621457524
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.08303431691318693
+            },
+            {
+              "id": "internet_bill",
+              "score": 0.08057930328441057
+            }
+          ]
+        },
+        {
+          "query": "uçak bileti",
+          "language": "tr",
+          "expected": "flight_ticket",
+          "rank": 4,
+          "expected_score": 0.31285795342433487,
+          "top": [
+            {
+              "id": "train_ticket",
+              "score": 0.33890374704359194
+            },
+            {
+              "id": "bank_statement",
+              "score": 0.32157977261596493
+            },
+            {
+              "id": "purchase_receipt",
+              "score": 0.3140406919794634
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.31285795342433487
+            },
+            {
+              "id": "dog_vet",
+              "score": 0.2922735017530457
+            }
+          ]
+        },
+        {
+          "query": "bank account statement",
+          "language": "en",
+          "expected": "bank_statement",
+          "rank": 11,
+          "expected_score": 0.13518073764117944,
+          "top": [
+            {
+              "id": "mobile_bill",
+              "score": 0.24831132639458092
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.2376678578619406
+            },
+            {
+              "id": "purchase_receipt",
+              "score": 0.20555876470033324
+            },
+            {
+              "id": "tax_notice",
+              "score": 0.19004683571101588
+            },
+            {
+              "id": "service_contract",
+              "score": 0.18547171993229208
+            }
+          ]
+        },
+        {
+          "query": "Kontoauszug",
+          "language": "de",
+          "expected": "bank_statement",
+          "rank": 9,
+          "expected_score": 0.22889736547108858,
+          "top": [
+            {
+              "id": "car_service",
+              "score": 0.2856540168148304
+            },
+            {
+              "id": "water_bill",
+              "score": 0.2812992581935637
+            },
+            {
+              "id": "service_contract",
+              "score": 0.2770048018100734
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.272122803957185
+            },
+            {
+              "id": "gas_bill",
+              "score": 0.2683652318716315
+            }
+          ]
+        },
+        {
+          "query": "relevé de compte bancaire",
+          "language": "fr",
+          "expected": "bank_statement",
+          "rank": 6,
+          "expected_score": 0.34641222249709025,
+          "top": [
+            {
+              "id": "train_ticket",
+              "score": 0.3927828889336031
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.3824035284840207
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.3785090806025303
+            },
+            {
+              "id": "car_service",
+              "score": 0.3594619947324067
+            },
+            {
+              "id": "gas_bill",
+              "score": 0.34960254616726866
+            }
+          ]
+        },
+        {
+          "query": "αντίγραφο τραπεζικού λογαριασμού",
+          "language": "el",
+          "expected": "bank_statement",
+          "rank": 7,
+          "expected_score": 0.0776280029031369,
+          "top": [
+            {
+              "id": "employment_contract",
+              "score": 0.12502763809823875
+            },
+            {
+              "id": "dog_vet",
+              "score": 0.11128565654180572
+            },
+            {
+              "id": "purchase_receipt",
+              "score": 0.08425179621457524
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.08303431691318693
+            },
+            {
+              "id": "internet_bill",
+              "score": 0.08057930328441057
+            }
+          ]
+        },
+        {
+          "query": "banka hesap özeti",
+          "language": "tr",
+          "expected": "bank_statement",
+          "rank": 11,
+          "expected_score": 0.3222110325072617,
+          "top": [
+            {
+              "id": "train_ticket",
+              "score": 0.40429910378336636
+            },
+            {
+              "id": "purchase_receipt",
+              "score": 0.3939435713568363
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.3884422650383428
+            },
+            {
+              "id": "water_bill",
+              "score": 0.3822541624098606
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.3593433304017524
+            }
+          ]
+        },
+        {
+          "query": "salary payslip",
+          "language": "en",
+          "expected": "salary_slip",
+          "rank": 18,
+          "expected_score": 0.0665935998650213,
+          "top": [
+            {
+              "id": "purchase_receipt",
+              "score": 0.21025751187310865
+            },
+            {
+              "id": "rental_contract",
+              "score": 0.20396038647337134
+            },
+            {
+              "id": "tax_notice",
+              "score": 0.1684427357381722
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.1638337503826401
+            },
+            {
+              "id": "service_contract",
+              "score": 0.1571951244768503
+            }
+          ]
+        },
+        {
+          "query": "Gehaltsabrechnung",
+          "language": "de",
+          "expected": "salary_slip",
+          "rank": 3,
+          "expected_score": 0.23016917765471623,
+          "top": [
+            {
+              "id": "employment_contract",
+              "score": 0.2664963958509538
+            },
+            {
+              "id": "car_service",
+              "score": 0.24132475167209896
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.23016917765471623
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.2291620808613884
+            },
+            {
+              "id": "house_insurance",
+              "score": 0.21962491679773744
+            }
+          ]
+        },
+        {
+          "query": "fiche de paie",
+          "language": "fr",
+          "expected": "salary_slip",
+          "rank": 14,
+          "expected_score": 0.2963285459048699,
+          "top": [
+            {
+              "id": "gas_bill",
+              "score": 0.40303495025740144
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.3752706372171851
+            },
+            {
+              "id": "water_bill",
+              "score": 0.3674460248338923
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.36592309092775777
+            },
+            {
+              "id": "car_service",
+              "score": 0.36423400299776354
+            }
+          ]
+        },
+        {
+          "query": "εκκαθαριστικό μισθοδοσίας",
+          "language": "el",
+          "expected": "salary_slip",
+          "rank": 9,
+          "expected_score": 0.066723146585297,
+          "top": [
+            {
+              "id": "employment_contract",
+              "score": 0.12502763809823875
+            },
+            {
+              "id": "dog_vet",
+              "score": 0.11128565654180572
+            },
+            {
+              "id": "purchase_receipt",
+              "score": 0.08425179621457524
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.08303431691318693
+            },
+            {
+              "id": "internet_bill",
+              "score": 0.08057930328441057
+            }
+          ]
+        },
+        {
+          "query": "maaş bordrosu",
+          "language": "tr",
+          "expected": "salary_slip",
+          "rank": 4,
+          "expected_score": 0.2728202370876488,
+          "top": [
+            {
+              "id": "train_ticket",
+              "score": 0.3867195515710702
+            },
+            {
+              "id": "water_bill",
+              "score": 0.33547756575932886
+            },
+            {
+              "id": "car_service",
+              "score": 0.27431081141606883
+            },
+            {
+              "id": "salary_slip",
+              "score": 0.2728202370876488
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.26018204268880796
+            }
+          ]
+        },
+        {
+          "query": "résultats d'analyses médicales",
+          "language": "fr",
+          "expected": "medical_test",
+          "rank": 2,
+          "expected_score": 0.37495278199001375,
+          "top": [
+            {
+              "id": "cat_vet",
+              "score": 0.39431999856651767
+            },
+            {
+              "id": "medical_test",
+              "score": 0.37495278199001375
+            },
+            {
+              "id": "dog_vet",
+              "score": 0.28627835882665853
+            },
+            {
+              "id": "service_contract",
+              "score": 0.2546415551664286
+            },
+            {
+              "id": "water_bill",
+              "score": 0.18531464051483348
+            }
+          ]
+        },
+        {
+          "query": "αποτελέσματα ιατρικών εξετάσεων",
+          "language": "el",
+          "expected": "medical_test",
+          "rank": 20,
+          "expected_score": 0.0020282093454302283,
+          "top": [
+            {
+              "id": "employment_contract",
+              "score": 0.12502763809823875
+            },
+            {
+              "id": "dog_vet",
+              "score": 0.11128565654180572
+            },
+            {
+              "id": "purchase_receipt",
+              "score": 0.08425179621457524
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.08303431691318693
+            },
+            {
+              "id": "internet_bill",
+              "score": 0.08057930328441057
+            }
+          ]
+        },
+        {
+          "query": "tıbbi laboratuvar sonuçları",
+          "language": "tr",
+          "expected": "medical_test",
+          "rank": 4,
+          "expected_score": 0.4861418385047507,
+          "top": [
+            {
+              "id": "water_bill",
+              "score": 0.5034472604937332
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.493434724556176
+            },
+            {
+              "id": "service_contract",
+              "score": 0.4878176125717097
+            },
+            {
+              "id": "medical_test",
+              "score": 0.4861418385047507
+            },
+            {
+              "id": "house_insurance",
+              "score": 0.46042138569394186
+            }
+          ]
+        },
+        {
+          "query": "bon fiscal cumpărături",
+          "language": "ro",
+          "expected": "purchase_receipt",
+          "rank": 2,
+          "expected_score": 0.6180038276352215,
+          "top": [
+            {
+              "id": "tax_notice",
+              "score": 0.6240654035198137
+            },
+            {
+              "id": "purchase_receipt",
+              "score": 0.6180038276352215
+            },
+            {
+              "id": "bank_statement",
+              "score": 0.33252695893511713
+            },
+            {
+              "id": "service_contract",
+              "score": 0.32942313039597243
+            },
+            {
+              "id": "water_bill",
+              "score": 0.3106181582109725
+            }
+          ]
+        },
+        {
+          "query": "Kassenbon für Lebensmittel",
+          "language": "de",
+          "expected": "purchase_receipt",
+          "rank": 9,
+          "expected_score": 0.20518586786983134,
+          "top": [
+            {
+              "id": "medical_test",
+              "score": 0.28268449985420674
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.26261381898941105
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.25988830070722024
+            },
+            {
+              "id": "car_service",
+              "score": 0.24542652280847654
+            },
+            {
+              "id": "gas_bill",
+              "score": 0.2350932404662389
+            }
+          ]
+        },
+        {
+          "query": "ticket de caisse courses",
+          "language": "fr",
+          "expected": "purchase_receipt",
+          "rank": 12,
+          "expected_score": 0.21435306366821283,
+          "top": [
+            {
+              "id": "bank_statement",
+              "score": 0.32952122311032067
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.3196597712664794
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.2975149818263083
+            },
+            {
+              "id": "gas_bill",
+              "score": 0.2794828593068588
+            },
+            {
+              "id": "car_service",
+              "score": 0.27156940636821914
+            }
+          ]
+        },
+        {
+          "query": "απόδειξη αγοράς τροφίμων",
+          "language": "el",
+          "expected": "purchase_receipt",
+          "rank": 3,
+          "expected_score": 0.08425179621457524,
+          "top": [
+            {
+              "id": "employment_contract",
+              "score": 0.12502763809823875
+            },
+            {
+              "id": "dog_vet",
+              "score": 0.11128565654180572
+            },
+            {
+              "id": "purchase_receipt",
+              "score": 0.08425179621457524
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.08303431691318693
+            },
+            {
+              "id": "internet_bill",
+              "score": 0.08057930328441057
+            }
+          ]
+        },
+        {
+          "query": "market alışveriş fişi",
+          "language": "tr",
+          "expected": "purchase_receipt",
+          "rank": 4,
+          "expected_score": 0.41332810800118214,
+          "top": [
+            {
+              "id": "car_service",
+              "score": 0.453847393095823
+            },
+            {
+              "id": "bank_statement",
+              "score": 0.4402734484833225
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.4242006924107372
+            },
+            {
+              "id": "purchase_receipt",
+              "score": 0.41332810800118214
+            },
+            {
+              "id": "water_bill",
+              "score": 0.412722413416561
+            }
+          ]
+        },
+        {
+          "query": "Grundsteuerbescheid",
+          "language": "de",
+          "expected": "tax_notice",
+          "rank": 16,
+          "expected_score": 0.11175413216482823,
+          "top": [
+            {
+              "id": "hotel_booking",
+              "score": 0.25116617768412164
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.2471628146674077
+            },
+            {
+              "id": "gas_bill",
+              "score": 0.22552683364825404
+            },
+            {
+              "id": "medical_test",
+              "score": 0.22207110065539054
+            },
+            {
+              "id": "employment_contract",
+              "score": 0.2074991303327964
+            }
+          ]
+        },
+        {
+          "query": "avis d'imposition foncière",
+          "language": "fr",
+          "expected": "tax_notice",
+          "rank": 9,
+          "expected_score": 0.33530853996948806,
+          "top": [
+            {
+              "id": "flight_ticket",
+              "score": 0.4326049770343159
+            },
+            {
+              "id": "hotel_booking",
+              "score": 0.3755035419762262
+            },
+            {
+              "id": "mobile_bill",
+              "score": 0.35847785979558056
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.3544737787243039
+            },
+            {
+              "id": "car_service",
+              "score": 0.35323007818721724
+            }
+          ]
+        },
+        {
+          "query": "ειδοποίηση φόρου ακίνητης περιουσίας",
+          "language": "el",
+          "expected": "tax_notice",
+          "rank": 10,
+          "expected_score": 0.05733803782215058,
+          "top": [
+            {
+              "id": "employment_contract",
+              "score": 0.12502763809823875
+            },
+            {
+              "id": "dog_vet",
+              "score": 0.11128565654180572
+            },
+            {
+              "id": "purchase_receipt",
+              "score": 0.08425179621457524
+            },
+            {
+              "id": "train_ticket",
+              "score": 0.08303431691318693
+            },
+            {
+              "id": "internet_bill",
+              "score": 0.08057930328441057
+            }
+          ]
+        },
+        {
+          "query": "emlak vergisi bildirimi",
+          "language": "tr",
+          "expected": "tax_notice",
+          "rank": 17,
+          "expected_score": 0.24340916156722553,
+          "top": [
+            {
+              "id": "train_ticket",
+              "score": 0.4914268694756475
+            },
+            {
+              "id": "car_service",
+              "score": 0.38188221238852477
+            },
+            {
+              "id": "house_insurance",
+              "score": 0.3650499186159099
+            },
+            {
+              "id": "flight_ticket",
+              "score": 0.3628496951293468
+            },
+            {
+              "id": "bank_statement",
+              "score": 0.3472681477338092
+            }
+          ]
+        }
+      ],
+      "model_load_ms": 223.2734999852255
+    }
+  ],
+  "raw_embedding_storage_bytes": {
+    "per_vector": 1536,
+    "all_20_documents": 30720,
+    "per_100000_chunks": 153600000,
+    "per_500000_chunks": 768000000
+  },
+  "total_run_seconds": 5.175945999973919
+}

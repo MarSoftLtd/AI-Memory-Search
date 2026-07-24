@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.AIMemorySearch" parent="Theme.MaterialComponents.NoActionBar.Bridge">
+        <item name="android:forceDarkAllowed">false</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:statusBarColor">@color/color_background</item>
+        <item name="android:navigationBarColor">@color/color_background</item>
+        <item name="android:windowBackground">@color/color_background</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:colorAccent">@color/color_accent</item>
+        <item name="android:textColorPrimary">@color/color_text_primary</item>
+        <item name="android:textColorSecondary">@color/color_text_secondary</item>
+        <item name="android:textColorHint">@color/color_text_hint</item>
+        <item name="colorAccent">@color/color_accent</item>
+        <item name="colorControlNormal">@color/color_text_secondary</item>
+        <item name="colorControlActivated">@color/color_accent</item>
+        <item name="colorButtonNormal">@color/color_accent</item>
+        <item name="android:windowContentTransitions">false</item>
+        <item name="buttonStyle">@style/Widget.AIMemorySearch.PrimaryButton</item>
+    </style>
+</resources>

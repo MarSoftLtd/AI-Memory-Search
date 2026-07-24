@@ -6,11 +6,14 @@ import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 public final class AiPackageManager {
 
     private final Map<String, AiPackageInfo> installedPackages;
     private final Map<AiCapability, String> activePackageIds;
+    private final Set<String> activeModelPackageIds;
 
     public AiPackageManager() {
         installedPackages =
@@ -19,6 +22,7 @@ public final class AiPackageManager {
                 new EnumMap<>(
                         AiCapability.class
                 );
+        activeModelPackageIds = new LinkedHashSet<>();
     }
 
     public synchronized List<AiPackageInfo> getInstalledPackages() {
@@ -121,6 +125,7 @@ public final class AiPackageManager {
         removeActiveReferences(
                 packageId
         );
+        activeModelPackageIds.remove(packageId);
     }
 
     public synchronized void unregisterInstalledPackage(
@@ -196,6 +201,40 @@ public final class AiPackageManager {
         return getInstalledPackage(
                 packageId
         );
+    }
+
+    public synchronized void activateModelPackage(AiPackageInfo packageInfo) {
+        if (packageInfo == null
+                || packageInfo.getPackageType() != AiPackageType.MODEL
+                || !isInstalled(packageInfo)) {
+            return;
+        }
+        activeModelPackageIds.add(packageInfo.getPackageId());
+    }
+
+    public synchronized void deactivateModelPackage(String packageId) {
+        if (!isBlank(packageId)) {
+            activeModelPackageIds.remove(packageId);
+        }
+    }
+
+    public synchronized boolean isModelPackageActive(String packageId) {
+        return !isBlank(packageId) && activeModelPackageIds.contains(packageId);
+    }
+
+    public synchronized List<AiPackageInfo> getActiveModelPackages() {
+        List<AiPackageInfo> result = new ArrayList<>();
+        for (String packageId : activeModelPackageIds) {
+            AiPackageInfo packageInfo = installedPackages.get(packageId);
+            if (packageInfo != null) {
+                result.add(packageInfo);
+            }
+        }
+        return Collections.unmodifiableList(result);
+    }
+
+    public synchronized void deactivateAllModelPackages() {
+        activeModelPackageIds.clear();
     }
 
     private void removeActiveReferences(

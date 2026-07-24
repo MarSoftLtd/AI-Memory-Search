@@ -376,6 +376,86 @@ public final class AiPackageLifecycleManager {
         }
     }
 
+    public AiPackageLifecycleResult activateInstalledModelPackage(
+            com.bliss.aimemorysearch.ai.model.AIPackageInfo metadata,
+            File installedDirectory
+    ) {
+        if (metadata == null
+                || metadata.getPackageType() != AiPackageType.MODEL
+                || installedDirectory == null
+                || !installedDirectory.isDirectory()
+                || !metadata.getPackageId().equals(installedDirectory.getName())) {
+            return AiPackageLifecycleResult.failure(
+                    AiPackageLifecycleState.FAILED,
+                    null,
+                    null,
+                    "ACTIVATION_INVALID",
+                    "Installed MODEL package is invalid",
+                    null
+            );
+        }
+
+        AiPackageInfo packageInfo = toRuntimePackageInfo(metadata);
+        packageManager.registerInstalledPackage(packageInfo);
+        packageManager.activateModelPackage(packageInfo);
+        if (!packageManager.isModelPackageActive(packageInfo.getPackageId())) {
+            packageManager.unregisterInstalledPackage(packageInfo);
+            return AiPackageLifecycleResult.failure(
+                    AiPackageLifecycleState.FAILED,
+                    null,
+                    packageInfo,
+                    "ACTIVATION_FAILED",
+                    "MODEL package activation failed",
+                    null
+            );
+        }
+        return AiPackageLifecycleResult.success(
+                AiPackageLifecycleState.ACTIVE,
+                null,
+                packageInfo,
+                "MODEL package activated"
+        );
+    }
+
+    public AiPackageLifecycleResult deactivateModelPackage(String packageId) {
+        AiPackageInfo packageInfo = packageManager.getInstalledPackage(packageId);
+        if (packageInfo == null || packageInfo.getPackageType() != AiPackageType.MODEL) {
+            return AiPackageLifecycleResult.failure(
+                    AiPackageLifecycleState.NOT_INSTALLED,
+                    null,
+                    packageInfo,
+                    "NOT_INSTALLED",
+                    "MODEL package is not installed",
+                    null
+            );
+        }
+        packageManager.deactivateModelPackage(packageId);
+        return AiPackageLifecycleResult.success(
+                AiPackageLifecycleState.INACTIVE,
+                null,
+                packageInfo,
+                "MODEL package deactivated"
+        );
+    }
+
+    private static AiPackageInfo toRuntimePackageInfo(
+            com.bliss.aimemorysearch.ai.model.AIPackageInfo metadata
+    ) {
+        return new AiPackageInfo(
+                metadata.getPackageId(),
+                AiPackageType.MODEL,
+                metadata.getPackageId(),
+                metadata.getDisplayNameKey(),
+                metadata.getDescriptionKey(),
+                metadata.getVersion(),
+                metadata.getDownloadSizeBytes(),
+                metadata.getInstalledSizeBytes(),
+                "",
+                metadata.getSha256(),
+                ""
+        );
+    }
+
     public AiPackageLifecycleResult activateCapability(
             AiCapability capability,
             AiPackageInfo packageInfo

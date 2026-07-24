@@ -8,6 +8,7 @@
     <color name="color_surface">#121B32</color>
     <color name="color_surface_secondary">#18253F</color>
     <color name="color_surface_modal">#F0121B32</color>
+    <color name="color_long_file_warning">#FF202A44</color>
     <color name="color_progress_track">#22304F</color>
 
     <color name="color_text_primary">#FFFFFF</color>
@@ -24,6 +25,8 @@
     <color name="color_accent_blue_soft">#6EA8FF</color>
     <color name="color_accent_violet">#8B7CFF</color>
     <color name="color_success">#00F5A0</color>
+    <color name="color_warning">#FFD166</color>
+    <color name="color_warning_border">#99FFD166</color>
 
     <color name="color_surface_overlay">#18FFFFFF</color>
     <color name="color_search_surface_top">#32FFFFFF</color>

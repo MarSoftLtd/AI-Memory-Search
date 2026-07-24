@@ -20,8 +20,6 @@ import androidx.work.WorkInfo;
 import androidx.work.WorkManager;
 
 import com.bliss.aimemorysearch.ai.E5EmbeddingEngine;
-import com.bliss.aimemorysearch.ai.E5SentencePieceNative;
-import com.bliss.aimemorysearch.ai.DocumentRuntimeLoader;
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
@@ -40,7 +38,6 @@ import android.provider.Settings;
 import android.content.Intent;
 
 import com.bliss.aimemorysearch.ai.MiniLMTokenizer;
-import com.github.ybq.android.spinkit.SpinKitView;
 
 import java.io.File;
 
@@ -56,6 +53,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String PACKAGE_OPERATION_FAMILY = "package_operation_family";
     private static final String PACKAGE_OPERATION_ID = "package_operation_id";
     private EditText searchEdit;
+    private CardView searchCard;
     private AppDatabase database;
     private SharedPreferences prefs;
     private int ocrProcessedCount = 0;
@@ -67,6 +65,8 @@ public class MainActivity extends AppCompatActivity {
     private View dimView;
     private ImageView clearSearch;
     private ImageView searchButton;
+    private View searchPreparationPanel;
+    private TextView searchPreparationText;
     private CardView exitCard;
     private TextView btnYesExit;
     private TextView btnNoExit;
@@ -89,8 +89,18 @@ public class MainActivity extends AppCompatActivity {
     private TextView speedText;
     private TextView etaText;
     private TextView stageText;
+    private TextView indexLiveInfoText;
+    private TextView indexLongFileWarningText;
+    private TextView indexStateText;
+    private TextView indexOverallProgressText;
+    private com.google.android.material.progressindicator.LinearProgressIndicator
+            indexOverallProgress;
+    private View indexLiveInfoPanel;
+    private View indexLongFileActions;
+    private View indexLongFileWarningCard;
+    private String pendingIndexDecisionToken = "";
     private long indexingStartTime = 0L;
-    private SpinKitView indexLoader;
+    private View indexLoader;
     private com.bliss.aimemorysearch.ai.LanguagePackageRouter languagePackageRouter;
     private com.bliss.aimemorysearch.ai.SearchRequest pendingSearchRequest;
     private String selectedLanguageFamily = "";
@@ -101,45 +111,35 @@ public class MainActivity extends AppCompatActivity {
     private com.bliss.aimemorysearch.ai.model.AIPackageInfo activeAiPackageInfo;
     private com.bliss.aimemorysearch.ai.TranslationPackageManager
             translationPackageManager;
+    private com.bliss.aimemorysearch.ai.AiPackageBundleCoordinator aiSearchBundleCoordinator;
+    private boolean aiSearchReady;
+    private boolean searchWorkflowReady;
+    private boolean initialLanguagePackageReady;
+    private boolean startupPackageOperationActive;
+    private boolean startupRuntimeActivationActive;
+    private boolean initialIndexOperationActive;
+    private java.util.List<com.bliss.aimemorysearch.ai.model.AIPackageInfo>
+            activeBundlePackages = java.util.Collections.emptyList();
+    private int activeBundlePackageIndex;
+    private long activeBundleCompletedBytes;
+    private long activeBundleTotalBytes;
+    private com.bliss.aimemorysearch.ai.model.AIPackageInfo activeDownloadPackageInfo;
+    private androidx.lifecycle.LiveData<androidx.work.WorkInfo>
+            reconciliationWorkLiveData;
+    private boolean reconciliationRecoveryInFlight;
+    private boolean indexObserverRegistered;
+    private boolean indexWorkActive;
+    private androidx.appcompat.app.AlertDialog firstIndexExplanationDialog;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        com.bliss.aimemorysearch.workers.CanonicalEnrichmentLifecycle.initialize(this);
 //====================================================================================================
         // validateSentencePiece();
 //====================================================================================================
-        new E5EmbeddingEngine(this).selfTest();
+        // Model self-tests run only after repository-backed activation.
 //====================================================================================================
-        ConceptSimilarityTest.run(this);
-        Intent liveService =
-                new Intent(
-                        this,
-                        com.bliss.aimemorysearch.services.LiveIndexingService.class
-                );
-
-        try {
-
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-
-                startForegroundService(liveService);
-
-            } else {
-
-                startService(liveService);
-            }
-
-            android.util.Log.d(
-                    "LIVE_INDEX",
-                    "SERVICE START SUCCESS"
-            );
-
-        } catch (Exception e) {
-            android.util.Log.e(
-                    "LIVE_INDEX",
-                    "SERVICE START FAILED",
-                    e
-            );
-        }
-
+        // AI runtimes are restored after the package UI is available.
         EdgeToEdge.enable(this);
         WindowCompat.setDecorFitsSystemWindows( getWindow(), false );
         setContentView(R.layout.activity_main);
@@ -153,17 +153,26 @@ public class MainActivity extends AppCompatActivity {
         translationPackageManager =
                 com.bliss.aimemorysearch.ai.TranslationPackageManager
                         .getInstance(this);
+        aiSearchBundleCoordinator =
+                new com.bliss.aimemorysearch.ai.AiPackageBundleCoordinator(this);
         initializeLanguagePackageRouting();
+        aiSearchReady = aiSearchBundleCoordinator.isInstalled(
+                com.bliss.aimemorysearch.ai.AiPackageBundleCoordinator.AI_SEARCH_BUNDLE_ID)
+                && aiSearchBundleCoordinator.activate(
+                com.bliss.aimemorysearch.ai.AiPackageBundleCoordinator.AI_SEARCH_BUNDLE_ID);
         database = AppDatabase.getInstance(this);
         rebuildVocabularyCache();
         prefs = getSharedPreferences( "index_state", MODE_PRIVATE );
         btnGrantAccess = findViewById(R.id.btnGrantAccess);
         permissionCard = findViewById(R.id.permissionCard);
         searchEdit = findViewById(R.id.searchEdit);
+        searchCard = findViewById(R.id.searchCard);
         titleText_unu = findViewById( R.id.titleText_unu );
         subtitleText_unu = findViewById( R.id.subtitleText_unu );
         clearSearch = findViewById(R.id.clearSearch);
         searchButton = findViewById(R.id.searchButton);
+        searchPreparationPanel = findViewById(R.id.searchPreparationPanel);
+        searchPreparationText = findViewById(R.id.searchPreparationText);
         exitCard = findViewById(R.id.exitCard);
         dimView = findViewById( R.id.dimView );
         btnYesExit = findViewById(R.id.btnYesExit);
@@ -233,6 +242,11 @@ public class MainActivity extends AppCompatActivity {
                 findViewById(
                         R.id.indexLoader
                 );
+        indexedCountText.setText("—");
+        pdfCountText.setText(R.string.dashboard_synchronizing);
+        jpgCountText.setText(R.string.dashboard_synchronizing);
+        ocrCountText.setText(R.string.dashboard_synchronizing);
+        embeddingCountText.setText(R.string.dashboard_synchronizing);
         setupSearch();
         showLastIndexInfo();
         btnGrantAccess.setOnClickListener(v -> {
@@ -268,6 +282,12 @@ public class MainActivity extends AppCompatActivity {
                 new androidx.activity.OnBackPressedCallback(true) {
                     @Override
                     public void handleOnBackPressed() {
+                        if (languagePackagePromptVisible) {
+                            if (aiPackageDialog.canClose()) {
+                                closeAiPackageDialog();
+                            }
+                            return;
+                        }
                         if (exitVisible) {
                             hideExitDialog();
                             return;
@@ -276,197 +296,31 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
         );
-        observeIndexStats();
         // =============================  AI
-        DocumentRuntimeLoader
-                .createDefault()
-                .loadEmbeddingRuntime(this);
-        ImageRuntimeLoader
-                .createDefault()
-                .loadImageEmbeddingRuntime(this);
-        ImageRuntimeLoader
-                .createDefault()
-                .loadTextEmbeddingRuntime(this);
-        MiniLMTokenizer
-                .getInstance()
-                .initialize(this);
-        new Thread(() -> {
-
-            float[] vector1 =
-                    DocumentRuntimeLoader
-                            .createDefault()
-                            .getEmbeddingRuntime()
-                            .generateEmbedding(
-                                    "factura emag"
-                            );
-
-            float[] vector2 =
-                    DocumentRuntimeLoader
-                            .createDefault()
-                            .getEmbeddingRuntime()
-                            .generateEmbedding(
-                                    "factura de la emag"
-                            );
-
-            float[] vector3 =
-                    DocumentRuntimeLoader
-                            .createDefault()
-                            .getEmbeddingRuntime()
-                            .generateEmbedding(
-                                    "poza cu masina"
-                            );
-
-            float similarity1 =
-                    VectorUtils.cosineSimilarity(
-                            vector1,
-                            vector2
-                    );
-
-            float similarity2 =
-                    VectorUtils.cosineSimilarity(
-                            vector1,
-                            vector3
-                    );
-
-            android.util.Log.d(
-                    "SEMANTIC",
-                    "Factura vs Factura = "
-                            + similarity1
-            );
-
-            android.util.Log.d(
-                    "SEMANTIC",
-                    "Factura vs Poza = "
-                            + similarity2
-            );
-
-        }).start();
+        if (aiSearchReady) {
+            startModelDependentRuntime();
+        }
         liveIndexingText =
                 findViewById(
                         R.id.liveIndexingText
                 );
+        indexLiveInfoText = findViewById(R.id.indexLiveInfoText);
+        indexLongFileWarningText = findViewById(R.id.indexLongFileWarningText);
+        indexStateText = findViewById(R.id.indexStateText);
+        indexOverallProgressText = findViewById(R.id.indexOverallProgressText);
+        indexOverallProgress = findViewById(R.id.indexOverallProgress);
+        indexLiveInfoPanel = findViewById(R.id.indexLiveInfoPanel);
+        indexLongFileActions = findViewById(R.id.indexLongFileActions);
+        indexLongFileWarningCard = findViewById(R.id.indexLongFileWarningCard);
+        observeIndexWorker();
+        observeIndexStats();
+        findViewById(R.id.indexContinueButton).setOnClickListener(
+                view -> submitIndexDecision("continue"));
+        findViewById(R.id.indexSkipButton).setOnClickListener(
+                view -> submitIndexDecision("skip"));
+        restorePendingPackageLifecycle();
+        uiHandler.post(this::continueStartupPreparation);
 
-    }
-    private void validateSentencePiece() {
-
-        new Thread(() -> {
-
-            try {
-
-                File modelDir =
-                        new File(
-                                getFilesDir(),
-                                "models/e5"
-                        );
-
-                if (!modelDir.exists()) {
-                    modelDir.mkdirs();
-                }
-
-                File modelFile =
-                        new File(
-                                modelDir,
-                                "sentencepiece.bpe.model"
-                        );
-
-                if (
-                        !modelFile.exists()
-                                ||
-                                modelFile.length() == 0
-                ) {
-
-                    try (
-                            InputStream inputStream =
-                                    getAssets()
-                                            .open(
-                                                    "models/e5/sentencepiece.bpe.model"
-                                            );
-                            FileOutputStream outputStream =
-                                    new FileOutputStream(
-                                            modelFile
-                                    )
-                    ) {
-
-                        byte[] buffer =
-                                new byte[16 * 1024];
-
-                        int read;
-
-                        while (
-                                (read = inputStream.read(buffer))
-                                        != -1
-                        ) {
-                            outputStream.write(
-                                    buffer,
-                                    0,
-                                    read
-                            );
-                        }
-                    }
-                }
-
-                boolean loaded =
-                        E5SentencePieceNative.loadModel(
-                                modelFile.getAbsolutePath()
-                        );
-
-                if (loaded) {
-
-                    android.util.Log.d(
-                            "SP_VALIDATION",
-                            "MODEL LOAD OK"
-                    );
-
-                    logSentencePieceTokens(
-                            "dog"
-                    );
-                    logSentencePieceTokens(
-                            "caine"
-                    );
-                    logSentencePieceTokens(
-                            "Hund"
-                    );
-                    logSentencePieceTokens(
-                            "chien"
-                    );
-                    logSentencePieceTokens(
-                            "perro"
-                    );
-
-                } else {
-
-                    android.util.Log.d(
-                            "SP_VALIDATION",
-                            "MODEL LOAD FAILED"
-                    );
-                }
-
-            } catch (Exception e) {
-
-                android.util.Log.e(
-                        "SP_VALIDATION",
-                        "MODEL LOAD FAILED",
-                        e
-                );
-            }
-
-        }).start();
-    }
-    private void logSentencePieceTokens(
-            String text
-    ) {
-
-        int[] tokens =
-                E5SentencePieceNative.encode(
-                        text
-                );
-
-        android.util.Log.d(
-                "SP_VALIDATION",
-                text
-                        + " = "
-                        + Arrays.toString(tokens)
-        );
     }
     private void observeIndexStats() {
 
@@ -493,6 +347,7 @@ public class MainActivity extends AppCompatActivity {
                     if (count == null) {
                         return;
                     }
+                    if (indexWorkActive) return;
 
                     pdfCountText.setText(
                             getString(
@@ -501,11 +356,6 @@ public class MainActivity extends AppCompatActivity {
                             )
                     );
 
-                    pdfGauge.setMax(
-                            count + 10
-                    );
-
-                    pdfGauge.setProgress(count);
                 });
 
         database.fileDao()
@@ -515,6 +365,7 @@ public class MainActivity extends AppCompatActivity {
                     if (count == null) {
                         return;
                     }
+                    if (indexWorkActive) return;
 
                     jpgCountText.setText(
                             getString(
@@ -523,11 +374,6 @@ public class MainActivity extends AppCompatActivity {
                             )
                     );
 
-                    jpgGauge.setMax(
-                            count + 10
-                    );
-
-                    jpgGauge.setProgress(count);
                 });
 
         database.fileDao()
@@ -537,6 +383,7 @@ public class MainActivity extends AppCompatActivity {
                     if (count == null) {
                         return;
                     }
+                    if (indexWorkActive) return;
 
                     ocrCountText.setText(
                             getString(
@@ -545,11 +392,6 @@ public class MainActivity extends AppCompatActivity {
                             )
                     );
 
-                    ocrGauge.setMax(
-                            count + 10
-                    );
-
-                    ocrGauge.setProgress(count);
                 });
 
         database.fileDao()
@@ -559,6 +401,7 @@ public class MainActivity extends AppCompatActivity {
                     if (count == null) {
                         return;
                     }
+                    if (indexWorkActive) return;
 
                     embeddingCountText.setText(
                             getString(
@@ -567,11 +410,6 @@ public class MainActivity extends AppCompatActivity {
                             )
                     );
 
-                    embeddingGauge.setMax(
-                            count + 10
-                    );
-
-                    embeddingGauge.setProgress(count);
                 });
     }
     private void setupSearch() {
@@ -734,17 +572,157 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
+        showSearchPreparation(getString(R.string.search_phase_detecting));
+
         com.bliss.aimemorysearch.ai.SearchRequest request =
                 com.bliss.aimemorysearch.ai.QueryUnderstandingEngine
                         .createSearchRequest(query.trim());
-        request.setSelectedLanguageFamily(
-                selectedLanguageFamily
-        );
+        new Thread(() -> {
+            com.bliss.aimemorysearch.ai.LanguageDetectionEngine.DetectionResult detection =
+                    com.bliss.aimemorysearch.ai.LanguageDetectionEngine
+                            .getInstance(this)
+                            .detectLanguage(query.trim(), selectedLanguageFamily);
+            android.util.Log.d("TRANSLATION_ROUTER",
+                    "input | query=" + query.trim()
+                            + " | detectedLanguage=" + detection.language
+                            + " | confidence=" + detection.confidence
+                            + " | fallbackFamily=" + selectedLanguageFamily);
+            request.setDetectedLanguage(detection.language);
+            request.setSelectedLanguageFamily(detection.family);
+            android.util.Log.d("TRANSLATION_ROUTER",
+                    "output | query=" + query.trim()
+                            + " | family=" + detection.family);
+            android.util.Log.d("MULTILINGUAL_PIPELINE",
+                    "Query language=" + detection.language
+                            + " | family=" + detection.family
+                            + " | confidence=" + detection.confidence
+                            + " | fallback=" + detection.fallback);
+            runOnUiThread(() -> continueSearch(request));
+        }).start();
+    }
 
-        if (!selectedLanguageFamily.isEmpty()) {
+    private void continueStartupPreparation() {
+        if (searchWorkflowReady || hasActiveAiPackageOperation()) {
+            return;
+        }
+
+        String bundleId =
+                com.bliss.aimemorysearch.ai.AiPackageBundleCoordinator
+                        .AI_SEARCH_BUNDLE_ID;
+        if (!aiSearchBundleCoordinator.isInstalled(bundleId)) {
+            showAiSearchBundlePrompt();
+            return;
+        }
+        if (!aiSearchReady) {
+            startupRuntimeActivationActive = true;
+            refreshKeepScreenAwake();
+            aiSearchReady = aiSearchBundleCoordinator.activate(bundleId);
+            startupRuntimeActivationActive = false;
+            refreshKeepScreenAwake();
+            if (!aiSearchReady) {
+                showAiSearchBundlePrompt();
+                return;
+            }
+            startModelDependentRuntime();
+        }
+
+        String deviceFamily = languagePackageRouter.getRecommendedFamily(
+                java.util.Locale.getDefault()
+        );
+        if (deviceFamily == null || deviceFamily.isEmpty()) {
+            completeStartupPreparation();
+            return;
+        }
+
+        selectedLanguageFamily = deviceFamily;
+        getSharedPreferences("language_package_routing", MODE_PRIVATE)
+                .edit()
+                .putString("selected_family", deviceFamily)
+                .apply();
+
+        if (languagePackageRouter.isInstalled(deviceFamily)
+                && languagePackageRouter.activateInstalledPackage(deviceFamily)) {
+            completeStartupPreparation();
+            return;
+        }
+
+        String packageId = languagePackageRouter.getRequiredPackageId(deviceFamily);
+        showLanguagePackagePrompt(packageId, true);
+        if (languagePackagePromptVisible && activeAiPackageInfo != null) {
+            markInitialLanguagePromptShown(true);
+            startAiPackageDownload();
+        }
+    }
+
+    private void completeStartupPreparation() {
+        languagePackageRouter.restoreInstalledPackages();
+        initialLanguagePackageReady = true;
+        if (hasStorageAccess()) {
+            startIndexing();
+        }
+        updateStartupCompletion();
+    }
+
+    private void updateStartupCompletion() {
+        boolean initialIndexComplete =
+                prefs != null && prefs.getBoolean("first_index_done", false);
+        boolean ready = aiSearchReady
+                && initialLanguagePackageReady
+                && !hasActiveAiPackageOperation()
+                && initialIndexComplete;
+        searchWorkflowReady = ready;
+        searchCard.setVisibility(ready ? View.VISIBLE : View.GONE);
+        if (ready) {
+            resumePendingSearch();
+        }
+    }
+
+    private void refreshKeepScreenAwake() {
+        boolean keepAwake = startupPackageOperationActive
+                || startupRuntimeActivationActive
+                || initialIndexOperationActive;
+        if (keepAwake) {
+            getWindow().addFlags(
+                    android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        } else {
+            getWindow().clearFlags(
+                    android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        }
+    }
+
+    private void continueSearch(com.bliss.aimemorysearch.ai.SearchRequest request) {
+
+        if (hasActiveAiPackageOperation()) {
+            showSearchPreparation(getString(
+                    persistedReconciliationWorkId().isEmpty()
+                            ? R.string.search_phase_waiting_package
+                            : R.string.search_phase_waiting_reconciliation,
+                    request.getOriginalQuery()));
+            return;
+        }
+        showSearchPreparation(getString(R.string.search_phase_capability));
+
+        String aiSearchBundleId =
+                com.bliss.aimemorysearch.ai.AiPackageBundleCoordinator.AI_SEARCH_BUNDLE_ID;
+        if (!aiSearchBundleCoordinator.isInstalled(aiSearchBundleId)) {
+            setPendingSearchRequest(request);
+            showSearchPreparation(getString(
+                    R.string.search_phase_waiting_package,
+                    request.getOriginalQuery()));
+            showAiSearchBundlePrompt();
+            return;
+        }
+        if (!aiSearchBundleCoordinator.activate(aiSearchBundleId)) {
+            setPendingSearchRequest(request);
+            showAiSearchBundlePrompt();
+            return;
+        }
+
+        String queryLanguageFamily = request.getSelectedLanguageFamily();
+        if (!queryLanguageFamily.isEmpty()) {
             String requiredPackageId =
                     languagePackageRouter.getRequiredPackageId(
-                            selectedLanguageFamily
+                            queryLanguageFamily
                     );
             if (
                     requiredPackageId != null
@@ -754,6 +732,9 @@ public class MainActivity extends AppCompatActivity {
                             )
             ) {
                 setPendingSearchRequest(request);
+                showSearchPreparation(getString(
+                        R.string.search_phase_waiting_package,
+                        request.getOriginalQuery()));
                 showLanguagePackagePrompt(requiredPackageId, false);
                 return;
             }
@@ -767,6 +748,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void continueWithCollectionCoverage(
             com.bliss.aimemorysearch.ai.SearchRequest request) {
+        showSearchPreparation(getString(R.string.search_phase_coverage));
         new Thread(() -> {
             String missingPackageId = null;
             int missingFiles = 0;
@@ -808,11 +790,29 @@ public class MainActivity extends AppCompatActivity {
     private void executeSearch(
             com.bliss.aimemorysearch.ai.SearchRequest request
     ) {
+        showSearchPreparation(getString(R.string.search_phase_searching));
         new SearchCoordinator(
                 this
         ).search(
                 request,
+                new SearchCoordinator.ProgressCallback() {
+                    @Override
+                    public void onPhase(String phase) {
+                        showSearchPreparation(phase);
+                    }
+
+                    @Override
+                    public void onBusy() {
+                        showSearchPreparation(getString(R.string.search_phase_busy));
+                    }
+
+                    @Override
+                    public void onFailure(Throwable error) {
+                        showSearchPreparation(getString(R.string.search_phase_failed));
+                    }
+                },
                 finalResults -> {
+                    hideSearchPreparation();
                     for (FileEntity file : finalResults) {
 
                         android.util.Log.e(
@@ -897,6 +897,43 @@ public class MainActivity extends AppCompatActivity {
         aiPackageDialog.show();
     }
 
+    private void showAiPackagePrompt(
+            com.bliss.aimemorysearch.ai.model.AIPackageInfo metadata
+    ) {
+        if (languagePackagePromptVisible || metadata == null) {
+            return;
+        }
+        languagePackagePromptVisible = true;
+        activeAiPackageInfo = metadata;
+        aiPackageDialog.bind(metadata);
+        aiPackageDialog.showReadyState();
+        configureAiPackageReadyActions();
+        aiPackageDialog.show();
+    }
+
+    private void showAiSearchBundlePrompt() {
+        String bundleId =
+                com.bliss.aimemorysearch.ai.AiPackageBundleCoordinator.AI_SEARCH_BUNDLE_ID;
+        com.bliss.aimemorysearch.ai.model.AIPackageInfo presentation =
+                aiSearchBundleCoordinator.createPresentationInfo(bundleId);
+        java.util.List<com.bliss.aimemorysearch.ai.model.AIPackageInfo> missing =
+                aiSearchBundleCoordinator.getMissingPackages(bundleId);
+        if (missing.isEmpty() && !aiSearchBundleCoordinator.isActive(bundleId)) {
+            missing = aiSearchBundleCoordinator.getPackages(bundleId);
+        }
+        if (presentation == null || missing.isEmpty() || languagePackagePromptVisible) {
+            return;
+        }
+        activeBundlePackages = missing;
+        activeBundlePackageIndex = 0;
+        activeBundleCompletedBytes = 0L;
+        activeBundleTotalBytes = 0L;
+        for (com.bliss.aimemorysearch.ai.model.AIPackageInfo info : missing) {
+            activeBundleTotalBytes += info.getDownloadSizeBytes();
+        }
+        showAiPackagePrompt(presentation);
+    }
+
     private void configureAiPackageReadyActions() {
         aiPackageDialog.setPrimaryActionListener(v -> startAiPackageDownload());
         aiPackageDialog.setSecondaryActionListener(v -> closeAiPackageDialog());
@@ -906,10 +943,35 @@ public class MainActivity extends AppCompatActivity {
         if (activeAiPackageInfo == null) {
             return;
         }
+        startupPackageOperationActive = true;
+        refreshKeepScreenAwake();
+        if (activeAiPackageInfo.getPackageType()
+                == com.bliss.aimemorysearch.ai.AiPackageType.TRANSLATION) {
+            persistPackageOperation(activeAiPackageInfo);
+        }
+        if (!activeBundlePackages.isEmpty()) {
+            startNextBundlePackageDownload();
+            return;
+        }
+        activeDownloadPackageInfo = activeAiPackageInfo;
         aiPackageDialog.setPrimaryActionListener(v -> aiPackageDownloadManager.cancel());
         aiPackageDialog.setSecondaryActionListener(null);
         aiPackageDownloadManager.start(
                 activeAiPackageInfo,
+                this::handleAiPackageDownloadEvent
+        );
+    }
+
+    private void startNextBundlePackageDownload() {
+        if (activeBundlePackageIndex >= activeBundlePackages.size()) {
+            finishAiSearchBundleInstallation();
+            return;
+        }
+        activeDownloadPackageInfo = activeBundlePackages.get(activeBundlePackageIndex);
+        aiPackageDialog.setPrimaryActionListener(v -> aiPackageDownloadManager.cancel());
+        aiPackageDialog.setSecondaryActionListener(null);
+        aiPackageDownloadManager.start(
+                activeDownloadPackageInfo,
                 this::handleAiPackageDownloadEvent
         );
     }
@@ -920,9 +982,11 @@ public class MainActivity extends AppCompatActivity {
         switch (event.getEvent()) {
             case STARTED:
                 aiPackageDialog.showDownloadingState(
-                        0,
-                        0L,
-                        event.getTotalBytes()
+                        bundleProgress(0L),
+                        activeBundleCompletedBytes,
+                        bundleTotal(event.getTotalBytes()),
+                        activeBundlePackages.isEmpty() ? 1 : activeBundlePackageIndex + 1,
+                        activeBundlePackages.isEmpty() ? 1 : activeBundlePackages.size()
                 );
                 break;
             case PROGRESS:
@@ -931,9 +995,14 @@ public class MainActivity extends AppCompatActivity {
                         ? (int) Math.min(100L, event.getDownloadedBytes() * 100L / totalBytes)
                         : 0;
                 aiPackageDialog.showDownloadingState(
-                        progress,
-                        event.getDownloadedBytes(),
-                        totalBytes
+                        activeBundlePackages.isEmpty()
+                                ? progress : bundleProgress(event.getDownloadedBytes()),
+                        activeBundlePackages.isEmpty()
+                                ? event.getDownloadedBytes()
+                                : activeBundleCompletedBytes + event.getDownloadedBytes(),
+                        bundleTotal(totalBytes),
+                        activeBundlePackages.isEmpty() ? 1 : activeBundlePackageIndex + 1,
+                        activeBundlePackages.isEmpty() ? 1 : activeBundlePackages.size()
                 );
                 break;
             case VERIFYING:
@@ -946,10 +1015,16 @@ public class MainActivity extends AppCompatActivity {
                 installVerifiedAiPackage(event.getTemporaryFile());
                 break;
             case CANCELLED:
+                startupPackageOperationActive = false;
+                refreshKeepScreenAwake();
+                clearPackageOperationState();
                 aiPackageDialog.showReadyState();
                 configureAiPackageReadyActions();
                 break;
             case FAILED:
+                startupPackageOperationActive = false;
+                refreshKeepScreenAwake();
+                clearPackageOperationState();
                 aiPackageDialog.showDownloadErrorState(
                         getString(downloadFailureMessage(event.getFailureReason()))
                 );
@@ -959,7 +1034,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void installVerifiedAiPackage(File packageFile) {
-        com.bliss.aimemorysearch.ai.model.AIPackageInfo packageInfo = activeAiPackageInfo;
+        com.bliss.aimemorysearch.ai.model.AIPackageInfo packageInfo =
+                activeDownloadPackageInfo != null
+                        ? activeDownloadPackageInfo : activeAiPackageInfo;
         if (packageInfo == null || packageFile == null) {
             showAiPackageInstallationError(
                     com.bliss.aimemorysearch.ai.AtomicAiPackageInstaller.FailureReason.INVALID_PACKAGE
@@ -969,32 +1046,93 @@ public class MainActivity extends AppCompatActivity {
         aiPackageDialog.showInstallingState();
         aiPackageDialog.setSecondaryActionListener(null);
         new Thread(() -> {
+            final long[] lastProgressUpdate = {0L};
             com.bliss.aimemorysearch.ai.AtomicAiPackageInstaller.Result result =
-                    aiPackageInstaller.install(packageInfo, packageFile);
-            com.bliss.aimemorysearch.ai.AiPackageLifecycleResult activationResult =
-                    result.isSuccess()
-                            ? translationPackageManager.activateInstalledPackage(
-                                    packageInfo,
-                                    result.getInstalledDirectory()
-                            )
-                            : null;
+                    aiPackageInstaller.install(
+                            packageInfo,
+                            packageFile,
+                            (extractedBytes, totalBytes) -> {
+                                long now = android.os.SystemClock.elapsedRealtime();
+                                if (now - lastProgressUpdate[0] < 250L
+                                        && (totalBytes <= 0L
+                                        || extractedBytes < totalBytes)) {
+                                    return;
+                                }
+                                lastProgressUpdate[0] = now;
+                                uiHandler.post(() ->
+                                        aiPackageDialog.showInstallingState(
+                                                extractedBytes,
+                                                totalBytes
+                                        )
+                                );
+                            }
+                    );
+            boolean activationSucceeded = false;
+            String reconciliationFamily = "";
+            if (result.isSuccess()) {
+                if (packageInfo.getPackageType()
+                        == com.bliss.aimemorysearch.ai.AiPackageType.TRANSLATION) {
+                    com.bliss.aimemorysearch.ai.AiPackageLifecycleResult activationResult =
+                            translationPackageManager.activateInstalledPackage(
+                                    packageInfo, result.getInstalledDirectory());
+                    activationSucceeded = activationResult.isSuccess();
+                    if (activationSucceeded) {
+                        reconciliationFamily = translationFamily(packageInfo);
+                        activationSucceeded = !reconciliationFamily.isEmpty();
+                    }
+                } else if (packageInfo.getPackageType()
+                        == com.bliss.aimemorysearch.ai.AiPackageType.MODEL) {
+                    activationSucceeded = true;
+                }
+            }
+            boolean finalActivationSucceeded = activationSucceeded;
+            String finalReconciliationFamily = reconciliationFamily;
             uiHandler.post(() -> {
                 if (result.isSuccess()
-                        && activationResult != null
-                        && activationResult.isSuccess()) {
-                    aiPackageDialog.showInstalledState();
-                    closeAiPackageDialog();
-                    resumePendingSearch();
+                        && finalActivationSucceeded) {
+                    if (packageInfo.getPackageType()
+                            == com.bliss.aimemorysearch.ai.AiPackageType.TRANSLATION) {
+                        startupPackageOperationActive = false;
+                        refreshKeepScreenAwake();
+                        beginCanonicalReconciliation(
+                                packageInfo,
+                                finalReconciliationFamily
+                        );
+                        aiPackageDialog.showInstalledState();
+                        closeAiPackageDialog();
+                    } else {
+                        activeBundleCompletedBytes += packageInfo.getDownloadSizeBytes();
+                        activeBundlePackageIndex++;
+                        startNextBundlePackageDownload();
+                    }
                 } else if (result.isSuccess()) {
+                    startupPackageOperationActive = false;
+                    refreshKeepScreenAwake();
+                    clearPackageOperationState();
                     aiPackageDialog.showDownloadErrorState(
                             getString(R.string.ai_package_activation_error)
                     );
                     aiPackageDialog.setPrimaryActionListener(v -> closeAiPackageDialog());
                 } else {
+                    startupPackageOperationActive = false;
+                    refreshKeepScreenAwake();
+                    clearPackageOperationState();
                     showAiPackageInstallationError(result.getFailureReason());
                 }
             });
         }).start();
+    }
+
+    private void startModelDependentRuntime() {
+        Intent liveService = new Intent(
+                this,
+                com.bliss.aimemorysearch.services.LiveIndexingService.class
+        );
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(liveService);
+        } else {
+            startService(liveService);
+        }
     }
 
     private void showAiPackageInstallationError(
@@ -1050,6 +1188,44 @@ public class MainActivity extends AppCompatActivity {
         aiPackageDialog.hide();
         languagePackagePromptVisible = false;
         activeAiPackageInfo = null;
+        activeDownloadPackageInfo = null;
+        activeBundlePackages = java.util.Collections.emptyList();
+    }
+
+    private long bundleTotal(long packageTotal) {
+        return activeBundlePackages.isEmpty() ? packageTotal : activeBundleTotalBytes;
+    }
+
+    private int bundleProgress(long currentPackageBytes) {
+        if (activeBundlePackages.isEmpty() || activeBundleTotalBytes <= 0L) {
+            return 0;
+        }
+        return (int) Math.min(100L,
+                (activeBundleCompletedBytes + currentPackageBytes) * 100L
+                        / activeBundleTotalBytes);
+    }
+
+    private void finishAiSearchBundleInstallation() {
+        startupRuntimeActivationActive = true;
+        refreshKeepScreenAwake();
+        boolean activated = aiSearchBundleCoordinator.activate(
+                com.bliss.aimemorysearch.ai.AiPackageBundleCoordinator.AI_SEARCH_BUNDLE_ID);
+        startupRuntimeActivationActive = false;
+        if (!activated) {
+            startupPackageOperationActive = false;
+            refreshKeepScreenAwake();
+            aiPackageDialog.showDownloadErrorState(
+                    getString(R.string.ai_package_activation_error));
+            aiPackageDialog.setPrimaryActionListener(v -> closeAiPackageDialog());
+            return;
+        }
+        aiPackageDialog.showInstalledState();
+        closeAiPackageDialog();
+        aiSearchReady = true;
+        startModelDependentRuntime();
+        startupPackageOperationActive = false;
+        refreshKeepScreenAwake();
+        continueStartupPreparation();
     }
 
     private void markInitialLanguagePromptShown(
@@ -1078,6 +1254,18 @@ public class MainActivity extends AppCompatActivity {
 
         if (request != null) {
             executeSearch(request);
+        }
+    }
+
+    private void showSearchPreparation(String message) {
+        if (searchPreparationPanel == null || searchPreparationText == null) return;
+        searchPreparationText.setText(message);
+        searchPreparationPanel.setVisibility(View.VISIBLE);
+    }
+
+    private void hideSearchPreparation() {
+        if (searchPreparationPanel != null) {
+            searchPreparationPanel.setVisibility(View.GONE);
         }
     }
 
@@ -1112,8 +1300,6 @@ public class MainActivity extends AppCompatActivity {
                 .apply();
         activeAiPackageInfo = packageInfo;
         aiPackageDialog.bind(packageInfo);
-        aiPackageDialog.showReconcilingState();
-        aiPackageDialog.show();
 
         observeCanonicalReconciliation(family, workId);
     }
@@ -1128,8 +1314,34 @@ public class MainActivity extends AppCompatActivity {
         reconciliationWorkLiveData = androidx.work.WorkManager.getInstance(this)
                 .getWorkInfoByIdLiveData(workId);
         reconciliationWorkLiveData.observe(this, workInfo -> {
-            if (!family.equals(persistedReconciliationFamily())
-                    || workInfo == null) {
+            if (!family.equals(persistedReconciliationFamily())) {
+                return;
+            }
+            if (workInfo == null) {
+                if (reconciliationRecoveryInFlight
+                        || !workId.toString().equals(persistedReconciliationWorkId())) {
+                    return;
+                }
+                reconciliationRecoveryInFlight = true;
+                com.bliss.aimemorysearch.workers.CanonicalReindexWorker.enqueue(
+                        this,
+                        family,
+                        workId
+                );
+                return;
+            }
+            reconciliationRecoveryInFlight = false;
+            if (workInfo.getState() == androidx.work.WorkInfo.State.BLOCKED) {
+                reconciliationRecoveryInFlight = true;
+                java.util.UUID replacementId =
+                        com.bliss.aimemorysearch.workers.CanonicalReindexWorker.enqueue(
+                                this,
+                                family
+                        );
+                getSharedPreferences(PENDING_SEARCH_STATE, MODE_PRIVATE).edit()
+                        .putString(RECONCILIATION_WORK_ID, replacementId.toString())
+                        .apply();
+                observeCanonicalReconciliation(family, replacementId);
                 return;
             }
             if (!workInfo.getState().isFinished()) {
@@ -1141,7 +1353,14 @@ public class MainActivity extends AppCompatActivity {
                 clearPackageOperationState();
                 aiPackageDialog.showInstalledState();
                 closeAiPackageDialog();
+                if (!searchWorkflowReady) {
+                    continueStartupPreparation();
+                    return;
+                }
                 resumePendingSearch();
+                if (hasStorageAccess()) {
+                    startIndexing();
+                }
                 return;
             }
             clearReconciliationState();
@@ -1150,6 +1369,9 @@ public class MainActivity extends AppCompatActivity {
                     getString(R.string.ai_package_reconciliation_error)
             );
             aiPackageDialog.setPrimaryActionListener(v -> closeAiPackageDialog());
+            if (hasStorageAccess()) {
+                startIndexing();
+            }
         });
     }
 
@@ -1181,7 +1403,6 @@ public class MainActivity extends AppCompatActivity {
         activeAiPackageInfo = packageInfo;
         aiPackageDialog.bind(packageInfo);
         if (translationPackageManager.isInstalled(packageId)) {
-            aiPackageDialog.showReconcilingState();
             String persistedWorkId = state.getString(RECONCILIATION_WORK_ID, "");
             java.util.UUID workId;
             try {
@@ -1200,9 +1421,12 @@ public class MainActivity extends AppCompatActivity {
             }
             observeCanonicalReconciliation(family, workId);
         } else {
-            aiPackageDialog.showInstallingState();
+            clearPackageOperationState();
+            aiPackageDialog.showErrorState(getString(R.string.ai_package_interrupted));
+            aiPackageDialog.setPrimaryActionListener(v -> startAiPackageDownload());
+            aiPackageDialog.setSecondaryActionListener(v -> closeAiPackageDialog());
+            aiPackageDialog.show();
         }
-        aiPackageDialog.show();
     }
 
     private void restorePendingSearchRequest(
@@ -1223,6 +1447,23 @@ public class MainActivity extends AppCompatActivity {
     private String persistedReconciliationFamily() {
         return getSharedPreferences(PENDING_SEARCH_STATE, MODE_PRIVATE)
                 .getString(RECONCILIATION_FAMILY, "");
+    }
+
+    private String persistedReconciliationWorkId() {
+        return getSharedPreferences(PENDING_SEARCH_STATE, MODE_PRIVATE)
+                .getString(RECONCILIATION_WORK_ID, "");
+    }
+
+    private boolean hasActiveAiPackageOperation() {
+        android.content.SharedPreferences state =
+                getSharedPreferences(PENDING_SEARCH_STATE, MODE_PRIVATE);
+        String packageFamily = state.getString(PACKAGE_OPERATION_FAMILY, "");
+        String packageId = state.getString(PACKAGE_OPERATION_ID, "");
+        String reconciliationFamily = state.getString(RECONCILIATION_FAMILY, "");
+        String reconciliationWorkId = state.getString(RECONCILIATION_WORK_ID, "");
+        return (!packageFamily.isEmpty() && !packageId.isEmpty())
+                || (!reconciliationFamily.isEmpty()
+                && !reconciliationWorkId.isEmpty());
     }
 
     private void clearReconciliationState() {
@@ -1307,7 +1548,7 @@ public class MainActivity extends AppCompatActivity {
 
             } else {
 
-                startIndexing();
+                continueStartupPreparation();
             }
 
         } else {
@@ -1329,11 +1570,132 @@ public class MainActivity extends AppCompatActivity {
 
             } else {
 
-                startIndexing();
+                continueStartupPreparation();
             }
         }
     }
+    private WorkInfo selectDisplayedWork(List<WorkInfo> workInfos) {
+        WorkInfo blocked = null;
+        WorkInfo enqueued = null;
+        for (WorkInfo candidate : workInfos) {
+            if (candidate.getState() == WorkInfo.State.RUNNING) {
+                return candidate;
+            }
+            if (candidate.getState() == WorkInfo.State.BLOCKED) {
+                blocked = candidate;
+            } else if (candidate.getState() == WorkInfo.State.ENQUEUED) {
+                enqueued = candidate;
+            }
+        }
+        if (blocked != null) return blocked;
+        if (enqueued != null) return enqueued;
+        return workInfos.isEmpty() ? null : workInfos.get(workInfos.size() - 1);
+    }
+
+    private void updateOverallProgress(int processed, int total, WorkInfo.State state) {
+        if (indexOverallProgress == null || indexOverallProgressText == null) return;
+        boolean active = state == WorkInfo.State.RUNNING
+                || state == WorkInfo.State.ENQUEUED
+                || state == WorkInfo.State.BLOCKED;
+        boolean hasTotal = total > 0;
+        boolean show = active || hasTotal;
+        indexOverallProgress.setVisibility(show ? View.VISIBLE : View.GONE);
+        indexOverallProgressText.setVisibility(show ? View.VISIBLE : View.GONE);
+        if (!show) return;
+        if (!hasTotal) {
+            indexOverallProgress.setIndeterminate(true);
+            indexOverallProgressText.setText(R.string.overall_progress_discovering);
+            return;
+        }
+        int boundedProcessed = Math.max(0, Math.min(processed, total));
+        int percent = boundedProcessed * 100 / total;
+        indexOverallProgress.setIndeterminate(false);
+        indexOverallProgress.setProgressCompat(percent, true);
+        indexOverallProgressText.setText(getString(
+                R.string.overall_progress_value, boundedProcessed, total, percent));
+    }
+
+    private void updateCategoryProgress(boolean reconciliation,
+            int documentsProcessed, int documentsTotal,
+            int imagesProcessed, int imagesTotal,
+            int ocrProcessed, int ocrEstimated,
+            int embeddingsProcessed, int embeddingsEstimated) {
+        if (reconciliation || documentsTotal + imagesTotal <= 0) {
+            pdfGauge.setVisibility(View.GONE);
+            jpgGauge.setVisibility(View.GONE);
+            ocrGauge.setVisibility(View.GONE);
+            embeddingGauge.setVisibility(View.GONE);
+            return;
+        }
+        bindCategoryProgress(pdfGauge, pdfCountText, documentsProcessed, documentsTotal,
+                getString(R.string.documents_workload));
+        bindCategoryProgress(jpgGauge, jpgCountText, imagesProcessed, imagesTotal,
+                getString(R.string.images_workload));
+        bindCategoryProgress(ocrGauge, ocrCountText, ocrProcessed, ocrEstimated,
+                getString(R.string.ocr_workload_estimate));
+        bindCategoryProgress(embeddingGauge, embeddingCountText,
+                embeddingsProcessed, embeddingsEstimated,
+                getString(R.string.embedding_workload_estimate));
+    }
+
+    private void bindCategoryProgress(ProgressBar bar, TextView label,
+            int processed, int total, String name) {
+        bar.setVisibility(total > 0 ? View.VISIBLE : View.GONE);
+        bar.setMax(Math.max(1, total));
+        bar.setProgress(Math.max(0, Math.min(processed, total)));
+        label.setText(getString(R.string.category_workload_value,
+                name, processed, total));
+    }
+
+    private void updateWorkState(
+            WorkInfo.State state,
+            boolean reconciliation,
+            int runAttemptCount
+    ) {
+        if (indexStateText == null) return;
+        int message;
+        if (state == WorkInfo.State.RUNNING) {
+            if (runAttemptCount > 0) {
+                indexStateText.setText(getString(
+                        reconciliation
+                                ? R.string.reconciliation_state_retrying
+                                : R.string.index_state_retrying,
+                        runAttemptCount + 1));
+                return;
+            }
+            message = reconciliation
+                    ? R.string.reconciliation_state_running
+                    : R.string.index_state_running;
+        } else if (state == WorkInfo.State.ENQUEUED) {
+            message = reconciliation
+                    ? R.string.reconciliation_state_queued
+                    : R.string.index_state_queued;
+        } else if (state == WorkInfo.State.BLOCKED) {
+            message = reconciliation
+                    ? R.string.reconciliation_state_waiting
+                    : R.string.index_state_waiting;
+        } else if (state == WorkInfo.State.SUCCEEDED) {
+            message = reconciliation
+                    ? R.string.reconciliation_state_completed
+                    : R.string.index_state_completed;
+        } else if (state == WorkInfo.State.FAILED) {
+            message = reconciliation
+                    ? R.string.reconciliation_state_failed
+                    : R.string.index_state_failed;
+        } else if (state == WorkInfo.State.CANCELLED) {
+            message = reconciliation
+                    ? R.string.reconciliation_state_cancelled
+                    : R.string.index_state_cancelled;
+        } else {
+            message = R.string.index_state_idle;
+        }
+        indexStateText.setText(message);
+    }
+
     private void observeIndexWorker() {
+
+        if (indexObserverRegistered) return;
+        indexObserverRegistered = true;
 
         WorkManager.getInstance(this)
                 .getWorkInfosForUniqueWorkLiveData(
@@ -1348,11 +1710,33 @@ public class MainActivity extends AppCompatActivity {
                         return;
                     }
 
-                    WorkInfo workInfo =
-                            workInfos.get(workInfos.size() - 1);
+                    WorkInfo workInfo = selectDisplayedWork(workInfos);
+                    if (workInfo == null) {
+                        return;
+                    }
+                    indexWorkActive = workInfo.getState() == WorkInfo.State.RUNNING
+                            || workInfo.getState() == WorkInfo.State.ENQUEUED
+                            || workInfo.getState() == WorkInfo.State.BLOCKED;
 
                     androidx.work.Data progress =
                             workInfo.getProgress();
+                    boolean isCanonicalReconciliation =
+                            workInfo.getTags().contains(
+                                    com.bliss.aimemorysearch.workers
+                                            .CanonicalReindexWorker.RECONCILIATION_TAG
+                            );
+                    if (!isCanonicalReconciliation) {
+                        initialIndexOperationActive = indexWorkActive
+                                && !prefs.getBoolean("first_index_done", false);
+                        if (workInfo.getState().isFinished()) {
+                            initialIndexOperationActive = false;
+                        }
+                        refreshKeepScreenAwake();
+                    }
+                    if (isCanonicalReconciliation
+                            && workInfo.getState() == WorkInfo.State.SUCCEEDED) {
+                        progress = workInfo.getOutputData();
+                    }
 
                     int processed =
                             progress.getInt(
@@ -1388,6 +1772,14 @@ public class MainActivity extends AppCompatActivity {
                                     "embeddingCount",
                                     0
                             );
+                    int documentTotal = progress.getInt("documentTotal", 0);
+                    int imageTotal = progress.getInt("imageTotal", 0);
+                    int ocrEstimatedTotal = progress.getInt("ocrEstimatedTotal", 0);
+                    int embeddingEstimatedTotal = progress.getInt(
+                            "embeddingEstimatedTotal", 0);
+                    int documentProcessed = progress.getInt("documentProcessed", 0);
+                    int imageProcessed = progress.getInt("imageProcessed", 0);
+                    int libraryDocumentTotal = progress.getInt("libraryDocumentTotal", 0);
                     String status =
                             progress.getString(
                                     "status"
@@ -1400,6 +1792,39 @@ public class MainActivity extends AppCompatActivity {
                             progress.getString(
                                     "currentFile"
                             );
+                    boolean hasIndexProgress = progress.getKeyValueMap()
+                            .containsKey("processed");
+                    String fileName = progress.getString("fileName");
+                    long fileSize = progress.getLong("fileSize", 0L);
+                    long progressElapsedMs = progress.getLong("elapsedMs", 0L);
+                    long workerStartedAt = progress.getLong("workerStartedAt", 0L);
+                    if (workerStartedAt > 0L) {
+                        progressElapsedMs = Math.max(
+                                progressElapsedMs,
+                                System.currentTimeMillis() - workerStartedAt);
+                    }
+                    long progressEtaSeconds = progress.getLong("etaSeconds", 0L);
+                    double progressSpeed = progress.getDouble("speed", 0d);
+                    int indexed = progress.getInt("indexed", 0);
+                    int skipped = progress.getInt("skipped", 0);
+                    int skippedByUser = progress.getInt("skippedByUser", 0);
+                    if (progressElapsedMs > 0L) {
+                        progressSpeed = processed * 1000d / progressElapsedMs;
+                        progressEtaSeconds = progressSpeed > 0d
+                                ? (long) Math.max(
+                                0d, (total - processed) / progressSpeed)
+                                : 0L;
+                    }
+                    boolean awaitingDecision = progress.getBoolean(
+                            com.bliss.aimemorysearch.workers.IndexWorker.KEY_AWAITING_DECISION,
+                            false);
+                    String decisionToken = progress.getString(
+                            com.bliss.aimemorysearch.workers.IndexWorker.KEY_DECISION_TOKEN);
+                    String currentOperation = progress.getString(
+                            com.bliss.aimemorysearch.workers.IndexWorker.KEY_CURRENT_OPERATION);
+                    long operationElapsedMs = progress.getLong(
+                            com.bliss.aimemorysearch.workers.IndexWorker.KEY_OPERATION_ELAPSED_MS,
+                            0L);
 
                     if (status == null) {
 
@@ -1413,12 +1838,60 @@ public class MainActivity extends AppCompatActivity {
 
                         currentFile = "";
                     }
+                    if (fileName == null || fileName.isEmpty()) {
+                        fileName = currentFile;
+                    }
+
+                    updateIndexLiveInfo(
+                            fileName,
+                            fileSize,
+                            workerStartedAt,
+                            progressElapsedMs,
+                            progressEtaSeconds,
+                            processed,
+                            total,
+                            indexed,
+                            skipped,
+                            skippedByUser,
+                            progressSpeed,
+                            stage,
+                            awaitingDecision,
+                            decisionToken,
+                            currentOperation,
+                            operationElapsedMs,
+                            isCanonicalReconciliation
+                    );
+
+                    updateOverallProgress(processed, total, workInfo.getState());
+                    updateCategoryProgress(isCanonicalReconciliation,
+                            documentProcessed, documentTotal,
+                            imageProcessed, imageTotal,
+                            ocrCount, ocrEstimatedTotal,
+                            embeddingCount, embeddingEstimatedTotal);
+                    updateWorkState(
+                            workInfo.getState(),
+                            isCanonicalReconciliation,
+                            workInfo.getRunAttemptCount());
+                    if (isCanonicalReconciliation
+                            && !workInfo.getState().isFinished()) {
+                        String family = persistedReconciliationFamily();
+                        String packageId = getSharedPreferences(
+                                PENDING_SEARCH_STATE, MODE_PRIVATE)
+                                .getString(RECONCILIATION_PACKAGE_ID, "");
+                        indexStateText.setText(getString(
+                                R.string.reconciliation_identity,
+                                family == null || family.isEmpty() ? "Unknown family" : family,
+                                packageId == null || packageId.isEmpty()
+                                        ? "Translation package" : packageId));
+                    }
 
                     if (
                             workInfo.getState()
                                     == WorkInfo.State.RUNNING
                     )
                     {
+                        indexLiveInfoPanel.setVisibility(
+                                hasIndexProgress ? View.VISIBLE : View.GONE);
                         if (indexLoader != null) {
 
                             if (indexLoader.getVisibility() != View.VISIBLE) {
@@ -1443,65 +1916,23 @@ public class MainActivity extends AppCompatActivity {
 
                         liveIndexingText.setText(
                                 getString(
-                                        R.string.indexing_progress,
+                                        isCanonicalReconciliation
+                                                ? R.string.reconciliation_library_progress
+                                                : R.string.indexing_progress,
                                         processed,
                                         total,
-                                        currentFile
+                                        isCanonicalReconciliation
+                                                ? libraryDocumentTotal : currentFile
                                 )
                         );
-                        long elapsedMs =
-                                System.currentTimeMillis()
-                                        - indexingStartTime;
+                        String etaTextValue = progressEtaSeconds > 0L
+                                ? formatIndexDuration(progressEtaSeconds)
+                                : getString(R.string.indexing_status_preparing);
 
-                        float elapsedSeconds =
-                                elapsedMs / 1000f;
-
-                        float filesPerSecond = 0f;
-
-                        if (elapsedSeconds > 0f) {
-
-                            filesPerSecond =
-                                    processed
-                                            / elapsedSeconds;
-                        }
-
-                        int remainingFiles =
-                                Math.max(
-                                        0,
-                                        total - processed
-                                );
-
-                        long etaSeconds = 0;
-
-                        if (filesPerSecond > 0f) {
-
-                            etaSeconds =
-                                    (long)
-                                            (
-                                                    remainingFiles
-                                                            / filesPerSecond
-                                            );
-                        }
-
-                        long minutes =
-                                etaSeconds / 60;
-
-                        long seconds =
-                                etaSeconds % 60;
-
-                        String etaTextValue =
-                                getString(
-                                        R.string.eta_time_value,
-                                        minutes,
-                                        seconds
-                                );
-
-                        String speedValue =
-                                String.format(
-                                        java.util.Locale.US,
-                                        "%.1f",
-                                        filesPerSecond
-                                );
+                        String speedValue = String.format(
+                                java.util.Locale.getDefault(),
+                                "%.1f",
+                                progressSpeed);
 
                         speedText.setText(
                                 getString(
@@ -1545,6 +1976,11 @@ public class MainActivity extends AppCompatActivity {
                                     == WorkInfo.State.SUCCEEDED
                     )
                     {
+                        if (!isCanonicalReconciliation) {
+                            updateStartupCompletion();
+                        }
+                        indexLiveInfoPanel.setVisibility(
+                                isCanonicalReconciliation ? View.VISIBLE : View.GONE);
                         if (indexLoader != null) {
                             
                             indexLoader.setVisibility(
@@ -1558,15 +1994,20 @@ public class MainActivity extends AppCompatActivity {
                         );
 
                         subtitleText_unu.setText(
-                                getString(
-                                        R.string.indexing_body_completed
-                                )
+                                isCanonicalReconciliation
+                                        ? getString(
+                                        R.string.reconciliation_completed_time,
+                                        formatIndexDuration(progressElapsedMs / 1000L))
+                                        : getString(R.string.indexing_body_completed)
                         );
 
                         liveIndexingText.setText(
-                                getString(
-                                        R.string.live_indexing_active
-                                )
+                                isCanonicalReconciliation
+                                        ? getString(
+                                        R.string.reconciliation_progress,
+                                        processed,
+                                        total)
+                                        : getString(R.string.live_indexing_active)
                         );
                         speedText.setText(
                                 getString(
@@ -1608,6 +2049,8 @@ public class MainActivity extends AppCompatActivity {
                             workInfo.getState()
                                     == WorkInfo.State.FAILED
                     ) {
+                        indexLiveInfoPanel.setVisibility(
+                                hasIndexProgress ? View.VISIBLE : View.GONE);
                         if (indexLoader != null) {
                             
                             indexLoader.setVisibility(
@@ -1615,10 +2058,28 @@ public class MainActivity extends AppCompatActivity {
                             );
                         }
                         liveIndexingText.setText(
-                                getString(
-                                        R.string.indexing_completed
-                                )
+                                isCanonicalReconciliation
+                                        ? getString(R.string.reconciliation_state_failed)
+                                        : getString(R.string.index_state_failed)
                         );
+                        stageText.setText(isCanonicalReconciliation
+                                ? getString(R.string.reconciliation_state_failed)
+                                : getString(R.string.index_state_failed));
+                        speedText.setText(getString(R.string.speed_done));
+                        etaText.setText(getString(R.string.eta_done));
+                    } else if (workInfo.getState() == WorkInfo.State.CANCELLED) {
+                        indexLoader.setVisibility(View.GONE);
+                        liveIndexingText.setText(isCanonicalReconciliation
+                                ? getString(R.string.reconciliation_state_cancelled)
+                                : getString(R.string.index_state_cancelled));
+                    } else if (workInfo.getState() == WorkInfo.State.ENQUEUED
+                            || workInfo.getState() == WorkInfo.State.BLOCKED) {
+                        indexLoader.setVisibility(View.VISIBLE);
+                        indexLiveInfoPanel.setVisibility(
+                                hasIndexProgress ? View.VISIBLE : View.GONE);
+                        liveIndexingText.setText(isCanonicalReconciliation
+                                ? getString(R.string.reconciliation_state_queued)
+                                : getString(R.string.index_state_queued));
                     }
                 });
     }
@@ -1655,6 +2116,7 @@ public class MainActivity extends AppCompatActivity {
                                 R.string.storage_permission_denied
                         )
                 );
+                showPermissionCard();
 
                 return;
             }
@@ -1679,10 +2141,14 @@ public class MainActivity extends AppCompatActivity {
                     )
             );
 
-            startIndexing();
+            hidePermissionCard();
+            continueStartupPreparation();
         }
     }
     private void startIndexing() {
+        if (!aiSearchReady) {
+            return;
+        }
         indexingStartTime =
                 System.currentTimeMillis();
 
@@ -1693,7 +2159,10 @@ public class MainActivity extends AppCompatActivity {
             int persistedCount = prefs.getInt("last_indexed_count", 0);
             int actualCount = database.fileDao().countIndexed();
 
-            if (firstIndexDone && actualCount > 0 && actualCount >= persistedCount) {
+            if (firstIndexDone
+                    && actualCount > 0
+                    && actualCount >= persistedCount) {
+                uiHandler.post(this::updateStartupCompletion);
                 return;
             }
 
@@ -1701,11 +2170,43 @@ public class MainActivity extends AppCompatActivity {
 
             uiHandler.post(() -> {
                 liveIndexingText.setText(getString(R.string.indexing_status_preparing));
-                startBackgroundIndexing();
+                showFirstIndexExplanationThen(this::startBackgroundIndexing);
             });
         }).start();
     }
+
+    private void showFirstIndexExplanationThen(Runnable continueIndexing) {
+        if (prefs.getBoolean("first_index_explanation_shown", false)) {
+            continueIndexing.run();
+            return;
+        }
+        if (firstIndexExplanationDialog != null
+                && firstIndexExplanationDialog.isShowing()) {
+            return;
+        }
+        firstIndexExplanationDialog =
+                new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle(R.string.first_index_explanation_title)
+                .setMessage(R.string.first_index_explanation_body)
+                .setCancelable(false)
+                .setPositiveButton(R.string.first_index_explanation_continue,
+                        (dialog, which) -> {
+                            prefs.edit()
+                                    .putBoolean("first_index_explanation_shown", true)
+                                    .commit();
+                            dialog.dismiss();
+                            firstIndexExplanationDialog = null;
+                            continueIndexing.run();
+                        })
+                .create();
+        firstIndexExplanationDialog.setOnDismissListener(dialog -> {
+            firstIndexExplanationDialog = null;
+        });
+        firstIndexExplanationDialog.show();
+    }
     private void startBackgroundIndexing() {
+        initialIndexOperationActive = true;
+        refreshKeepScreenAwake();
 
         androidx.work.OneTimeWorkRequest request =
                 new androidx.work.OneTimeWorkRequest.Builder(
@@ -1804,21 +2305,8 @@ public class MainActivity extends AppCompatActivity {
         );
     }
     private void showPermissionCard() {
-
-        dimView.setVisibility(
-                View.VISIBLE
-        );
-
-        dimView.animate()
-                .alpha(1f)
-                .setDuration(
-                        getResources()
-                                .getInteger(
-                                        R.integer.duration_dialog_enter
-                                )
-                )
-                .start();
-
+        dimView.setAlpha(0.3f);
+        dimView.setVisibility(View.VISIBLE);
         permissionCard.setVisibility(
                 View.VISIBLE
         );
@@ -1840,24 +2328,6 @@ public class MainActivity extends AppCompatActivity {
                 .start();
     }
     private void hidePermissionCard() {
-
-        dimView.animate()
-                .alpha(0f)
-                .setDuration(
-                        getResources()
-                                .getInteger(
-                                        R.integer.duration_dialog_exit
-                                )
-                )
-                .withEndAction(() -> {
-
-                    dimView.setVisibility(
-                            View.GONE
-                    );
-
-                })
-                .start();
-
         permissionCard.animate()
                 .alpha(0f)
                 .scaleX(0.92f)
@@ -1878,31 +2348,13 @@ public class MainActivity extends AppCompatActivity {
                 .start();
     }
     private boolean hasStorageAccess() {
-
-        boolean mediaGranted;
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-
-            mediaGranted =
-                    ContextCompat.checkSelfPermission(
-                            this,
-                            Manifest.permission.READ_MEDIA_IMAGES
-                    ) == PackageManager.PERMISSION_GRANTED;
-
-        } else {
-
-            mediaGranted =
-                    ContextCompat.checkSelfPermission(
-                            this,
-                            Manifest.permission.READ_EXTERNAL_STORAGE
-                    ) == PackageManager.PERMISSION_GRANTED;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            return Environment.isExternalStorageManager();
         }
-
-        boolean storageGranted =
-                Build.VERSION.SDK_INT < Build.VERSION_CODES.R
-                        || Environment.isExternalStorageManager();
-
-        return mediaGranted && storageGranted;
+        return ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.READ_EXTERNAL_STORAGE
+        ) == PackageManager.PERMISSION_GRANTED;
     }
     private void showExitDialog() {
         exitVisible = true;
@@ -1941,7 +2393,6 @@ public class MainActivity extends AppCompatActivity {
     private void hideExitDialog() {
 
         exitVisible = false;
-
         dimView.animate()
                 .alpha(0f)
                 .setDuration(
@@ -2051,12 +2502,17 @@ public class MainActivity extends AppCompatActivity {
 
             hidePermissionCard();
 
+            if (!aiSearchReady) {
+                showAiSearchBundlePrompt();
+                return;
+            }
+
             boolean firstIndexDone =
                     prefs.getBoolean(
                             "first_index_done",
                             false
                     );
-            startIndexing();
+            continueStartupPreparation();
             if (firstIndexDone) {
                 startIndexMaintenance();
             }
@@ -2069,8 +2525,112 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void updateIndexLiveInfo(
+            String fileName,
+            long fileSize,
+            long workerStartedAt,
+            long elapsedMs,
+            long etaSeconds,
+            int processed,
+            int total,
+            int indexed,
+            int skipped,
+            int skippedByUser,
+            double speed,
+            String phase,
+            boolean awaitingDecision,
+            String decisionToken,
+            String currentOperation,
+            long operationElapsedMs,
+            boolean reconciliation
+    ) {
+        if (indexLiveInfoText == null) {
+            return;
+        }
+        String displayName = fileName == null || fileName.isEmpty()
+                ? "Scanning filesystem" : fileName;
+        String displaySize = fileSize > 0L
+                ? android.text.format.Formatter.formatFileSize(this, fileSize)
+                : "Not available";
+        String displayPhase = phase == null || phase.isEmpty() ? "Preparing" : phase;
+        int remaining = Math.max(0, total - processed);
+        String start = workerStartedAt > 0L
+                ? new java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault())
+                .format(new java.util.Date(workerStartedAt))
+                : "Not available";
+        String eta = etaSeconds > 0L
+                ? formatIndexDuration(etaSeconds)
+                : (total > 0 && processed >= total ? "0:00" : "Calculating");
+        String scope = reconciliation ? "Reconciled" : "Processed";
+        String subject = reconciliation ? "Current document" : "Current file";
+        indexLiveInfoText.setText(
+                subject + ": " + displayName
+                        + (reconciliation ? "" : " | Size: " + displaySize)
+                        + "\nStarted: " + start + " | Elapsed: "
+                        + formatIndexDuration(elapsedMs / 1000L) + " | ETA: " + eta
+                        + "\n" + scope + ": " + processed + " / " + total
+                        + " | Remaining: " + remaining
+                        + (reconciliation ? "" : "\nIndexed this attempt: " + indexed
+                        + " | Skipped: " + skipped + " | By user: " + skippedByUser)
+                        + "\nSpeed: " + String.format(java.util.Locale.getDefault(),
+                        reconciliation ? "%.2f documents/s" : "%.2f files/s", speed)
+                        + " | Phase: " + displayPhase
+                        + (reconciliation
+                        ? "\nMultilingual search remains gated until preparation completes."
+                        : "")
+        );
+
+        pendingIndexDecisionToken = decisionToken == null ? "" : decisionToken;
+        if (awaitingDecision && !pendingIndexDecisionToken.isEmpty()) {
+            indexLongFileWarningText.setText(getString(
+                    R.string.index_long_file_warning,
+                    displayName,
+                    currentOperation == null || currentOperation.isEmpty()
+                            ? displayPhase : currentOperation,
+                    formatIndexDuration(operationElapsedMs / 1000L)));
+            indexLongFileWarningText.setVisibility(View.VISIBLE);
+            indexLongFileActions.setVisibility(View.VISIBLE);
+            indexLongFileWarningCard.setVisibility(View.VISIBLE);
+        } else {
+            indexLongFileWarningText.setVisibility(View.GONE);
+            indexLongFileActions.setVisibility(View.GONE);
+            indexLongFileWarningCard.setVisibility(View.GONE);
+        }
+    }
+
+    private void submitIndexDecision(String decision) {
+        if (pendingIndexDecisionToken.isEmpty()) {
+            return;
+        }
+        getSharedPreferences(
+                com.bliss.aimemorysearch.workers.IndexWorker.USER_SKIP_PREFS,
+                MODE_PRIVATE)
+                .edit()
+                .putString("decision." + pendingIndexDecisionToken, decision)
+                .apply();
+        indexLongFileActions.setVisibility(View.GONE);
+    }
+
+    private static String formatIndexDuration(long seconds) {
+        if (seconds <= 0L) {
+            return "0:00";
+        }
+        long hours = seconds / 3600L;
+        long minutes = (seconds % 3600L) / 60L;
+        long remainingSeconds = seconds % 60L;
+        return hours > 0L
+                ? String.format(java.util.Locale.getDefault(), "%d:%02d:%02d",
+                hours, minutes, remainingSeconds)
+                : String.format(java.util.Locale.getDefault(), "%d:%02d",
+                minutes, remainingSeconds);
+    }
+
     @Override
     protected void onDestroy() {
+        if (firstIndexExplanationDialog != null) {
+            firstIndexExplanationDialog.dismiss();
+            firstIndexExplanationDialog = null;
+        }
         if (aiPackageDownloadManager != null) {
             aiPackageDownloadManager.close();
         }

@@ -1,6 +1,7 @@
 package com.bliss.aimemorysearch;
 
 import android.content.Context;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 
@@ -23,6 +24,7 @@ public final class SearchCoordinator {
 
     private static final AtomicBoolean SEARCH_IN_PROGRESS =
             new AtomicBoolean(false);
+    private static final float CANONICAL_RELATIVE_THRESHOLD = 0.70f;
 
     public interface Callback {
 
@@ -31,10 +33,15 @@ public final class SearchCoordinator {
         );
     }
 
+    public interface ProgressCallback {
+        void onPhase(String phase);
+        void onBusy();
+        void onFailure(Throwable error);
+    }
+
     private final Context context;
     private final Handler mainHandler;
     private final AiCapabilityManager capabilityManager;
-
     public SearchCoordinator(
             Context context
     ) {
@@ -47,7 +54,6 @@ public final class SearchCoordinator {
         this.capabilityManager =
                 AiCapabilityManager.createDefault();
     }
-
     public void search(
             String query,
             Callback callback
@@ -61,9 +67,16 @@ public final class SearchCoordinator {
                 callback
         );
     }
+    public void search(
+            SearchRequest queryRequest,
+            Callback callback
+    ) {
+        search(queryRequest, null, callback);
+    }
 
     public void search(
             SearchRequest queryRequest,
+            ProgressCallback progressCallback,
             Callback callback
     ) {
         String query =
@@ -75,9 +88,11 @@ public final class SearchCoordinator {
                 "MAINACTIVITY SEARCH CALLED = " + query
         );
         android.util.Log.d("MULTILINGUAL_PIPELINE", "1. User query: " + query);
-        if (query == null || query.trim().isEmpty()) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.GINGERBREAD) {
+            if (query == null || query.trim().isEmpty()) {
 
-            return;
+                return;
+            }
         }
 
         if (!SEARCH_IN_PROGRESS.compareAndSet(false, true)) {
@@ -85,7 +100,14 @@ public final class SearchCoordinator {
                     "SEARCH_ENTRY",
                     "SEARCH IGNORED: another search is already running"
             );
+            if (progressCallback != null) {
+                mainHandler.post(progressCallback::onBusy);
+            }
             return;
+        }
+
+        if (progressCallback != null) {
+            mainHandler.post(() -> progressCallback.onPhase("Preparing the query…"));
         }
 
         new Thread(() -> {
@@ -94,12 +116,87 @@ public final class SearchCoordinator {
 
             try {
 
+            final String[] finalQueryHolder =
+                    new String[]{
+                            query.trim()
+                    };
+
+            android.util.Log.d(
+                    "MULTILINGUAL_PIPELINE",
+                    "2. Detected language family: "
+                            + queryRequest.getSelectedLanguageFamily()
+            );
+
+            java.util.concurrent.CountDownLatch normalizerLatch =
+                    new java.util.concurrent.CountDownLatch(1);
+
+            MultilingualQueryNormalizer
+                    .getInstance(context)
+                    .normalizeForClip(
+                            query.trim(),
+                            queryRequest.getSelectedLanguageFamily(),
+                            new MultilingualQueryNormalizer.Callback() {
+                                @Override
+                                public void onReady(
+                                        String originalQuery,
+                                        String englishQuery
+                                ) {
+                                    finalQueryHolder[0] = englishQuery;
+                                    android.util.Log.d(
+                                            "MULTILINGUAL_PIPELINE",
+                                            "3. Final translated English query: "
+                                                    + englishQuery
+                                    );
+                                    normalizerLatch.countDown();
+                                }
+
+                                @Override
+                                public void onError(String originalQuery) {
+                                    android.util.Log.w(
+                                            "MULTILINGUAL_PIPELINE",
+                                            "Normalizer onError fallback; final query remains: "
+                                                    + finalQueryHolder[0]
+                                    );
+                                    normalizerLatch.countDown();
+                                }
+                            }
+                    );
+
+            try {
+                boolean completed = normalizerLatch.await(
+                        20,
+                        java.util.concurrent.TimeUnit.SECONDS
+                );
+                if (!completed) {
+                    android.util.Log.w(
+                            "MULTILINGUAL_PIPELINE",
+                            "Normalizer timeout fallback; final query remains: "
+                                    + finalQueryHolder[0]
+                    );
+                }
+            } catch (Exception e) {
+                android.util.Log.e(
+                        "MULTILINGUAL_PIPELINE",
+                        "Normalizer wait exception; final query remains: "
+                                + finalQueryHolder[0],
+                        e
+                );
+            }
+
+            queryRequest.setTranslatedQuery(
+                    finalQueryHolder[0]
+            );
+
+            android.util.Log.d(
+                    "MULTILINGUAL_PIPELINE",
+                    "4. Canonical query: " + finalQueryHolder[0]
+            );
             SearchAnalysis
                     queryAnalysis =
                     QueryUnderstandingEngine.createSearchAnalysis(
                             queryRequest
                     );
-            android.util.Log.d("MULTILINGUAL_PIPELINE", "2. QueryUnderstandingEngine output: normalized="
+            android.util.Log.d("MULTILINGUAL_PIPELINE", "QueryUnderstandingEngine output: normalized="
                     + queryRequest.getNormalizedQuery() + " | tokens=" + queryRequest.getQueryTokens());
             CapabilityPlan capabilityPlan =
                     capabilityManager.evaluate(
@@ -116,7 +213,13 @@ public final class SearchCoordinator {
                             + capabilityPlan.getRequirements().size()
             );
             List<ChunkSemanticSearchEngine.ChunkResult>
-                    chunkResults =
+                    chunkResults;
+            android.util.Log.d(
+                    "MULTILINGUAL_PIPELINE",
+                    "5. Document search input: "
+                            + queryRequest.getNormalizedQuery()
+            );
+            chunkResults =
                     ChunkSemanticSearchEngine.search(
                             context,
                             queryRequest,
@@ -140,59 +243,10 @@ public final class SearchCoordinator {
                         new java.util.ArrayList<>();
             }
 
-            final String[] clipQueryHolder =
-                    new String[]{
-                            query.trim()
-                    };
-
-            java.util.concurrent.CountDownLatch normalizerLatch =
-                    new java.util.concurrent.CountDownLatch(1);
-
-            MultilingualQueryNormalizer
-                    .getInstance(context)
-                    .normalizeForClip(
-                            query.trim(),
-                            queryRequest.getSelectedLanguageFamily(),
-                            new MultilingualQueryNormalizer.Callback() {
-                                @Override
-                                public void onReady(
-                                        String originalQuery,
-                                        String englishClipQuery
-                                ) {
-                                    clipQueryHolder[0] =
-                                            englishClipQuery;
-
-                                    android.util.Log.d("MULTILINGUAL_PIPELINE", "7. Final translated English query: " + englishClipQuery);
-
-                                    normalizerLatch.countDown();
-                                }
-
-                                @Override
-                                public void onError(
-                                        String originalQuery
-                                ) {
-                                    android.util.Log.w("MULTILINGUAL_PIPELINE", "Normalizer onError fallback; CLIP query remains: " + clipQueryHolder[0]);
-                                    normalizerLatch.countDown();
-                                }
-                            }
-                    );
-
-            try {
-                boolean completed = normalizerLatch.await(
-                        20,
-                        java.util.concurrent.TimeUnit.SECONDS
-                );
-                if (!completed) {
-                    android.util.Log.w("MULTILINGUAL_PIPELINE", "Normalizer timeout fallback; CLIP query remains: " + clipQueryHolder[0]);
-                }
-            } catch (Exception e) {
-                android.util.Log.e("MULTILINGUAL_PIPELINE", "Normalizer wait exception; CLIP query remains: " + clipQueryHolder[0], e);
-            }
-
             SearchRequest
                     imageSearchRequest =
                     QueryUnderstandingEngine.createSearchRequest(
-                            clipQueryHolder[0]
+                            finalQueryHolder[0]
                     );
             imageSearchRequest.setSelectedLanguageFamily(
                     queryRequest.getSelectedLanguageFamily()
@@ -213,9 +267,9 @@ public final class SearchCoordinator {
                     MobileClipTextEmbeddingEngine
                             .getInstance()
                             .generateEmbedding(
-                                    clipQueryHolder[0]
+                                    finalQueryHolder[0]
                             );
-            android.util.Log.d("MULTILINGUAL_PIPELINE", "8. Query sent to MobileCLIP: " + clipQueryHolder[0]
+            android.util.Log.d("MULTILINGUAL_PIPELINE", "6. CLIP Text input: " + finalQueryHolder[0]
                     + " | embedding created=" + (imageQueryEmbedding != null)
                     + " | dimensions=" + (imageQueryEmbedding == null ? 0 : imageQueryEmbedding.length));
 
@@ -230,7 +284,17 @@ public final class SearchCoordinator {
                             imageQueryEmbedding,
                             10
                     );
-            android.util.Log.d("MULTILINGUAL_PIPELINE", "9-10. ImageSemanticSearchEngine results found: " + imageResults.size());
+            boolean translatedQuery =
+                    !query.trim().equalsIgnoreCase(finalQueryHolder[0].trim());
+            java.util.Set<String> semanticImagePaths =
+                    new java.util.HashSet<>();
+            for (ImageSemanticSearchEngine.SearchResult result : imageResults) {
+                if (result != null && result.file != null && result.file.path != null) {
+                    semanticImagePaths.add(result.file.path);
+                }
+            }
+            android.util.Log.d("MULTILINGUAL_PIPELINE", "7. Image search input: " + finalQueryHolder[0]
+                    + " | results found=" + imageResults.size());
             for (
                     ImageSemanticSearchEngine.SearchResult r
                     : imageResults
@@ -291,6 +355,20 @@ public final class SearchCoordinator {
                                 .getFileByPath(path);
 
                 if (entity != null) {
+                    if (translatedQuery
+                            && "IMAGE".equalsIgnoreCase(entity.type)
+                            && !semanticImagePaths.contains(path)) {
+                        android.util.Log.d(
+                                "SEARCH_TRACE",
+                                "lexical-image-suppressed"
+                                        + " | original=" + query
+                                        + " | canonical=" + finalQueryHolder[0]
+                                        + " | name=" + entity.name
+                                        + " | path=" + path
+                                        + " | lexicalScore=" + result.score
+                        );
+                        continue;
+                    }
                     android.util.Log.e(
                             "CHUNK_RESULT",
                             entity.name
@@ -323,6 +401,8 @@ public final class SearchCoordinator {
 
             java.util.Map<String, Float> ranking =
                     new java.util.HashMap<>();
+            java.util.Set<String> canonicalOnlyPaths =
+                    new java.util.HashSet<>();
 
             for (
                     ChunkSemanticSearchEngine.ChunkResult result
@@ -339,10 +419,24 @@ public final class SearchCoordinator {
                     continue;
                 }
 
+                if (translatedQuery
+                        && !semanticImagePaths.contains(result.chunk.filePath)) {
+                    FileEntity lexicalEntity = database.fileDao()
+                            .getFileByPath(result.chunk.filePath);
+                    if (lexicalEntity != null
+                            && "IMAGE".equalsIgnoreCase(lexicalEntity.type)) {
+                        continue;
+                    }
+                }
+
                 Float existingScore =
                         ranking.get(
                                 result.chunk.filePath
                         );
+
+                if (result.canonicalOnly) {
+                    canonicalOnlyPaths.add(result.chunk.filePath);
+                }
 
                 if (
                         existingScore == null
@@ -578,6 +672,14 @@ public final class SearchCoordinator {
             float adaptiveGap =
                     maxScore * 0.35f;
 
+            float bestCanonicalScore = 0f;
+            for (String path : canonicalOnlyPaths) {
+                bestCanonicalScore = Math.max(
+                        bestCanonicalScore,
+                        ranking.getOrDefault(path, 0f)
+                );
+            }
+
             List<FileEntity> finalResults =
                     new java.util.ArrayList<>();
 
@@ -594,6 +696,11 @@ public final class SearchCoordinator {
 
                 boolean closeToBest =
                         (maxScore - score) <= adaptiveGap;
+                boolean passesCanonicalPolicy =
+                        canonicalOnlyPaths.contains(file.path)
+                                && bestCanonicalScore > 0f
+                                && score >= bestCanonicalScore
+                                * CANONICAL_RELATIVE_THRESHOLD;
                 android.util.Log.e(
                         "MAIN_FILTER",
                         file.name
@@ -605,9 +712,8 @@ public final class SearchCoordinator {
                                 + " | close=" + closeToBest
                 );
                 if (
-                        passesMinimum
-                                &&
-                                closeToBest
+                        (passesMinimum && closeToBest)
+                                || passesCanonicalPolicy
                 ) {
 
                     finalResults.add(file);
@@ -630,7 +736,25 @@ public final class SearchCoordinator {
 
             SearchResultsHolder.results =
                     finalResults;
+            for (int index = 0; index < finalResults.size(); index++) {
+                FileEntity result = finalResults.get(index);
+                android.util.Log.d(
+                        "SEARCH_TRACE",
+                        "final"
+                                + " | original=" + query
+                                + " | canonical=" + finalQueryHolder[0]
+                                + " | rank=" + (index + 1)
+                                + " | name=" + result.name
+                                + " | type=" + result.type
+                                + " | score=" + ranking.getOrDefault(result.path, 0f)
+                                + " | path=" + result.path
+                );
+            }
             android.util.Log.d("MULTILINGUAL_PIPELINE", "10. Final merged search results: " + finalResults.size());
+
+            if (progressCallback != null) {
+                mainHandler.post(() -> progressCallback.onPhase("Opening search results…"));
+            }
 
             completionPosted = mainHandler.post(() -> {
                 try {
@@ -650,6 +774,9 @@ public final class SearchCoordinator {
                         "SEARCH FAILED",
                         error
                 );
+                if (progressCallback != null) {
+                    mainHandler.post(() -> progressCallback.onFailure(error));
+                }
             } finally {
                 if (!completionPosted) {
                     SEARCH_IN_PROGRESS.set(false);
@@ -658,7 +785,6 @@ public final class SearchCoordinator {
 
         }).start();
     }
-
     private boolean hasStrongVocabularyPrefixExpansion(
             SearchRequest searchRequest,
             SearchAnalysis searchAnalysis

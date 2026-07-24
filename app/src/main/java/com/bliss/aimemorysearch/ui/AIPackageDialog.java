@@ -4,6 +4,7 @@ import android.content.Context;
 import android.text.TextUtils;
 import android.text.format.Formatter;
 import android.view.View;
+import android.view.ViewTreeObserver;
 import android.widget.TextView;
 
 import com.bliss.aimemorysearch.R;
@@ -34,6 +35,9 @@ public final class AIPackageDialog {
     private final TextView errorText;
     private final MaterialButton primaryButton;
     private final TextView secondaryButton;
+    private final View modalScrim;
+    private final View permissionCard;
+    private ViewTreeObserver.OnGlobalLayoutListener permissionVisibilityListener;
     private boolean closingEnabled = true;
 
     public AIPackageDialog(View root) {
@@ -60,9 +64,34 @@ public final class AIPackageDialog {
         errorText = requireView(R.id.aiPackageErrorText);
         primaryButton = requireView(R.id.aiPackagePrimaryButton);
         secondaryButton = requireView(R.id.aiPackageSecondaryButton);
+        modalScrim = root.getRootView().findViewById(R.id.dimView);
+        permissionCard = root.getRootView().findViewById(R.id.permissionCard);
     }
 
     public void show() {
+        if (permissionCard != null
+                && permissionCard.getVisibility() == View.VISIBLE) {
+            root.setVisibility(View.GONE);
+            root.setAlpha(0f);
+            if (permissionVisibilityListener == null) {
+                permissionVisibilityListener = () -> {
+                            if (permissionCard.getVisibility() != View.VISIBLE) {
+                                root.getViewTreeObserver()
+                                        .removeOnGlobalLayoutListener(
+                                                permissionVisibilityListener);
+                                permissionVisibilityListener = null;
+                                show();
+                            }
+                        };
+                root.getViewTreeObserver().addOnGlobalLayoutListener(
+                        permissionVisibilityListener);
+            }
+            return;
+        }
+        if (modalScrim != null) {
+            modalScrim.setAlpha(0.3f);
+            modalScrim.setVisibility(View.VISIBLE);
+        }
         root.setAlpha(1f);
         root.setVisibility(View.VISIBLE);
     }
@@ -71,8 +100,21 @@ public final class AIPackageDialog {
         if (!closingEnabled) {
             return;
         }
+        if (permissionCard != null && permissionVisibilityListener != null) {
+            root.getViewTreeObserver().removeOnGlobalLayoutListener(
+                    permissionVisibilityListener);
+            permissionVisibilityListener = null;
+        }
         root.setVisibility(View.GONE);
         root.setAlpha(0f);
+        if (modalScrim != null) {
+            modalScrim.setVisibility(View.GONE);
+            modalScrim.setAlpha(0f);
+        }
+    }
+
+    public boolean canClose() {
+        return closingEnabled;
     }
 
     public void bind(AIPackageInfo info) {
@@ -118,6 +160,22 @@ public final class AIPackageDialog {
         ));
     }
 
+    public void showDownloadingState(
+            int progress,
+            long downloadedBytes,
+            long totalBytes,
+            int packagePosition,
+            int packageCount
+    ) {
+        showDownloadingState(progress, downloadedBytes, totalBytes);
+        if (packageCount > 1) {
+            progressStatusText.setText(context.getString(
+                    R.string.ai_package_downloading_bundle_status,
+                    packagePosition,
+                    packageCount));
+        }
+    }
+
     public void showVerifyingState() {
         showIndeterminateState(
                 R.string.ai_package_verifying,
@@ -126,10 +184,41 @@ public final class AIPackageDialog {
     }
 
     public void showInstallingState() {
-        showIndeterminateState(
-                R.string.ai_package_installing,
-                R.string.ai_package_installing_status
-        );
+        closingEnabled = false;
+        applyState(R.string.ai_package_installing, true, false, false, false,
+                0, 0);
+        progressStatusText.setText(R.string.ai_package_installing_status);
+        progressBar.setIndeterminate(true);
+        progressBytesText.setText(null);
+        progressPercentText.setText(null);
+    }
+
+    public void showInstallingState(long extractedBytes, long totalBytes) {
+        closingEnabled = false;
+        applyState(R.string.ai_package_installing, true, false, false, false,
+                0, 0);
+        progressStatusText.setText(R.string.ai_package_installing_status);
+        if (totalBytes > 0L) {
+            int progress = (int) Math.min(
+                    100L,
+                    extractedBytes * 100L / totalBytes
+            );
+            progressBar.setIndeterminate(false);
+            progressBar.setProgressCompat(progress, true);
+            progressBytesText.setText(context.getString(
+                    R.string.ai_package_progress_bytes,
+                    formatBytes(extractedBytes),
+                    formatBytes(totalBytes)
+            ));
+            progressPercentText.setText(context.getString(
+                    R.string.ai_package_progress_percent,
+                    progress
+            ));
+        } else {
+            progressBar.setIndeterminate(true);
+            progressBytesText.setText(formatBytes(extractedBytes));
+            progressPercentText.setText(null);
+        }
     }
 
     public void showInstalledState() {
@@ -263,6 +352,8 @@ public final class AIPackageDialog {
             return context.getString(R.string.ai_package_type_unknown);
         }
         switch (packageType) {
+            case MODEL:
+                return context.getString(R.string.ai_package_type_model);
             case DOCUMENT:
                 return context.getString(R.string.ai_package_type_document);
             case IMAGE:

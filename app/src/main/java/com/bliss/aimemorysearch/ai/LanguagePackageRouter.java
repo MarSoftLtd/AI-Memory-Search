@@ -52,7 +52,28 @@ public final class LanguagePackageRouter {
     }
 
     public int restoreInstalledPackages() {
-        return bootstrapper.restoreInstalledPackages();
+        bootstrapper.restoreInstalledPackages();
+
+        int activated = 0;
+        for (com.bliss.aimemorysearch.ai.model.AIPackageInfo metadata
+                : translationPackageManager.getAvailablePackageMetadata()) {
+            if (metadata.getPackageType() != AiPackageType.TRANSLATION
+                    || !packageManager.isInstalled(metadata.getPackageId())) {
+                continue;
+            }
+
+            AiPackageLifecycleResult result =
+                    translationPackageManager.activateInstalledPackage(
+                            metadata,
+                            storageManager.getInstalledPackageDirectory(
+                                    metadata.getPackageId()
+                            )
+                    );
+            if (result.isSuccess()) {
+                activated++;
+            }
+        }
+        return activated;
     }
 
     public String getRecommendedFamily(

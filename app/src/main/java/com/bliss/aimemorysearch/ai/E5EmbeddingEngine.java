@@ -4,7 +4,6 @@ import android.content.Context;
 import android.util.Log;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.nio.LongBuffer;
 import java.util.ArrayList;
@@ -20,16 +19,6 @@ import ai.onnxruntime.OrtSession;
 public class E5EmbeddingEngine {
 
     private static final String TAG = "E5_EMBEDDING";
-    private static final String MODEL_ASSET_PATH =
-            "models/e5/model.onnx";
-    private static final String SENTENCEPIECE_ASSET_PATH =
-            "models/e5/sentencepiece.bpe.model";
-    private static final String LOCAL_MODEL_DIR =
-            "models/e5";
-    private static final String LOCAL_MODEL_NAME =
-            "model.onnx";
-    private static final String LOCAL_SENTENCEPIECE_NAME =
-            "sentencepiece.bpe.model";
     private static final int MAX_SEQUENCE_LENGTH =
             512;
     private static final int XLM_ROBERTA_CLS_ID =
@@ -75,10 +64,10 @@ public class E5EmbeddingEngine {
                     sentencePieceLoadAttempted =
                             true;
 
-                    File sentencePieceFile =
-                            copyAssetSentencePieceToInternalFile(
-                                    appContext
-                            );
+                    File packageDirectory = ModelPackageRuntime.requireDirectory(
+                            appContext, ModelPackageRuntime.E5);
+                    File sentencePieceFile = new File(
+                            packageDirectory, "sentencepiece.bpe.model");
 
                     sentencePieceLoaded =
                             E5SentencePieceNative.loadModel(
@@ -107,10 +96,9 @@ public class E5EmbeddingEngine {
                 }
 
                 if (session == null) {
-                    File modelFile =
-                            copyAssetModelToInternalFile(
-                                    appContext
-                            );
+                    File packageDirectory = ModelPackageRuntime.requireDirectory(
+                            appContext, ModelPackageRuntime.E5);
+                    File modelFile = new File(packageDirectory, "model.onnx");
 
                     OrtSession.SessionOptions options =
                             new OrtSession.SessionOptions();
@@ -125,8 +113,7 @@ public class E5EmbeddingEngine {
 
                     Log.i(
                             TAG,
-                            "model loaded: "
-                                    + modelFile.getAbsolutePath()
+                            "model loaded from installed AI package"
                     );
                 }
 
@@ -142,6 +129,27 @@ public class E5EmbeddingEngine {
                         e
                 );
             }
+        }
+    }
+
+    public static boolean isInitialized() {
+        synchronized (INIT_LOCK) {
+            return sentencePieceLoaded && environment != null && session != null;
+        }
+    }
+
+    public static void deactivate() {
+        synchronized (INIT_LOCK) {
+            if (session != null) {
+                try {
+                    session.close();
+                } catch (Exception ignored) {
+                }
+            }
+            session = null;
+            environment = null;
+            sentencePieceLoaded = false;
+            sentencePieceLoadAttempted = false;
         }
     }
 
@@ -444,122 +452,6 @@ public class E5EmbeddingEngine {
 
         Log.i(TAG, "selfTest cosine dog vs perro: "
                 + cosineSimilarity(dog, perro));
-    }
-
-    private File copyAssetModelToInternalFile(
-            Context context
-    ) throws Exception {
-
-        File modelDir =
-                new File(
-                        context.getFilesDir(),
-                        LOCAL_MODEL_DIR
-                );
-
-        if (!modelDir.exists()) {
-            modelDir.mkdirs();
-        }
-
-        File modelFile =
-                new File(
-                        modelDir,
-                        LOCAL_MODEL_NAME
-                );
-
-        if (
-                modelFile.exists()
-                        &&
-                        modelFile.length() > 10 * 1024 * 1024
-        ) {
-            return modelFile;
-        }
-
-        try (
-                InputStream inputStream =
-                        context.getAssets()
-                                .open(MODEL_ASSET_PATH);
-                FileOutputStream outputStream =
-                        new FileOutputStream(
-                                modelFile
-                        )
-        ) {
-
-            byte[] buffer =
-                    new byte[16 * 1024];
-
-            int read;
-
-            while (
-                    (read = inputStream.read(buffer))
-                            != -1
-            ) {
-                outputStream.write(
-                        buffer,
-                        0,
-                        read
-                );
-            }
-        }
-
-        return modelFile;
-    }
-
-    private File copyAssetSentencePieceToInternalFile(
-            Context context
-    ) throws Exception {
-
-        File modelDir =
-                new File(
-                        context.getFilesDir(),
-                        LOCAL_MODEL_DIR
-                );
-
-        if (!modelDir.exists()) {
-            modelDir.mkdirs();
-        }
-
-        File sentencePieceFile =
-                new File(
-                        modelDir,
-                        LOCAL_SENTENCEPIECE_NAME
-                );
-
-        if (
-                sentencePieceFile.exists()
-                        &&
-                        sentencePieceFile.length() > 0
-        ) {
-            return sentencePieceFile;
-        }
-
-        try (
-                InputStream inputStream =
-                        context.getAssets()
-                                .open(SENTENCEPIECE_ASSET_PATH);
-                FileOutputStream outputStream =
-                        new FileOutputStream(
-                                sentencePieceFile
-                        )
-        ) {
-
-            byte[] buffer =
-                    new byte[16 * 1024];
-
-            int read;
-
-            while (
-                    (read = inputStream.read(buffer))
-                            != -1
-            ) {
-                outputStream.write(
-                        buffer,
-                        0,
-                        read
-                );
-            }
-        }
-
-        return sentencePieceFile;
     }
 
     private void validateRequiredInputs() {

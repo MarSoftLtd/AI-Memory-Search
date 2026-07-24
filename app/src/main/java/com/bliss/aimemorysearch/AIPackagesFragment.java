@@ -1,5 +1,7 @@
 package com.bliss.aimemorysearch;
 
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -11,11 +13,16 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bliss.aimemorysearch.ai.AiPackageBundleCoordinator;
+import com.bliss.aimemorysearch.ai.TranslationPackageManager;
+import com.bliss.aimemorysearch.ai.model.AIPackageInfo;
+
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
+/** Displays the real installed and available offline AI package catalog. */
 public class AIPackagesFragment extends Fragment {
+    private RecyclerView packageList;
 
     @Nullable
     @Override
@@ -24,123 +31,112 @@ public class AIPackagesFragment extends Fragment {
             @Nullable ViewGroup container,
             @Nullable Bundle savedInstanceState
     ) {
-        return inflater.inflate(
-                R.layout.fragment_ai_packages,
-                container,
-                false
-        );
+        return inflater.inflate(R.layout.fragment_ai_packages, container, false);
     }
 
     @Override
-    public void onViewCreated(
-            @NonNull View view,
-            @Nullable Bundle savedInstanceState
-    ) {
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+        packageList = view.findViewById(R.id.aiPackagesList);
+        packageList.setLayoutManager(new LinearLayoutManager(requireContext()));
+        bindCurrentState();
+    }
 
-        RecyclerView aiPackageList =
-                view.findViewById(R.id.aiPackagesList);
+    @Override
+    public void onResume() {
+        super.onResume();
+        bindCurrentState();
+    }
 
-        aiPackageList.setLayoutManager(
-                new LinearLayoutManager(requireContext())
-        );
-        aiPackageList.setAdapter(
-                new AIPackageAdapter(createRows())
-        );
-
-        aiPackageList.setAlpha(0f);
-        aiPackageList.setTranslationY(
-                getResources().getDimension(R.dimen.spacing_16)
-        );
-        aiPackageList.animate()
-                .alpha(1f)
-                .translationY(0f)
-                .setDuration(
-                        getResources().getInteger(R.integer.duration_medium)
-                )
-                .start();
+    private void bindCurrentState() {
+        if (packageList == null || !isAdded()) return;
+        packageList.setAdapter(new AIPackageAdapter(createRows()));
     }
 
     private List<AIPackageRow> createRows() {
+        List<AIPackageUiModel> installed = new ArrayList<>();
+        List<AIPackageUiModel> available = new ArrayList<>();
+        TranslationPackageManager translations =
+                TranslationPackageManager.getInstance(requireContext());
+        SharedPreferences operation = requireContext().getSharedPreferences(
+                "pending_search_state", Context.MODE_PRIVATE);
+        String activeOperationId = operation.getString("package_operation_id", "");
+        String reconciliationId = operation.getString("reconciliation_package_id", "");
+
+        AiPackageBundleCoordinator bundles = new AiPackageBundleCoordinator(requireContext());
+        AIPackageInfo searchBundle = bundles.createPresentationInfo(
+                AiPackageBundleCoordinator.AI_SEARCH_BUNDLE_ID);
+        if (searchBundle != null) {
+            boolean bundleInstalled = bundles.isInstalled(
+                    AiPackageBundleCoordinator.AI_SEARCH_BUNDLE_ID);
+            addByState(bundleInstalled ? installed : available,
+                    toUiModel(searchBundle,
+                            bundleInstalled
+                                    ? AIPackageUiModel.State.ACTIVE
+                                    : AIPackageUiModel.State.AVAILABLE,
+                            R.drawable.ic_ai_package_document));
+        }
+
+        for (AIPackageInfo info : translations.getAvailablePackageMetadata()) {
+            boolean isInstalled = translations.isInstalled(info.getPackageId());
+            AIPackageUiModel.State state;
+            if (info.getPackageId().equals(reconciliationId)) {
+                state = AIPackageUiModel.State.PREPARING;
+            } else if (info.getPackageId().equals(activeOperationId)) {
+                state = AIPackageUiModel.State.DOWNLOADING;
+            } else {
+                state = isInstalled
+                        ? AIPackageUiModel.State.INSTALLED
+                        : AIPackageUiModel.State.AVAILABLE;
+            }
+            addByState(isInstalled ? installed : available,
+                    toUiModel(info, state, R.drawable.ic_ai_package_language));
+        }
+
         List<AIPackageRow> rows = new ArrayList<>();
-
         rows.add(AIPackageRow.header());
-        rows.add(
-                AIPackageRow.sectionHeader(
-                        getString(R.string.ai_package_section_installed),
-                        R.dimen.spacing_32
-                )
-        );
-        for (AIPackageUiModel aiPackage : createInstalledAIPackages()) {
-            rows.add(AIPackageRow.aiPackage(aiPackage));
+        if (!installed.isEmpty()) {
+            rows.add(AIPackageRow.sectionHeader(
+                    getString(R.string.ai_package_section_installed), R.dimen.spacing_32));
+            for (AIPackageUiModel model : installed) rows.add(AIPackageRow.aiPackage(model));
         }
-        rows.add(
-                AIPackageRow.sectionHeader(
-                        getString(R.string.ai_package_section_available),
-                        R.dimen.spacing_24
-                )
-        );
-        for (AIPackageUiModel aiPackage : createAvailableAIPackages()) {
-            rows.add(AIPackageRow.aiPackage(aiPackage));
+        if (!available.isEmpty()) {
+            rows.add(AIPackageRow.sectionHeader(
+                    getString(R.string.ai_package_section_available), R.dimen.spacing_24));
+            for (AIPackageUiModel model : available) rows.add(AIPackageRow.aiPackage(model));
         }
-        rows.add(
-                AIPackageRow.sectionHeader(
-                        getString(R.string.ai_package_section_storage),
-                        R.dimen.spacing_24
-                )
-        );
-        rows.add(AIPackageRow.storageSummary());
-
         return rows;
     }
 
-    private List<AIPackageUiModel> createInstalledAIPackages() {
-        return Arrays.asList(
-                new AIPackageUiModel(
-                        "documents",
-                        R.drawable.ic_ai_package_document,
-                        getString(R.string.ai_package_document_title),
-                        getString(R.string.ai_package_document_description),
-                        AIPackageUiModel.State.READY,
-                        true,
-                        false,
-                        null
-                ),
-                new AIPackageUiModel(
-                        "images",
-                        R.drawable.ic_ai_package_image,
-                        getString(R.string.ai_package_image_title),
-                        getString(R.string.ai_package_image_description),
-                        AIPackageUiModel.State.INSTALLED,
-                        true,
-                        false,
-                        null
-                )
-        );
+    private void addByState(List<AIPackageUiModel> target, AIPackageUiModel model) {
+        target.add(model);
     }
 
-    private List<AIPackageUiModel> createAvailableAIPackages() {
-        return Arrays.asList(
-                new AIPackageUiModel(
-                        "language",
-                        R.drawable.ic_ai_package_language,
-                        getString(R.string.ai_package_language_title),
-                        getString(R.string.ai_package_language_description),
-                        AIPackageUiModel.State.AVAILABLE,
-                        false,
-                        false,
-                        null
-                ),
-                new AIPackageUiModel(
-                        "voice",
-                        R.drawable.ic_ai_package_voice,
-                        getString(R.string.ai_package_voice_title),
-                        getString(R.string.ai_package_voice_description),
-                        AIPackageUiModel.State.AVAILABLE,
-                        false,
-                        false,
-                        null
-                )
-        );
+    private AIPackageUiModel toUiModel(
+            AIPackageInfo info,
+            AIPackageUiModel.State state,
+            int icon
+    ) {
+        boolean installed = state == AIPackageUiModel.State.INSTALLED
+                || state == AIPackageUiModel.State.ACTIVE
+                || state == AIPackageUiModel.State.PREPARING;
+        return new AIPackageUiModel(
+                info.getPackageId(),
+                icon,
+                resolve(info.getDisplayNameKey(), info.getPackageId()),
+                resolve(info.getDescriptionKey(), info.getVersion()),
+                state,
+                installed,
+                false,
+                null);
+    }
+
+    private String resolve(String resourceName, String fallback) {
+        if (resourceName != null && !resourceName.isEmpty()) {
+            int id = getResources().getIdentifier(
+                    resourceName, "string", requireContext().getPackageName());
+            if (id != 0) return getString(id);
+        }
+        return fallback == null ? "" : fallback;
     }
 }

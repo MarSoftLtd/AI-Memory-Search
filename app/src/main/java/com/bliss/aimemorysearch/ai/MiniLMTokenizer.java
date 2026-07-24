@@ -4,6 +4,8 @@ import android.content.Context;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.io.File;
+import java.io.FileInputStream;
 import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -36,6 +38,11 @@ public class MiniLMTokenizer {
     }
 
     public void initialize(Context context) {
+        initialize(new File(ModelPackageRuntime.requireDirectory(
+                context, ModelPackageRuntime.EMBEDDING_CORE), "vocab.txt"));
+    }
+
+    public void initialize(File vocabularyFile) {
 
         if (loaded) {
             return;
@@ -46,8 +53,7 @@ public class MiniLMTokenizer {
             BufferedReader reader =
                     new BufferedReader(
                             new InputStreamReader(
-                                    context.getAssets()
-                                            .open("models/vocab.txt")
+                                    new FileInputStream(vocabularyFile)
                             )
                     );
 
@@ -82,6 +88,15 @@ public class MiniLMTokenizer {
                     e
             );
         }
+    }
+
+    public synchronized boolean isInitialized() {
+        return loaded && !vocab.isEmpty();
+    }
+
+    public synchronized void deactivate() {
+        loaded = false;
+        vocab.clear();
     }
 
     public TokenizedInput encode(String text) {

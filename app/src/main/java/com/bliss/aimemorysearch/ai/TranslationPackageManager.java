@@ -10,8 +10,8 @@ public final class TranslationPackageManager {
 
     private static volatile TranslationPackageManager instance;
 
-    private final ModelStorageManager storageManager;
-    private final ModelInstallationManager installationManager;
+    private final AiStorageManager storageManager;
+    private final AiPackageManager packageManager;
     private final TranslationPackageManifestReader manifestReader;
     private final TranslationPackageValidator packageValidator;
     private final AssetsTranslationPackageRepository metadataRepository;
@@ -23,14 +23,8 @@ public final class TranslationPackageManager {
         Context applicationContext =
                 context.getApplicationContext();
 
-        storageManager =
-                ModelStorageManager.getInstance(
-                        applicationContext
-                );
-        installationManager =
-                ModelInstallationManager.getInstance(
-                        applicationContext
-                );
+        storageManager = new AiStorageManager(applicationContext);
+        packageManager = AiPlatform.getPackageManager();
         manifestReader =
                 new TranslationPackageManifestReader();
         packageValidator =
@@ -123,19 +117,14 @@ public final class TranslationPackageManager {
         if (metadata == null || metadata.getPackageType() != AiPackageType.TRANSLATION) {
             return false;
         }
-        HashSet<String> packageLanguages =
-                new HashSet<>(metadata.getSupportedLanguages());
-        for (TranslationModelId modelId : TranslationModelId.values()) {
-            TranslationModelInfo modelInfo = TranslationModelRegistry.getModel(modelId);
-            if (
-                    packageLanguages.equals(
-                            new HashSet<>(modelInfo.getSupportedLanguages())
-                    )
-            ) {
-                return getPackage(modelId).isInstalled();
-            }
+        if (!packageManager.isInstalled(packageId)) {
+            return false;
         }
-        return false;
+        return packageValidator.isValid(
+                new TranslationPackageLayout(
+                        storageManager.getInstalledPackageDirectory(packageId)
+                )
+        );
     }
 
     public AiPackageLifecycleResult activateInstalledPackage(
@@ -225,7 +214,11 @@ public final class TranslationPackageManager {
     private File getPackageDirectory(
             TranslationModelId modelId
     ) {
-        return storageManager.getModelDirectory(modelId);
+        com.bliss.aimemorysearch.ai.model.AIPackageInfo metadata =
+                getMetadata(modelId);
+        return storageManager.getInstalledPackageDirectory(
+                metadata == null ? "" : metadata.getPackageId()
+        );
     }
 
     private TranslationPackageManifest readManifest(
