@@ -743,7 +743,7 @@ public class MainActivity extends AppCompatActivity {
             );
         }
 
-        continueWithCollectionCoverage(request);
+        executeSearch(request);
     }
 
     private void continueWithCollectionCoverage(
