@@ -643,34 +643,20 @@ public final class SearchCoordinator {
                                 + e.getValue()
                 );
             }
-            float maxScore = 0f;
+            float maxDocumentScore = 0f;
+            float maxImageScore = 0f;
 
-            for (Float score : ranking.values()) {
-
-                if (score != null && score > maxScore) {
-                    maxScore = score;
+            for (java.util.Map.Entry<String, Float> entry : ranking.entrySet()) {
+                Float score = entry.getValue();
+                if (score == null) {
+                    continue;
+                }
+                if (semanticImagePaths.contains(entry.getKey())) {
+                    maxImageScore = Math.max(maxImageScore, score);
+                } else {
+                    maxDocumentScore = Math.max(maxDocumentScore, score);
                 }
             }
-
-            float minAcceptedScore;
-
-            if (
-                    queryAnalysis.isDocumentIntent()
-                            &&
-                            !queryAnalysis.isImageIntent()
-            ) {
-
-                minAcceptedScore =
-                        maxScore * 0.50f;
-
-            } else {
-
-                minAcceptedScore =
-                        maxScore * 0.15f;
-            }
-
-            float adaptiveGap =
-                    maxScore * 0.35f;
 
             float bestCanonicalScore = 0f;
             for (String path : canonicalOnlyPaths) {
@@ -690,12 +676,23 @@ public final class SearchCoordinator {
                                 file.path,
                                 0f
                         );
+                float modalityMaxScore =
+                        semanticImagePaths.contains(file.path)
+                                ? maxImageScore
+                                : maxDocumentScore;
+                float minAcceptedScore =
+                        queryAnalysis.isDocumentIntent()
+                                && !queryAnalysis.isImageIntent()
+                                ? modalityMaxScore * 0.50f
+                                : modalityMaxScore * 0.15f;
+                float adaptiveGap =
+                        modalityMaxScore * 0.35f;
 
                 boolean passesMinimum =
                         score >= minAcceptedScore;
 
                 boolean closeToBest =
-                        (maxScore - score) <= adaptiveGap;
+                        (modalityMaxScore - score) <= adaptiveGap;
                 boolean passesCanonicalPolicy =
                         canonicalOnlyPaths.contains(file.path)
                                 && bestCanonicalScore > 0f
@@ -705,7 +702,7 @@ public final class SearchCoordinator {
                         "MAIN_FILTER",
                         file.name
                                 + " | score=" + score
-                                + " | max=" + maxScore
+                                + " | modalityMax=" + modalityMaxScore
                                 + " | minAccepted=" + minAcceptedScore
                                 + " | gap=" + adaptiveGap
                                 + " | passMin=" + passesMinimum
