@@ -15,6 +15,7 @@ import java.util.concurrent.TimeUnit;
 public final class LanguageDetectionEngine {
 
     private static final float CONFIDENCE_THRESHOLD = 0.20f;
+    private static final float ROUTING_CONFIDENCE_THRESHOLD = 0.25f;
     private static final int SAMPLE_CHARACTERS = 4000;
     private static volatile LanguageDetectionEngine instance;
 
@@ -54,6 +55,9 @@ public final class LanguageDetectionEngine {
                     .orElse(null);
             if (best == null) {
                 return new DetectionResult("und", fallbackFamily, 0f, true);
+            }
+            if (best.getConfidence() < ROUTING_CONFIDENCE_THRESHOLD) {
+                return new DetectionResult("und", "", best.getConfidence(), true);
             }
             String language = best.getLanguageTag();
             if ("en".equalsIgnoreCase(language)) {

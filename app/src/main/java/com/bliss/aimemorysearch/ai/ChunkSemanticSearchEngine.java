@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -29,7 +30,8 @@ public class ChunkSemanticSearchEngine {
     public static List<ChunkResult> search(
             Context context,
             SearchRequest searchRequest,
-            SearchAnalysis searchAnalysis
+            SearchAnalysis searchAnalysis,
+            List<String> canonicalQueries
     ) {
         long searchStart = System.currentTimeMillis();
 
@@ -116,6 +118,8 @@ public class ChunkSemanticSearchEngine {
                     queryEmbedding != null
                             &&
                             queryEmbedding.length > 0;
+            boolean accuracyDiagnostic =
+                    isAccuracyDiagnostic(searchRequest.getOriginalQuery());
 
             List<ChunkEntity> candidateChunks =
                     new ArrayList<>();
@@ -198,29 +202,63 @@ public class ChunkSemanticSearchEngine {
             }
 
             int lexicalCandidateCount = candidateChunks.size();
-            String canonicalQuery = searchRequest.getTranslatedQuery();
             long canonicalLookupStart = System.currentTimeMillis();
-            List<CanonicalIndexStore.Match> canonicalMatches = new ArrayList<>();
-            int canonicalHashCount = 0;
-            if (canonicalQuery != null && !canonicalQuery.trim().isEmpty()) {
-                Map<CanonicalHash, Integer> queryEvidence =
-                        new CanonicalVocabularyExtractor().extract(canonicalQuery);
-                List<CanonicalHash> queryHashes = new ArrayList<>(queryEvidence.keySet());
-                canonicalHashCount = queryHashes.size();
-                android.util.Log.d(
-                        "CANONICAL_LOOKUP",
-                        "query=" + canonicalQuery + " | hashes=" + queryHashes
-                );
-                if (!queryHashes.isEmpty()) {
-                    CanonicalIndexStore canonicalStore = new CanonicalIndexStore(context);
-                    try {
-                        canonicalMatches = canonicalStore.lookup(
-                                queryHashes, false, CANONICAL_CANDIDATE_LIMIT);
-                    } finally {
-                        canonicalStore.close();
+            LinkedHashMap<String, CanonicalIndexStore.Match> canonicalMatchesByChunk =
+                    new LinkedHashMap<>();
+            List<String> effectiveCanonicalQueries =
+                    canonicalQueries == null || canonicalQueries.isEmpty()
+                            ? Collections.singletonList(searchRequest.getTranslatedQuery())
+                            : canonicalQueries;
+            CanonicalIndexStore canonicalStore = new CanonicalIndexStore(context);
+            try {
+                for (String canonicalQuery : effectiveCanonicalQueries) {
+                    if (canonicalQuery == null || canonicalQuery.trim().isEmpty()) {
+                        continue;
+                    }
+                    Map<CanonicalHash, Integer> queryEvidence =
+                            new CanonicalVocabularyExtractor().extract(canonicalQuery);
+                    List<CanonicalHash> queryHashes =
+                            new ArrayList<>(queryEvidence.keySet());
+                    int canonicalHashCount = queryHashes.size();
+                    android.util.Log.d(
+                            "CANONICAL_LOOKUP",
+                            "query=" + canonicalQuery + " | hashes=" + queryHashes
+                    );
+                    if (queryHashes.isEmpty()) {
+                        continue;
+                    }
+                    List<CanonicalIndexStore.Match> hypothesisMatches =
+                            canonicalStore.lookup(
+                                    queryHashes,
+                                    false,
+                                    CANONICAL_CANDIDATE_LIMIT
+                            );
+                    for (CanonicalIndexStore.Match match : hypothesisMatches) {
+                        String unique =
+                                match.getFilePath() + "_" + match.getChunkIndex();
+                        float coverage =
+                                Math.min(
+                                        1f,
+                                        (float) match.getMatchedTerms()
+                                                / canonicalHashCount
+                                );
+                        float existingCoverage =
+                                canonicalCoverageByChunk.getOrDefault(
+                                        unique,
+                                        0f
+                                );
+                        if (coverage > existingCoverage
+                                || !canonicalMatchesByChunk.containsKey(unique)) {
+                            canonicalMatchesByChunk.put(unique, match);
+                            canonicalCoverageByChunk.put(unique, coverage);
+                        }
                     }
                 }
+            } finally {
+                canonicalStore.close();
             }
+            List<CanonicalIndexStore.Match> canonicalMatches =
+                    new ArrayList<>(canonicalMatchesByChunk.values());
             long canonicalLookupMs = System.currentTimeMillis() - canonicalLookupStart;
             long hydrationStart = System.currentTimeMillis();
             HashMap<String, CanonicalIndexStore.Match> requestedCanonical = new HashMap<>();
@@ -252,9 +290,6 @@ public class ChunkSemanticSearchEngine {
                     CanonicalIndexStore.Match match = requestedCanonical.get(unique);
                     if (match == null) continue;
                     hydratedCanonicalCount++;
-                    float coverage = canonicalHashCount == 0 ? 0f
-                            : Math.min(1f, (float) match.getMatchedTerms() / canonicalHashCount);
-                    canonicalCoverageByChunk.put(unique, coverage);
                     if (addedPaths.add(unique)) {
                         candidateChunks.add(chunk);
                         candidateProvenance.put(unique, "canonical");
@@ -265,7 +300,8 @@ public class ChunkSemanticSearchEngine {
             }
             long hydrationMs = System.currentTimeMillis() - hydrationStart;
             android.util.Log.d("CANONICAL_SEARCH", "originalQuery="
-                    + searchRequest.getOriginalQuery() + " | canonicalQuery=" + canonicalQuery
+                    + searchRequest.getOriginalQuery() + " | canonicalQueries="
+                    + effectiveCanonicalQueries
                     + " | lexicalCandidates=" + lexicalCandidateCount
                     + " | canonicalPostingCandidates=" + canonicalMatches.size()
                     + " | hydratedCanonicalChunks=" + hydratedCanonicalCount
@@ -273,7 +309,49 @@ public class ChunkSemanticSearchEngine {
                     + " | canonicalLookupMs=" + canonicalLookupMs
                     + " | roomHydrationMs=" + hydrationMs
                     + " | provenance=" + candidateProvenance);
+            if (accuracyDiagnostic) {
+                int vectorCandidateCount = 0;
+                for (ChunkEntity candidate : candidateChunks) {
+                    if (candidate != null
+                            && candidate.embedding != null
+                            && candidate.embedding.length > 0) {
+                        vectorCandidateCount++;
+                    }
+                }
+                android.util.Log.i(
+                        "ACCURACY_DIAG",
+                        "retrieval"
+                                + " | query=" + searchRequest.getOriginalQuery()
+                                + " | lexicalRuns=true"
+                                + " | embeddingRuns=" + hasQueryEmbedding
+                                + " | lexicalCandidates=" + lexicalCandidateCount
+                                + " | canonicalCandidates="
+                                + canonicalMatches.size()
+                                + " | vectorScorableCandidates="
+                                + vectorCandidateCount
+                                + " | mergedCandidates="
+                                + candidateChunks.size()
+                );
+            }
 
+            if (candidateChunks.isEmpty()) {
+                return results;
+            }
+            List<ChunkEntity> userCandidateChunks = new ArrayList<>();
+            for (ChunkEntity candidate : candidateChunks) {
+                if (candidate != null
+                        && isInternalGeneratedFile(candidate.fileName)) {
+                    android.util.Log.d(
+                            "SEARCH_INTERNAL_FILTER",
+                            "Excluded internal generated file"
+                                    + " | name=" + candidate.fileName
+                                    + " | path=" + candidate.filePath
+                    );
+                    continue;
+                }
+                userCandidateChunks.add(candidate);
+            }
+            candidateChunks = userCandidateChunks;
             if (candidateChunks.isEmpty()) {
                 return results;
             }
@@ -364,20 +442,7 @@ public class ChunkSemanticSearchEngine {
                             tokenInfo.weight;
 
                     boolean matched =
-                            containsWholeToken(
-                                    normalizedChunk,
-                                    token
-                            )
-                                    ||
-                                    containsPrefixToken(
-                                            normalizedChunk,
-                                            token
-                                    )
-                                    ||
-                                    containsAcronymToken(
-                                            normalizedChunk,
-                                            token
-                                    );
+                            matchesRequiredToken(normalizedChunk, token);
 
                     if (matched) {
 
@@ -522,7 +587,24 @@ public class ChunkSemanticSearchEngine {
                         && matchedTokens == validTokens
                         && (validTokens < 2 || allTokensInSameWindow(
                         normalizedChunk, queryTokens, 15));
-                if (!canonicalOnly && !completeLexicalMatch) continue;
+                if (!canonicalOnly && !completeLexicalMatch) {
+                    if (accuracyDiagnostic && isExpectedWaterInvoice(chunk)) {
+                        android.util.Log.i(
+                                "ACCURACY_DIAG",
+                                "water-rejected-before-score"
+                                        + " | query="
+                                        + searchRequest.getOriginalQuery()
+                                        + " | file=" + chunk.fileName
+                                        + " | chunk=" + chunk.chunkIndex
+                                        + " | lexical=" + lexicalScore
+                                        + " | semantic=" + semanticScore
+                                        + " | matchedTokens=" + matchedTokens
+                                        + "/" + validTokens
+                                        + " | reason=incomplete-lexical-match"
+                        );
+                    }
+                    continue;
+                }
 
                 float metadataScore = 0f;
 
@@ -707,7 +789,15 @@ public class ChunkSemanticSearchEngine {
                 ChunkResult chunkResult =
                         new ChunkResult(
                                 chunk,
-                                finalScore
+                                finalScore,
+                                lexicalScore,
+                                semanticScore,
+                                tokenCoverage,
+                                matchedTokens == validTokens,
+                                hasQueryEmbedding
+                                        && chunk.embedding != null
+                                        && chunk.embedding.length > 0,
+                                provenance
                         );
                 chunkResult.canonicalOnly = canonicalOnly;
 
@@ -775,11 +865,7 @@ public class ChunkSemanticSearchEngine {
                 ChunkResult existing =
                         bestDocumentResults.get(path);
 
-                if (
-                        existing == null
-                                ||
-                                result.score > existing.score
-                ) {
+                if (existing == null) {
 
                     android.util.Log.d(
                             "DOC_KEY",
@@ -794,6 +880,20 @@ public class ChunkSemanticSearchEngine {
                             path,
                             result
                     );
+                } else {
+                    boolean lexicalEvidence =
+                            existing.lexicalEvidence || result.lexicalEvidence;
+                    boolean canonicalEvidence =
+                            existing.canonicalEvidence || result.canonicalEvidence;
+                    boolean semanticAvailable =
+                            existing.semanticAvailable || result.semanticAvailable;
+                    ChunkResult selected = result.score > existing.score
+                            ? result
+                            : existing;
+                    selected.lexicalEvidence = lexicalEvidence;
+                    selected.canonicalEvidence = canonicalEvidence;
+                    selected.semanticAvailable = semanticAvailable;
+                    bestDocumentResults.put(path, selected);
                 }
             }
             results =
@@ -842,13 +942,13 @@ public class ChunkSemanticSearchEngine {
             }
             if (!results.isEmpty()) {
 
-                float bestScore =
-                        results.get(0).score;
-
+                float bestLexicalScore = 0f;
                 float bestCanonicalScore = 0f;
                 for (ChunkResult result : results) {
                     if (result.canonicalOnly) {
                         bestCanonicalScore = Math.max(bestCanonicalScore, result.score);
+                    } else {
+                        bestLexicalScore = Math.max(bestLexicalScore, result.score);
                     }
                 }
 
@@ -877,12 +977,36 @@ public class ChunkSemanticSearchEngine {
 
                     boolean passesLexicalPolicy =
                             !r.canonicalOnly
-                                    && r.score >= bestScore * threshold;
+                                    && bestLexicalScore > 0f
+                                    && r.score >= bestLexicalScore * threshold;
                     boolean passesCanonicalPolicy =
                             r.canonicalOnly
                                     && bestCanonicalScore > 0f
                                     && r.score >= bestCanonicalScore
                                     * CANONICAL_RELATIVE_THRESHOLD;
+                    if (accuracyDiagnostic) {
+                        android.util.Log.i(
+                                "ACCURACY_DIAG",
+                                "chunk-filter"
+                                        + " | query="
+                                        + searchRequest.getOriginalQuery()
+                                        + " | file=" + r.chunk.fileName
+                                        + " | path=" + r.chunk.filePath
+                                        + " | score=" + r.score
+                                        + " | canonicalOnly=" + r.canonicalOnly
+                                        + " | lexicalBest=" + bestLexicalScore
+                                        + " | lexicalThreshold="
+                                        + (bestLexicalScore * threshold)
+                                        + " | canonicalBest=" + bestCanonicalScore
+                                        + " | passLexical=" + passesLexicalPolicy
+                                        + " | passCanonical="
+                                        + passesCanonicalPolicy
+                                        + " | decision="
+                                        + (passesLexicalPolicy
+                                        || passesCanonicalPolicy
+                                        ? "keep" : "remove-relative-threshold")
+                        );
+                    }
 
                     if (passesLexicalPolicy || passesCanonicalPolicy) {
 
@@ -1066,6 +1190,11 @@ public class ChunkSemanticSearchEngine {
         }
 
         return false;
+    }
+
+    static boolean matchesRequiredToken(String text, String token) {
+        return containsWholeToken(text, token)
+                || containsAcronymToken(text, token);
     }
 
     private static boolean containsAcronymToken(
@@ -1331,13 +1460,49 @@ public class ChunkSemanticSearchEngine {
 
         public boolean canonicalOnly;
 
+        public final float bm25Score;
+
+        public final float semanticScore;
+
+        public final float tokenCoverage;
+
+        public final boolean exactTokenMatch;
+
+        public boolean semanticAvailable;
+
+        public boolean lexicalEvidence;
+
+        public boolean canonicalEvidence;
+
         public ChunkResult(
                 ChunkEntity chunk,
                 float score
         ) {
+            this(chunk, score, 0f, 0f, 0f, false, false, "");
+        }
+
+        public ChunkResult(
+                ChunkEntity chunk,
+                float score,
+                float bm25Score,
+                float semanticScore,
+                float tokenCoverage,
+                boolean exactTokenMatch,
+                boolean semanticAvailable,
+                String provenance
+        ) {
 
             this.chunk = chunk;
             this.score = score;
+            this.bm25Score = bm25Score;
+            this.semanticScore = semanticScore;
+            this.tokenCoverage = tokenCoverage;
+            this.exactTokenMatch = exactTokenMatch;
+            this.semanticAvailable = semanticAvailable;
+            this.lexicalEvidence = "lexical".equals(provenance)
+                    || "both".equals(provenance);
+            this.canonicalEvidence = "canonical".equals(provenance)
+                    || "both".equals(provenance);
 
             if (
                     chunk != null
@@ -1368,6 +1533,33 @@ public class ChunkSemanticSearchEngine {
                 matchedSnippet = "";
             }
         }
+    }
+
+    private static boolean isInternalGeneratedFile(String fileName) {
+        if (fileName == null) {
+            return false;
+        }
+        String normalized =
+                fileName.trim().toLowerCase(Locale.ROOT);
+        return normalized.startsWith("canonical_runtime_")
+                || (normalized.startsWith("mcanonical")
+                && normalized.endsWith(".pdf"))
+                || normalized.matches("m\\d+_progress\\.xml");
+    }
+
+    private static boolean isAccuracyDiagnostic(String query) {
+        if (query == null) {
+            return false;
+        }
+        String normalized = normalize(query).replaceAll("\\s+", " ").trim();
+        return "factura".equals(normalized)
+                || "factura apa".equals(normalized)
+                || "invoice".equals(normalized);
+    }
+
+    private static boolean isExpectedWaterInvoice(ChunkEntity chunk) {
+        return chunk != null
+                && "AIF26-240003-471483.pdf".equals(chunk.fileName);
     }
     private static float calculateTokenProximity(
             String text,

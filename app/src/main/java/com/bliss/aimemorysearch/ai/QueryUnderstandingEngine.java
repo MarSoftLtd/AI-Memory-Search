@@ -2,11 +2,36 @@ package com.bliss.aimemorysearch.ai;
 
 import java.text.Normalizer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 public class QueryUnderstandingEngine {
+
+    private static final Set<String> DOCUMENT_INTENT_TOKENS =
+            new HashSet<>(Arrays.asList(
+                    "invoice", "factura", "facturi", "bill", "bills",
+                    "receipt", "chitanta", "contract", "document", "documents",
+                    "pdf", "report", "raport", "statement", "extras",
+                    "form", "formular", "passport", "pasaport", "certificate",
+                    "certificat", "license", "licence", "adeverinta"
+            ));
+
+    private static final Set<String> IMAGE_INTENT_TOKENS =
+            new HashSet<>(Arrays.asList(
+                    "photo", "photos", "photograph", "photographs",
+                    "picture", "pictures", "image", "images", "poza", "poze", "imagine",
+                    "fotografie", "fotografii"
+            ));
+
+    private static final Set<String> VISUAL_SUBJECT_TOKENS =
+            new HashSet<>(Arrays.asList(
+                    "cat", "cats", "pisica", "pisici", "dog", "dogs",
+                    "caine", "caini", "rose", "roses", "trandafir",
+                    "flower", "flowers", "floare"
+            ));
 
     public static class QueryTokenWeight {
 
@@ -44,7 +69,9 @@ public class QueryUnderstandingEngine {
         );
 
         request.setNormalizedQuery(
-                normalize(query)
+                QueryMorphologyNormalizer.normalize(
+                        normalize(query)
+                )
         );
 
         request.setQueryTokens(
@@ -66,6 +93,16 @@ public class QueryUnderstandingEngine {
         }
 
         float[] embedding;
+        boolean accuracyDiagnostic =
+                isAccuracyDiagnostic(request.getOriginalQuery());
+        if (accuracyDiagnostic) {
+            android.util.Log.i(
+                    "ACCURACY_DIAG",
+                    "embedding-input"
+                            + " | query=" + request.getOriginalQuery()
+                            + " | text=" + request.getNormalizedQuery()
+            );
+        }
 
         try {
 
@@ -123,6 +160,16 @@ public class QueryUnderstandingEngine {
                 personIntent,
                 invoiceIntent
         );
+    }
+
+    private static boolean isAccuracyDiagnostic(String query) {
+        if (query == null) {
+            return false;
+        }
+        String normalized = normalize(query);
+        return "factura".equals(normalized)
+                || "factura apa".equals(normalized)
+                || "invoice".equals(normalized);
     }
 
     private static String normalize(
@@ -265,60 +312,51 @@ public class QueryUnderstandingEngine {
         return semanticTokens;
     }
 
-    private static boolean detectDocumentIntent(
+    static boolean detectDocumentIntent(
             List<String> tokens
     ) {
 
         if (
                 tokens == null
+                        || tokens.isEmpty()
         ) {
 
             return false;
         }
 
-        for (String token : tokens) {
-
-            if (
-                    token.length() >= 5
-            ) {
-
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static boolean detectImageIntent(
-            List<String> tokens
-    ) {
-
-        if (
-                tokens == null
-        ) {
-            return false;
-        }
-
-        if (
-                tokens.size() == 1
-        ) {
+        if (containsAny(tokens, DOCUMENT_INTENT_TOKENS)) {
             return true;
         }
 
+        return !containsAny(tokens, IMAGE_INTENT_TOKENS)
+                && !containsAny(tokens, VISUAL_SUBJECT_TOKENS);
+    }
+
+    static boolean detectImageIntent(
+            List<String> tokens
+    ) {
+
+        if (
+                tokens == null
+                        || tokens.isEmpty()
+        ) {
+            return false;
+        }
+
+        if (containsAny(tokens, IMAGE_INTENT_TOKENS)
+                || containsAny(tokens, VISUAL_SUBJECT_TOKENS)) {
+            return true;
+        }
+
+        return !containsAny(tokens, DOCUMENT_INTENT_TOKENS);
+    }
+
+    private static boolean containsAny(
+            List<String> tokens,
+            Set<String> intentTokens
+    ) {
         for (String token : tokens) {
-
-            if (
-                    token.equals("photo")
-                            ||
-                            token.equals("picture")
-                            ||
-                            token.equals("image")
-                            ||
-                            token.equals("poza")
-                            ||
-                            token.equals("imagine")
-            ) {
-
+            if (token != null && intentTokens.contains(token)) {
                 return true;
             }
         }

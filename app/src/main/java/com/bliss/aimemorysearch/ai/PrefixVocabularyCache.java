@@ -9,7 +9,7 @@ public class PrefixVocabularyCache {
     private static final HashSet<String> vocabulary =
             new HashSet<>();
 
-    public static void addText(
+    public static synchronized void addText(
             String text
     ) {
 
@@ -35,7 +35,7 @@ public class PrefixVocabularyCache {
         }
     }
 
-    public static List<String> expandPrefix(
+    public static synchronized List<String> expandPrefix(
             String prefix
     ) {
 
@@ -86,11 +86,11 @@ public class PrefixVocabularyCache {
 
         return results;
     }
-    public static int getVocabularySize() {
+    public static synchronized int getVocabularySize() {
 
         return vocabulary.size();
     }
-    public static void clear() {
+    public static synchronized void clear() {
 
         vocabulary.clear();
     }

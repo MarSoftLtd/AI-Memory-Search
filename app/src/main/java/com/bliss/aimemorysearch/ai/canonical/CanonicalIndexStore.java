@@ -268,6 +268,14 @@ public final class CanonicalIndexStore extends SQLiteOpenHelper {
         }
     }
 
+    public int countPendingFiles() {
+        try (Cursor cursor = getReadableDatabase().rawQuery(
+                "SELECT COUNT(*) FROM canonical_files WHERE state=?",
+                new String[]{STATE_PENDING})) {
+            return cursor.moveToFirst() ? cursor.getInt(0) : 0;
+        }
+    }
+
     /** True only for rows written with the language-discovery schema. */
     public boolean hasLanguageMetadata(String filePath) {
         try (Cursor cursor = getReadableDatabase().rawQuery(
