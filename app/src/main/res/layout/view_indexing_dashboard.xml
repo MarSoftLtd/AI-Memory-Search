@@ -39,12 +39,14 @@
                     app:layout_constraintTop_toTopOf="parent" />
 
                 <TextView
+                    android:id="@+id/indexingActivityDescription"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/spacing_4"
                     android:text="@string/dashboard_indexing_description"
                     android:textColor="@color/color_text_muted"
                     android:textSize="@dimen/text_caption"
+                    android:visibility="gone"
                     app:layout_constraintEnd_toStartOf="@id/indexLoader"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/indexSectionTitle" />
@@ -73,36 +75,12 @@
                 android:orientation="vertical">
 
                 <TextView
-                    android:id="@+id/pdfCountText"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:ellipsize="end"
-                    android:maxLines="1"
-                    android:text="@string/documents_count_initial"
-                    android:textColor="@color/color_text_primary"
-                    android:textSize="@dimen/text_label"
-                    android:textStyle="bold" />
-
-                <com.google.android.material.progressindicator.LinearProgressIndicator
-                    android:id="@+id/pdfGauge"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/spacing_8"
-                    android:max="100"
-                    android:progress="0"
-                    app:indicatorColor="@color/color_accent_secondary"
-                    app:trackColor="@color/color_progress_track"
-                    app:trackCornerRadius="@dimen/dashboard_progress_radius"
-                    app:trackThickness="@dimen/dashboard_progress_height" />
-
-                <TextView
                     android:id="@+id/jpgCountText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/spacing_16"
                     android:ellipsize="end"
                     android:maxLines="1"
-                    android:text="@string/images_count_initial"
+                    android:text="IMAGES · 0"
                     android:textColor="@color/color_text_primary"
                     android:textSize="@dimen/text_label"
                     android:textStyle="bold" />
@@ -114,7 +92,79 @@
                     android:layout_marginTop="@dimen/spacing_8"
                     android:max="100"
                     android:progress="0"
-                    app:indicatorColor="@color/color_accent_violet"
+                    app:indicatorColor="@color/color_source_image"
+                    app:trackColor="@color/color_progress_track"
+                    app:trackCornerRadius="@dimen/dashboard_progress_radius"
+                    app:trackThickness="@dimen/dashboard_progress_height" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_16"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/emailSyncStatus"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="EMAIL · 0"
+                        android:textColor="@color/color_text_primary"
+                        android:textSize="@dimen/text_label"
+                        android:textStyle="bold" />
+
+                    <com.bliss.aimemorysearch.ui.FourDotLoaderView
+                        android:id="@+id/emailSyncLoader"
+                        android:layout_width="@dimen/component_loader_size"
+                        android:layout_height="@dimen/component_loader_size"
+                        android:visibility="gone" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/emailEnableButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:minHeight="0dp"
+                        android:text="@string/email_enable"
+                        android:textAllCaps="false"
+                        app:backgroundTint="@color/color_accent_blue"
+                        app:cornerRadius="@dimen/dashboard_button_radius" />
+                </LinearLayout>
+
+                <com.google.android.material.progressindicator.LinearProgressIndicator
+                    android:id="@+id/emailGauge"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_8"
+                    android:max="100"
+                    android:progress="0"
+                    app:indicatorColor="@color/color_source_email"
+                    app:trackColor="@color/color_progress_track"
+                    app:trackCornerRadius="@dimen/dashboard_progress_radius"
+                    app:trackThickness="@dimen/dashboard_progress_height" />
+
+                <TextView
+                    android:id="@+id/pdfCountText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_16"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="PDF · 0"
+                    android:textColor="@color/color_text_primary"
+                    android:textSize="@dimen/text_label"
+                    android:textStyle="bold" />
+
+                <com.google.android.material.progressindicator.LinearProgressIndicator
+                    android:id="@+id/pdfGauge"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_8"
+                    android:max="100"
+                    android:progress="0"
+                    app:indicatorColor="@color/color_source_pdf"
                     app:trackColor="@color/color_progress_track"
                     app:trackCornerRadius="@dimen/dashboard_progress_radius"
                     app:trackThickness="@dimen/dashboard_progress_height" />
@@ -126,7 +176,7 @@
                     android:layout_marginTop="@dimen/spacing_16"
                     android:ellipsize="end"
                     android:maxLines="1"
-                    android:text="@string/text_detected_count_initial"
+                    android:text="WORD · 0"
                     android:textColor="@color/color_text_primary"
                     android:textSize="@dimen/text_label"
                     android:textStyle="bold" />
@@ -138,7 +188,7 @@
                     android:layout_marginTop="@dimen/spacing_8"
                     android:max="100"
                     android:progress="0"
-                    app:indicatorColor="@color/color_success"
+                    app:indicatorColor="@color/color_category_word"
                     app:trackColor="@color/color_progress_track"
                     app:trackCornerRadius="@dimen/dashboard_progress_radius"
                     app:trackThickness="@dimen/dashboard_progress_height" />
@@ -150,7 +200,7 @@
                     android:layout_marginTop="@dimen/spacing_16"
                     android:ellipsize="end"
                     android:maxLines="1"
-                    android:text="@string/ai_indexed_count_initial"
+                    android:text="EXCEL · 0"
                     android:textColor="@color/color_text_primary"
                     android:textSize="@dimen/text_label"
                     android:textStyle="bold" />
@@ -162,7 +212,64 @@
                     android:layout_marginTop="@dimen/spacing_8"
                     android:max="100"
                     android:progress="0"
-                    app:indicatorColor="@color/color_accent"
+                    app:indicatorColor="@color/color_category_excel"
+                    app:trackColor="@color/color_progress_track"
+                    app:trackCornerRadius="@dimen/dashboard_progress_radius"
+                    app:trackThickness="@dimen/dashboard_progress_height" />
+
+                <TextView
+                    android:id="@+id/powerpointCountText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_16"
+                    android:text="POWERPOINT · 0"
+                    android:textColor="@color/color_text_primary"
+                    android:textSize="@dimen/text_label"
+                    android:textStyle="bold" />
+                <com.google.android.material.progressindicator.LinearProgressIndicator
+                    android:id="@+id/powerpointGauge"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_8"
+                    app:indicatorColor="@color/color_category_powerpoint"
+                    app:trackColor="@color/color_progress_track"
+                    app:trackCornerRadius="@dimen/dashboard_progress_radius"
+                    app:trackThickness="@dimen/dashboard_progress_height" />
+
+                <TextView
+                    android:id="@+id/textCountText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_16"
+                    android:text="TEXT · 0"
+                    android:textColor="@color/color_text_primary"
+                    android:textSize="@dimen/text_label"
+                    android:textStyle="bold" />
+                <com.google.android.material.progressindicator.LinearProgressIndicator
+                    android:id="@+id/textGauge"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_8"
+                    app:indicatorColor="@color/color_category_text"
+                    app:trackColor="@color/color_progress_track"
+                    app:trackCornerRadius="@dimen/dashboard_progress_radius"
+                    app:trackThickness="@dimen/dashboard_progress_height" />
+
+                <TextView
+                    android:id="@+id/otherDocumentsCountText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_16"
+                    android:text="OTHER DOCUMENTS · 0"
+                    android:textColor="@color/color_text_primary"
+                    android:textSize="@dimen/text_label"
+                    android:textStyle="bold" />
+                <com.google.android.material.progressindicator.LinearProgressIndicator
+                    android:id="@+id/otherDocumentsGauge"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_8"
+                    app:indicatorColor="@color/color_category_other"
                     app:trackColor="@color/color_progress_track"
                     app:trackCornerRadius="@dimen/dashboard_progress_radius"
                     app:trackThickness="@dimen/dashboard_progress_height" />
@@ -170,6 +277,7 @@
             </LinearLayout>
 
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/overallProgressCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/spacing_24"
@@ -177,7 +285,8 @@
                 app:cardCornerRadius="@dimen/dashboard_card_radius"
                 app:cardElevation="@dimen/elevation_none"
                 app:strokeColor="@color/color_border"
-                app:strokeWidth="@dimen/border_width">
+                app:strokeWidth="@dimen/border_width"
+                android:visibility="gone">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -265,12 +374,14 @@
             </com.google.android.material.card.MaterialCardView>
 
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/runtimeStatusCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/spacing_16"
                 app:cardBackgroundColor="@color/color_surface_secondary"
                 app:cardCornerRadius="@dimen/dashboard_card_radius"
-                app:cardElevation="@dimen/elevation_none">
+                app:cardElevation="@dimen/elevation_none"
+                android:visibility="gone">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -304,6 +415,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/spacing_4"
                         android:ellipsize="end"
+                        android:minLines="2"
                         android:maxLines="2"
                         android:text="@string/idle"
                         android:textColor="@color/color_accent_soft"
@@ -373,6 +485,10 @@
                 </LinearLayout>
 
             </com.google.android.material.card.MaterialCardView>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/spacing_32" />
 
         </LinearLayout>
 

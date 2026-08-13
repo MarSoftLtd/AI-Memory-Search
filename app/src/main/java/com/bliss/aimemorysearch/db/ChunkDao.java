@@ -24,8 +24,10 @@ public interface ChunkDao {
 
     @Query(
             "SELECT * FROM chunks " +
-                    "WHERE normalizedText LIKE :token || '%' " +
-                    "OR normalizedText LIKE '% ' || :token || '%' " +
+                    "WHERE normalizedText = :token " +
+                    "OR normalizedText LIKE :token || ' %' " +
+                    "OR normalizedText LIKE '% ' || :token || ' %' " +
+                    "OR normalizedText LIKE '% ' || :token " +
                     "LIMIT :limit"
     )
     List<ChunkEntity> searchByToken(
@@ -44,7 +46,7 @@ public interface ChunkDao {
     List<ChunkEntity> getChunksByFilePath(String filePath);
 
     @Query("SELECT id,parentFileId,filePath,fileName,chunkText,normalizedText,"
-            + "NULL AS embedding,chunkIndex,indexedAt FROM chunks "
+            + "NULL AS embedding,chunkIndex,indexedAt,sourceType,sourceId FROM chunks "
             + "WHERE filePath = :filePath ORDER BY chunkIndex")
     List<ChunkEntity> getCanonicalChunksByFilePath(String filePath);
     @Query(

@@ -60,6 +60,24 @@ public final class AtomicConjunctionStrategy
         Map<String, CandidateAccumulator> candidates = new LinkedHashMap<>();
         int retainedLimit = budget.getMaxResultsPerModality();
 
+        for (ConceptGraph.Concept component : components) {
+            String componentQuery = component.getText();
+            if (!imageEmbeddings.containsKey(componentQuery)) {
+                imageEmbeddings.put(
+                        componentQuery,
+                        MobileClipTextEmbeddingEngine
+                                .getInstance()
+                                .generateEmbedding(componentQuery)
+                );
+            }
+        }
+        BatchAtomicImageRetriever.BatchResult batchImages =
+                BatchAtomicImageRetriever.search(
+                        context.getApplicationContext(),
+                        imageEmbeddings,
+                        retainedLimit
+                );
+
         for (int componentIndex = 0;
              componentIndex < components.size();
              componentIndex++) {
@@ -79,23 +97,14 @@ public final class AtomicConjunctionStrategy
                             Collections.singletonList(componentQuery)
                     );
 
-            float[] imageEmbedding = imageEmbeddings.get(componentQuery);
-            if (imageEmbedding == null) {
-                imageEmbedding = MobileClipTextEmbeddingEngine
-                        .getInstance()
-                        .generateEmbedding(componentQuery);
-                imageEmbeddings.put(componentQuery, imageEmbedding);
-            }
             List<ImageSemanticSearchEngine.SearchResult> images =
-                    new ImageSemanticSearchEngine(
-                            context.getApplicationContext()
-                    ).search(imageEmbedding, retainedLimit);
+                    batchImages.resultsFor(componentQuery);
 
             Map<String, Float> componentDocuments = topDocuments(
                     documents,
                     retainedLimit
             );
-            Map<String, Float> componentImages = topImages(images, retainedLimit);
+            Map<String, Float> componentImages = imageEvidence(images);
             addComponentEvidence(
                     candidates,
                     componentDocuments,
@@ -153,7 +162,10 @@ public final class AtomicConjunctionStrategy
                 retained.add(new InterpretationExecutionResult.RetrievedResult(
                         candidate.path,
                         candidate.modality,
-                        candidate.agreementScore
+                        candidate.agreementScore,
+                        candidate.supportCount == components.size()
+                                ? MatchTier.BEST_MATCH
+                                : MatchTier.PARTIAL_MATCH
                 ));
                 Log.d(
                         LOG_TAG,
@@ -171,6 +183,14 @@ public final class AtomicConjunctionStrategy
                 LOG_TAG,
                 "complete"
                         + " | components=" + components.size()
+                        + " | imageCorpusScans="
+                        + batchImages.getCorpusScans()
+                        + " | indexedImages="
+                        + batchImages.getIndexedImageCount()
+                        + " | imageEmbeddingCalls="
+                        + imageEmbeddings.size()
+                        + " | imageBatchMs="
+                        + batchImages.getLatencyMillis()
                         + " | candidates=" + ordered.size()
                         + " | bestAgreement=" + bestAgreement
                         + " | executionMs=" + elapsedMillis
@@ -241,20 +261,15 @@ public final class AtomicConjunctionStrategy
         return retained;
     }
 
-    private static Map<String, Float> topImages(
-            List<ImageSemanticSearchEngine.SearchResult> results,
-            int limit
+    private static Map<String, Float> imageEvidence(
+            List<ImageSemanticSearchEngine.SearchResult> results
     ) {
-        Map<String, Float> retained = new LinkedHashMap<>(limit);
+        Map<String, Float> retained = new LinkedHashMap<>(results.size());
         for (ImageSemanticSearchEngine.SearchResult result : results) {
             if (result == null
                     || result.file == null
                     || result.file.path == null) {
                 continue;
-            }
-            if (!retained.containsKey(result.file.path)
-                    && retained.size() >= limit) {
-                break;
             }
             retained.put(
                     result.file.path,

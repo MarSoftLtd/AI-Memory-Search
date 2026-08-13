@@ -26,6 +26,15 @@
     <color name="color_accent_violet">#8B7CFF</color>
     <color name="color_success">#00F5A0</color>
     <color name="color_warning">#FFD166</color>
+    <color name="color_source_email">#FFFFD54F</color>
+    <color name="color_source_image">#FF2FE07B</color>
+    <color name="color_source_pdf">#FFFF5252</color>
+    <color name="color_source_document">#FF4B8BFF</color>
+    <color name="color_category_word">#FF4B8BFF</color>
+    <color name="color_category_excel">#FF00C98D</color>
+    <color name="color_category_powerpoint">#FFFF8A3D</color>
+    <color name="color_category_text">#FFB06CFF</color>
+    <color name="color_category_other">#FF8E9AB8</color>
     <color name="color_warning_border">#99FFD166</color>
 
     <color name="color_surface_overlay">#18FFFFFF</color>

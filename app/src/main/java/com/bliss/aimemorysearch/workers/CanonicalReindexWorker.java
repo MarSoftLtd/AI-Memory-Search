@@ -47,7 +47,7 @@ public final class CanonicalReindexWorker extends Worker {
         WorkManager.getInstance(
                 context.getApplicationContext()).enqueueUniqueWork(
                 IndexWorker.UNIQUE_WORK_NAME,
-                ExistingWorkPolicy.REPLACE,
+                ExistingWorkPolicy.APPEND_OR_REPLACE,
                 request);
         return workId;
     }

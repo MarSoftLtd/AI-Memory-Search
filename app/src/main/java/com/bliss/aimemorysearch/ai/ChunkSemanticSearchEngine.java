@@ -14,6 +14,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -67,26 +68,10 @@ public class ChunkSemanticSearchEngine {
                             searchRequest.getNormalizedQuery()
                     );
 
-            List<String> allTokens =
-                    new ArrayList<>();
-
-            if (
-                    searchRequest.getQueryTokens() != null
-            ) {
-
-                allTokens.addAll(
-                        searchRequest.getQueryTokens()
-                );
-            }
-
-            if (
-                    searchAnalysis.getSemanticTokens() != null
-            ) {
-
-                allTokens.addAll(
-                        searchAnalysis.getSemanticTokens()
-                );
-            }
+            List<String> allTokens = mergeExpansionTokens(
+                    searchRequest.getQueryTokens(),
+                    searchAnalysis.getSemanticTokens()
+            );
 
             String[] queryTokens =
                     searchRequest.getQueryTokens().toArray(
@@ -120,6 +105,10 @@ public class ChunkSemanticSearchEngine {
                             queryEmbedding.length > 0;
             boolean accuracyDiagnostic =
                     isAccuracyDiagnostic(searchRequest.getOriginalQuery());
+            boolean explicitAcronymQuery = isExplicitAcronymQuery(
+                    searchRequest.getOriginalQuery(),
+                    normalizedQuery
+            );
 
             List<ChunkEntity> candidateChunks =
                     new ArrayList<>();
@@ -442,7 +431,11 @@ public class ChunkSemanticSearchEngine {
                             tokenInfo.weight;
 
                     boolean matched =
-                            matchesRequiredToken(normalizedChunk, token);
+                            matchesRequiredToken(
+                                    normalizedChunk,
+                                    token,
+                                    explicitAcronymQuery
+                            );
 
                     if (matched) {
 
@@ -505,10 +498,12 @@ public class ChunkSemanticSearchEngine {
                                             expandedToken
                                     )
                                     ||
-                                    containsAcronymToken(
+                                    (explicitAcronymQuery
+                                    && expandedToken.equals(normalizedQuery)
+                                    && containsAcronymToken(
                                             normalizedChunk,
                                             expandedToken
-                                    )
+                                    ))
                     ) {
 
                         semanticTokenBoost +=
@@ -516,9 +511,11 @@ public class ChunkSemanticSearchEngine {
 
                         if (bestWeight >= 0.55f) {
 
-                            expandedQuery +=
-                                    " "
-                                            + expandedToken;
+                            expandedQuery = appendDistinctExpansion(
+                                    expandedQuery,
+                                    expandedToken,
+                                    queryTokens
+                            );
                         }
                     }
                 }
@@ -1192,9 +1189,58 @@ public class ChunkSemanticSearchEngine {
         return false;
     }
 
-    static boolean matchesRequiredToken(String text, String token) {
+    static boolean matchesRequiredToken(
+            String text,
+            String token,
+            boolean allowAcronym
+    ) {
         return containsWholeToken(text, token)
-                || containsAcronymToken(text, token);
+                || (allowAcronym && containsAcronymToken(text, token));
+    }
+
+    static List<String> mergeExpansionTokens(
+            List<String> queryTokens,
+            List<String> semanticTokens
+    ) {
+        LinkedHashSet<String> unique = new LinkedHashSet<>();
+        if (queryTokens != null) unique.addAll(queryTokens);
+        if (semanticTokens != null) unique.addAll(semanticTokens);
+        return new ArrayList<>(unique);
+    }
+
+    static String appendDistinctExpansion(
+            String expandedQuery,
+            String expandedToken,
+            String[] queryTokens
+    ) {
+        if (expandedToken == null || queryTokens == null) {
+            return expandedQuery;
+        }
+        for (String queryToken : queryTokens) {
+            if (expandedToken.equals(queryToken)) return expandedQuery;
+        }
+        return expandedQuery + " " + expandedToken;
+    }
+
+    static boolean isExplicitAcronymQuery(
+            String originalQuery,
+            String normalizedToken
+    ) {
+        if (originalQuery == null || normalizedToken == null) return false;
+        String candidate = originalQuery.trim();
+        if (candidate.length() < 2 || candidate.length() > 5
+                || candidate.indexOf(' ') >= 0
+                || !normalize(candidate).equals(normalizedToken)) {
+            return false;
+        }
+        for (int index = 0; index < candidate.length(); index++) {
+            char character = candidate.charAt(index);
+            if (!Character.isLetter(character)
+                    || !Character.isUpperCase(character)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static boolean containsAcronymToken(

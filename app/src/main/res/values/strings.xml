@@ -1,8 +1,9 @@
 <resources>
     <string name="dashboard_preparing_private_ai">Preparing your Private AI</string>
-    <string name="dashboard_private_ai_description">Models are installed only once. Your files and AI processing remain private and run locally on this device.</string>
-    <string name="dashboard_indexing_description">Preparing your searchable knowledge base</string>
+    <string name="dashboard_private_ai_description">Models are installed only once. Your files and AI processing remain private and run locally on this device. Initial setup is required only once.</string>    <string name="dashboard_indexing_description">Preparing your searchable knowledge base</string>
     <string name="dashboard_overall_progress">Overall progress</string>
+    <string name="indexed_items_zero">0 items indexed</string>
+    <string name="indexed_items_total">%1$d items indexed</string>
     <string name="dashboard_runtime_status">Runtime status</string>
     <string name="dashboard_large_file_title">This file needs more time</string>
     <string name="clear_search">Clear search</string>
@@ -209,8 +210,25 @@
     <string name="embedding_workload_estimate">Embeddings (estimated maximum)</string>
     <string name="category_workload_value">%1$s: %2$d / %3$d</string>
     <string name="dashboard_synchronizing">Synchronizing current state…</string>
+    <string name="canonical_bootstrap_title">Preparing multilingual search...</string>
+    <string name="canonical_bootstrap_progress">%1$d files remaining</string>
     <string name="first_index_explanation_title">Prepare private offline search</string>
     <string name="first_index_explanation_body">Initial indexing can take time because documents and images are read, OCR text is extracted when needed, and semantic embeddings are generated. All AI processing happens locally on this device. Your files and extracted content are not uploaded. After preparation, search works fully offline and no Internet connection is required.</string>
     <string name="first_index_explanation_continue">Start private indexing</string>
     <string name="reconciliation_library_progress">Prepared %1$d / %2$d eligible documents · Library documents discovered at last scan: %3$d</string>
+    <string name="explanation_title">Technical search report</string>
+    <string name="technical_report_toggle">Expand or collapse technical report</string>
+    <string name="result_previous">Previous result</string>
+    <string name="result_next">Next result</string>
+    <string name="explanation_more_details">More details</string>
+    <string name="explanation_confidence_percent">Confidence %1$.0f%%</string>
+    <string name="email_title">Email</string>
+    <string name="email_enable">Enable Email</string>
+    <string name="email_not_enabled">Enable Email once to authorize access. Synchronization is automatic afterward.</string>
+    <string name="email_authorizing">Waiting for Email authorization…</string>
+    <string name="email_authorization_cancelled">Email authorization was not completed.</string>
+    <string name="email_sync_queued">Email synchronization queued…</string>
+    <string name="email_indexed_total">Email · %1$d indexed</string>
+    <string name="email_sync_running">%1$s · Email · %2$d indexed</string>
+    <string name="email_sync_failed">Email synchronization paused · %1$d indexed locally</string>
 </resources>

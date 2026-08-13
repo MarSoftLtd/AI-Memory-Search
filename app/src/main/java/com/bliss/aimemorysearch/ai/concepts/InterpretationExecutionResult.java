@@ -81,16 +81,28 @@ public final class InterpretationExecutionResult {
         private final String path;
         private final Modality modality;
         private final float score;
+        private final MatchTier matchTier;
 
         public RetrievedResult(String path, Modality modality, float score) {
+            this(path, modality, score, null);
+        }
+
+        public RetrievedResult(
+                String path,
+                Modality modality,
+                float score,
+                MatchTier matchTier
+        ) {
             this.path = path;
             this.modality = modality;
             this.score = score;
+            this.matchTier = matchTier;
         }
 
         public String getPath() { return path; }
         public Modality getModality() { return modality; }
         public float getScore() { return score; }
+        public MatchTier getMatchTier() { return matchTier; }
     }
 
     public enum Modality {

@@ -74,6 +74,7 @@
                 android:layout_marginEnd="@dimen/spacing_16" />
 
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/indexCompletionCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="@dimen/spacing_16"
@@ -81,7 +82,8 @@
                 android:layout_marginEnd="@dimen/spacing_16"
                 app:cardBackgroundColor="@color/color_surface"
                 app:cardCornerRadius="@dimen/dashboard_card_radius"
-                app:cardElevation="@dimen/elevation_none">
+                app:cardElevation="@dimen/elevation_none"
+                android:visibility="gone">
 
                 <LinearLayout
                     android:layout_width="match_parent"

@@ -1,0 +1,35 @@
+Message-ID: <mixed-1@example.com>
+Subject: =?UTF-8?Q?Raport_lunar?=
+From: Reports <reports@example.com>
+To: Team <team@example.com>
+Cc: First Person <first@example.com>,
+ Second Person <second@example.com>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="outer"
+
+--outer
+Content-Type: multipart/alternative; boundary="alternative"
+
+--alternative
+Content-Type: text/plain; charset=UTF-8
+
+Preferred plain body.
+--alternative
+Content-Type: text/html; charset=UTF-8
+
+<p>This HTML body must not be selected.</p>
+--alternative--
+--outer
+Content-Type: application/pdf; name="report.pdf"
+Content-Disposition: attachment; filename="report.pdf"
+Content-Transfer-Encoding: base64
+
+JVBERi0xLjQ=
+--outer
+Content-Type: image/png; name="chart.png"
+Content-Disposition: inline; filename="chart.png"
+Content-ID: <chart-1>
+Content-Transfer-Encoding: base64
+
+iVBORw0KGgo=
+--outer--

@@ -1,0 +1,6 @@
+<resources>
+    <!-- Initial search readiness requires this many or fewer pending canonical files. -->
+    <integer name="initial_canonical_pending_target">0</integer>
+    <!-- Maximum total time for one file during the main indexing pass. -->
+    <integer name="index_file_processing_limit_seconds">30</integer>
+</resources>

@@ -59,6 +59,8 @@ dependencies {
     implementation libs.androidx.core.ktx
     implementation libs.androidx.lifecycle.runtime.ktx
     testImplementation libs.junit
+    testImplementation 'org.xerial:sqlite-jdbc:3.41.2.2'
+    testImplementation 'org.json:json:20250517'
     androidTestImplementation platform(libs.androidx.compose.bom)
     androidTestImplementation libs.androidx.compose.ui.test.junit4
     androidTestImplementation libs.androidx.espresso.core
@@ -84,4 +86,5 @@ dependencies {
     implementation 'com.github.ybq:Android-SpinKit:1.4.0'
     implementation 'com.google.mlkit:language-id:17.0.6'
     implementation 'com.google.mlkit:translate:17.0.3'
+    implementation 'com.google.android.gms:play-services-auth:21.4.0'
 }

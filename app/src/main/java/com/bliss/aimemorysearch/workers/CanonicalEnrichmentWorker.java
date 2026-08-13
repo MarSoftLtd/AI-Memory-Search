@@ -42,7 +42,7 @@ public final class CanonicalEnrichmentWorker extends Worker {
 
     public static void enqueue(Context context, String filePath, String generation) {
         enqueue(context, filePath, generation,
-                CanonicalEnrichmentLifecycle.isActiveForeground());
+                CanonicalEnrichmentLifecycle.shouldPauseForForeground(context));
     }
 
     private static void enqueue(
@@ -95,7 +95,8 @@ public final class CanonicalEnrichmentWorker extends Worker {
                     : store.pendingGenerations().entrySet()) {
                 enqueue(context, pending.getKey(), pending.getValue(),
                         delayedForForeground
-                                || CanonicalEnrichmentLifecycle.isActiveForeground());
+                                || CanonicalEnrichmentLifecycle
+                                .shouldPauseForForeground(context));
             }
         }
     }
@@ -108,7 +109,8 @@ public final class CanonicalEnrichmentWorker extends Worker {
         if (filePath == null || generation == null) {
             return Result.failure();
         }
-        if (CanonicalEnrichmentLifecycle.isActiveForeground()) {
+        if (CanonicalEnrichmentLifecycle.shouldPauseForForeground(
+                getApplicationContext())) {
             return Result.retry();
         }
         try (CanonicalIndexStore store = new CanonicalIndexStore(getApplicationContext())) {
@@ -126,8 +128,11 @@ public final class CanonicalEnrichmentWorker extends Worker {
                 pipeline.indexGeneration(filePath, generation,
                         database.chunkDao().getCanonicalChunksByFilePath(filePath),
                         () -> isStopped()
-                                || CanonicalEnrichmentLifecycle.isActiveForeground());
+                                || CanonicalEnrichmentLifecycle
+                                .shouldPauseForForeground(
+                                        getApplicationContext()));
             }
+            CanonicalBootstrapState.evaluateCompletion(getApplicationContext());
             return Result.success();
         } catch (CancellationException cancelled) {
             return Result.retry();

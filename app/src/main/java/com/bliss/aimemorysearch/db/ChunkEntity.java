@@ -25,4 +25,10 @@ public class ChunkEntity {
     public int chunkIndex;
 
     public long indexedAt;
+
+    /** Nullable for legacy document/image rows; EMAIL rows point to emails.id. */
+    public String sourceType;
+
+    /** Stable source identifier used for exact provenance and future citations. */
+    public String sourceId;
 }

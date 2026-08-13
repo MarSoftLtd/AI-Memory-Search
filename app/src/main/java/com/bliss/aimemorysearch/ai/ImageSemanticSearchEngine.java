@@ -123,25 +123,10 @@ public class ImageSemanticSearchEngine {
                                 a.score
                         )
         );
-        if (
-                bestScore < 0.26f
-        ) {
-
-            android.util.Log.e(
-                    "IMAGE_REJECTED",
-                    "BEST SCORE TOO LOW = "
-                            + bestScore
-            );
-
-            return new ArrayList<>();
-        }
         android.util.Log.e(
                 "IMAGE_THRESHOLD",
                 "BEST SCORE = " + bestScore
         );
-
-        List<SearchResult> filtered =
-                new ArrayList<>();
 
         float adaptiveThreshold =
                 Math.max(
@@ -154,21 +139,16 @@ public class ImageSemanticSearchEngine {
                 "THRESHOLD = " + adaptiveThreshold
         );
 
-        for (SearchResult r : results) {
+        List<SearchResult> filtered =
+                filterByAdaptiveThreshold(results, bestScore);
 
-            if (
-                    r.score >= adaptiveThreshold
-            ) {
-
-                filtered.add(r);
-
-                android.util.Log.e(
-                        "IMAGE_ACCEPTED",
-                        r.file.name
-                                + " | "
-                                + r.score
-                );
-            }
+        for (SearchResult result : filtered) {
+            android.util.Log.e(
+                    "IMAGE_ACCEPTED",
+                    result.file.name
+                            + " | "
+                            + result.score
+            );
         }
 
         if (
@@ -184,7 +164,71 @@ public class ImageSemanticSearchEngine {
                     );
         }
 
+        int cutoff = adaptiveImageCutoff(filtered);
+        if (cutoff < filtered.size()) {
+            android.util.Log.d(
+                    "IMAGE_DISTRIBUTION_CUTOFF",
+                    "total=" + filtered.size()
+                            + " | retained=" + cutoff
+                            + " | hidden=" + (filtered.size() - cutoff)
+            );
+            filtered = new ArrayList<>(filtered.subList(0, cutoff));
+        }
+
         return filtered;
+    }
+
+    static List<SearchResult> filterByAdaptiveThreshold(
+            List<SearchResult> orderedResults,
+            float bestScore
+    ) {
+        List<SearchResult> filtered = new ArrayList<>();
+
+        float adaptiveThreshold =
+                Math.max(
+                        0.22f,
+                        bestScore * 0.85f
+                );
+
+        for (SearchResult r : orderedResults) {
+
+            if (
+                    r.score >= adaptiveThreshold
+            ) {
+
+                filtered.add(r);
+
+            }
+        }
+        return filtered;
+    }
+
+    static int adaptiveImageCutoff(List<SearchResult> orderedResults) {
+        if (orderedResults == null || orderedResults.size() < 3) {
+            return orderedResults == null ? 0 : orderedResults.size();
+        }
+
+        float totalDrop = 0f;
+        float largestDrop = 0f;
+        int largestBoundary = -1;
+        for (int index = 1; index < orderedResults.size(); index++) {
+            float drop = orderedResults.get(index - 1).score
+                    - orderedResults.get(index).score;
+            if (!Float.isFinite(drop) || drop <= 0f) {
+                continue;
+            }
+            totalDrop += drop;
+            if (drop > largestDrop) {
+                largestDrop = drop;
+                largestBoundary = index;
+            }
+        }
+
+        if (largestBoundary > 0
+                && largestDrop > totalDrop - largestDrop) {
+            return largestBoundary;
+        }
+        return orderedResults.size();
     }
 
     private float cosineSimilarity(

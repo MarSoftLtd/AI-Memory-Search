@@ -24,11 +24,14 @@ import com.bliss.aimemorysearch.ai.concepts.Interpretation;
 import com.bliss.aimemorysearch.ai.concepts.InterpretationExecutionResult;
 import com.bliss.aimemorysearch.ai.concepts.InterpretationEvaluator;
 import com.bliss.aimemorysearch.ai.concepts.InterpretationEngine;
+import com.bliss.aimemorysearch.ai.concepts.MatchTier;
 import com.bliss.aimemorysearch.ai.concepts.RetrievalBudget;
 import com.bliss.aimemorysearch.ai.concepts.RetrievalContext;
 import com.bliss.aimemorysearch.ai.concepts.SemanticConceptExtractor;
+import com.bliss.aimemorysearch.ai.results.AdaptiveResultCutoff;
 import com.bliss.aimemorysearch.db.AppDatabase;
 import com.bliss.aimemorysearch.db.FileEntity;
+import com.bliss.aimemorysearch.db.EmailEntity;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -200,6 +203,16 @@ public final class SearchCoordinator {
             );
             List<Interpretation> shadowInterpretations =
                     InterpretationEngine.generate(shadowConceptGraph);
+            com.bliss.aimemorysearch.ai.AiPackageInfo documentPackage =
+                    com.bliss.aimemorysearch.ai.AiPlatform.getPackageManager()
+                            .getActivePackage(com.bliss.aimemorysearch.ai.AiCapability.DOCUMENT_SEARCH);
+            com.bliss.aimemorysearch.ai.AiPackageInfo imagePackage =
+                    com.bliss.aimemorysearch.ai.AiPlatform.getPackageManager()
+                            .getActivePackage(com.bliss.aimemorysearch.ai.AiCapability.IMAGE_SEARCH);
+            com.bliss.aimemorysearch.ai.AiPackageInfo languagePackage =
+                    com.bliss.aimemorysearch.ai.AiPlatform.getPackageManager()
+                            .findInstalledPackage(com.bliss.aimemorysearch.ai.AiPackageType.TRANSLATION,
+                                    queryRequest.getSelectedLanguageFamily());
             android.util.Log.d(
                     "QUERY_INTERPRETATIONS",
                     InterpretationEngine.toDiagnosticString(
@@ -417,6 +430,8 @@ public final class SearchCoordinator {
                     );
             List<ClipHypothesisResult> imageResults =
                     new java.util.ArrayList<>();
+            java.util.LinkedHashMap<String, Float> imageClipCosineByPath =
+                    new java.util.LinkedHashMap<>();
             java.util.HashMap<String, Integer> imagePivotSupport =
                     new java.util.HashMap<>();
             for (String pivot : queryPivots) {
@@ -467,6 +482,12 @@ public final class SearchCoordinator {
                     if (result != null
                             && result.file != null
                             && result.file.path != null) {
+                        imageClipCosineByPath.put(
+                                result.file.path,
+                                Math.max(imageClipCosineByPath.getOrDefault(
+                                        result.file.path, -Float.MAX_VALUE),
+                                        result.score)
+                        );
                         imagePivotSupport.put(
                                 result.file.path,
                                 imagePivotSupport.getOrDefault(
@@ -546,6 +567,19 @@ public final class SearchCoordinator {
                     );
 
             SearchExplanationHolder.clear();
+            SearchExplanationHolder.setOriginalQuery(query);
+            SearchExplanationHolder.setQueryMetadata(
+                    new SearchExplanationHolder.QueryMetadata(
+                            queryRequest.getNormalizedQuery(),
+                            queryRequest.getTranslatedQuery(),
+                            queryRequest.getDetectedLanguage(),
+                            queryRequest.getWorkingLanguage(),
+                            queryRequest.getSelectedLanguageFamily(), queryPivots,
+                            InterpretationEngine.toDiagnosticString(shadowInterpretations),
+                            "DocumentRuntimeLoader / EmbeddingEngine",
+                            packageLabel(documentPackage),
+                            "MobileClipTextEmbeddingEngine / ImageSemanticSearchEngine",
+                            packageLabel(imagePackage), packageLabel(languagePackage)));
             for (
                     ChunkSemanticSearchEngine.ChunkResult result
                     : chunkResults
@@ -951,6 +985,9 @@ public final class SearchCoordinator {
                     documentEvidenceByPath,
                     imageEvidence
             );
+            SearchExplanationHolder.setImageClipCosineByPath(
+                    imageClipCosineByPath
+            );
             for (
                     java.util.Map.Entry<String, Float> e
                     : ranking.entrySet()
@@ -1037,18 +1074,12 @@ public final class SearchCoordinator {
                 }
             }
 
-            java.util.Collections.sort(
+            sortFinalResults(
                     finalResults,
-                    (a, b) -> Float.compare(
-                            ranking.getOrDefault(
-                                    b.path,
-                                    0f
-                            ),
-                            ranking.getOrDefault(
-                                    a.path,
-                                    0f
-                            )
-                    )
+                    ranking,
+                    semanticImagePaths,
+                    maxDocumentScore,
+                    maxImageScore
             );
 
             java.util.LinkedHashMap<String, DocumentConfidence>
@@ -1099,9 +1130,31 @@ public final class SearchCoordinator {
             SearchExplanationHolder.setDocumentConfidences(
                     documentConfidences
             );
+            SearchExplanationHolder.scores.clear();
+            SearchExplanationHolder.scores.putAll(ranking);
 
-            SearchResultsHolder.results =
-                    finalResults;
+            java.util.LinkedHashMap<String, SearchExplanationHolder.EmailMetadata>
+                    emailMetadataByPath = new java.util.LinkedHashMap<>();
+            for (FileEntity finalResult : finalResults) {
+                if (finalResult != null
+                        && finalResult.path != null
+                        && "EMAIL".equalsIgnoreCase(finalResult.type)) {
+                    EmailEntity email = database.emailDao()
+                            .getById(finalResult.path);
+                    if (email != null) {
+                        emailMetadataByPath.put(
+                                finalResult.path,
+                                new SearchExplanationHolder.EmailMetadata(
+                                        email.provider, email.account, email.messageId,
+                                        email.threadId, email.sender, email.timestamp)
+                        );
+                    }
+                }
+            }
+            SearchExplanationHolder.setEmailMetadataByPath(
+                    emailMetadataByPath
+            );
+
             for (int index = 0; index < finalResults.size(); index++) {
                 FileEntity result = finalResults.get(index);
                 android.util.Log.d(
@@ -1118,21 +1171,27 @@ public final class SearchCoordinator {
             }
             android.util.Log.d("MULTILINGUAL_PIPELINE", "10. Final merged search results: " + finalResults.size());
 
+            java.util.LinkedHashMap<String, MatchTier> imageMatchTiers =
+                    new java.util.LinkedHashMap<>();
+            for (FileEntity finalResult : finalResults) {
+                if (finalResult != null
+                        && finalResult.path != null
+                        && "IMAGE".equalsIgnoreCase(finalResult.type)) {
+                    imageMatchTiers.put(
+                            finalResult.path,
+                            MatchTier.RELATED_MATCH
+                    );
+                }
+            }
+            SearchExplanationHolder.setImageMatchTiers(imageMatchTiers);
+
             if (progressCallback != null) {
                 mainHandler.post(() -> progressCallback.onPhase("Opening search results…"));
             }
 
-            completionPosted = mainHandler.post(() -> {
-                try {
-                    if (callback != null) {
-                        callback.onSearchCompleted(
-                                finalResults
-                        );
-                    }
-                } finally {
-                    SEARCH_IN_PROGRESS.set(false);
-                }
-            });
+            java.util.LinkedHashMap<String, Float> imageAgreementByPath =
+                    new java.util.LinkedHashMap<>();
+            boolean multiConceptInterpretationAvailable = false;
 
             try {
                 android.os.Process.setThreadPriority(
@@ -1153,6 +1212,10 @@ public final class SearchCoordinator {
                         new AtomicConjunctionStrategy();
                 for (AtomicMultilingualAlignment.AlignedInterpretation aligned
                         : alignedInterpretations) {
+                    multiConceptInterpretationAvailable =
+                            multiConceptInterpretationAvailable
+                                    || aligned.getInterpretation()
+                                    .getComponents().size() > 1;
                     RetrievalContext shadowRetrievalContext =
                             new RetrievalContext(
                                     context,
@@ -1171,6 +1234,34 @@ public final class SearchCoordinator {
                                     ),
                                     atomicStrategy
                             );
+                    for (InterpretationExecutionResult evaluation
+                            : shadowEvaluations) {
+                        for (InterpretationExecutionResult.RetrievedResult result
+                                : evaluation.getRetrievedResults()) {
+                            if (result.getModality()
+                                    != InterpretationExecutionResult.Modality.IMAGE
+                                    || result.getMatchTier() == null
+                                    || !imageMatchTiers.containsKey(
+                                    result.getPath())) {
+                                continue;
+                            }
+                            imageMatchTiers.put(
+                                    result.getPath(),
+                                    strongerMatchTier(
+                                            imageMatchTiers.get(result.getPath()),
+                                            result.getMatchTier()
+                                    )
+                            );
+                            imageAgreementByPath.put(
+                                    result.getPath(),
+                                    Math.max(
+                                            imageAgreementByPath.getOrDefault(
+                                                    result.getPath(), 0f),
+                                            result.getScore()
+                                    )
+                            );
+                        }
+                    }
                     android.util.Log.d(
                             "ATOMIC_ALIGNMENT",
                             "pivot=\"" + aligned.getApprovedPivot() + "\""
@@ -1187,6 +1278,21 @@ public final class SearchCoordinator {
                                     .toDiagnosticString(shadowEvaluations)
                     );
                 }
+                SearchExplanationHolder.setImageMatchTiers(imageMatchTiers);
+                SearchExplanationHolder.setImageAgreementByPath(
+                        imageAgreementByPath
+                );
+                for (FileEntity finalResult : finalResults) {
+                    MatchTier matchTier = imageMatchTiers.get(finalResult.path);
+                    if (matchTier != null) {
+                        android.util.Log.d(
+                                "MATCH_TIER",
+                                "name=" + finalResult.name
+                                        + " | tier=" + matchTier
+                                        + " | path=" + finalResult.path
+                        );
+                    }
+                }
             } catch (Throwable shadowError) {
                 android.util.Log.w(
                         "INTERPRETATION_EVALUATION",
@@ -1194,6 +1300,61 @@ public final class SearchCoordinator {
                         shadowError
                 );
             }
+
+            applyAtomicImageValidation(
+                    finalResults,
+                    multiConceptInterpretationAvailable,
+                    imageMatchTiers
+            );
+
+            boolean imageOnlyResults = !finalResults.isEmpty();
+            for (FileEntity result : finalResults) {
+                imageOnlyResults = imageOnlyResults
+                        && result != null
+                        && "IMAGE".equalsIgnoreCase(result.type);
+            }
+            boolean originalSingleConceptImagePipeline =
+                    !multiConceptInterpretationAvailable;
+            AdaptiveResultCutoff.Result cutoff =
+                    imageOnlyResults || originalSingleConceptImagePipeline
+                            ? AdaptiveResultCutoff.preserveOriginalResults(
+                            finalResults)
+                            : AdaptiveResultCutoff.evaluate(
+                            finalResults,
+                            SearchExplanationHolder.scores,
+                            documentConfidences,
+                            imageMatchTiers,
+                            imageAgreementByPath,
+                            false
+                    );
+            SearchResultsHolder.setResults(
+                    finalResults,
+                    cutoff.getDisplayedCount()
+            );
+            android.util.Log.d(
+                    "ADAPTIVE_CUTOFF",
+                    "query=" + query
+                            + " | total=" + finalResults.size()
+                            + " | displayed=" + cutoff.getDisplayedCount()
+                            + " | hidden=" + cutoff.getHiddenCount()
+                            + " | hiddenPartial="
+                            + SearchResultsHolder
+                            .getHiddenPartialMatches().size()
+                            + " | hiddenRelated="
+                            + SearchResultsHolder
+                            .getHiddenRelatedMatches().size()
+                            + " | reason=" + cutoff.getReason()
+            );
+            List<FileEntity> displayedResults = SearchResultsHolder.results;
+            completionPosted = mainHandler.post(() -> {
+                try {
+                    if (callback != null) {
+                        callback.onSearchCompleted(displayedResults);
+                    }
+                } finally {
+                    SEARCH_IN_PROGRESS.set(false);
+                }
+            });
 
             } catch (Throwable error) {
                 android.util.Log.e(
@@ -1211,6 +1372,86 @@ public final class SearchCoordinator {
             }
 
         }).start();
+    }
+
+    private static String packageLabel(com.bliss.aimemorysearch.ai.AiPackageInfo info) {
+        return info == null ? "" : info.getPackageId() + " / " + info.getVersion();
+    }
+
+    private static MatchTier strongerMatchTier(
+            MatchTier current,
+            MatchTier candidate
+    ) {
+        if (current == MatchTier.BEST_MATCH
+                || candidate == MatchTier.BEST_MATCH) {
+            return MatchTier.BEST_MATCH;
+        }
+        if (current == MatchTier.PARTIAL_MATCH
+                || candidate == MatchTier.PARTIAL_MATCH) {
+            return MatchTier.PARTIAL_MATCH;
+        }
+        return MatchTier.RELATED_MATCH;
+    }
+
+    static void applyAtomicImageValidation(
+            List<FileEntity> results,
+            boolean multiConceptInterpretationAvailable,
+            java.util.Map<String, MatchTier> imageMatchTiers
+    ) {
+        if (!multiConceptInterpretationAvailable) {
+            return;
+        }
+        results.removeIf(result -> result != null
+                && "IMAGE".equalsIgnoreCase(result.type)
+                && imageMatchTiers.get(result.path) != MatchTier.BEST_MATCH);
+    }
+
+    static void sortFinalResults(
+            List<FileEntity> results,
+            java.util.Map<String, Float> scores,
+            java.util.Set<String> imagePaths,
+            float maxDocumentScore,
+            float maxImageScore
+    ) {
+        boolean hasDocuments = false;
+        boolean hasImages = false;
+        for (FileEntity result : results) {
+            if (imagePaths.contains(result.path)) hasImages = true;
+            else hasDocuments = true;
+        }
+        final boolean mixedModalities = hasDocuments && hasImages;
+        java.util.Collections.sort(results, (a, b) -> {
+            boolean aImage = imagePaths.contains(a.path);
+            boolean bImage = imagePaths.contains(b.path);
+            if (!mixedModalities || aImage == bImage) {
+                return Float.compare(
+                        scores.getOrDefault(b.path, 0f),
+                        scores.getOrDefault(a.path, 0f)
+                );
+            }
+            return Float.compare(
+                    relativeModalityScore(
+                            b, scores, imagePaths, maxDocumentScore,
+                            maxImageScore),
+                    relativeModalityScore(
+                            a, scores, imagePaths, maxDocumentScore,
+                            maxImageScore)
+            );
+        });
+    }
+
+    private static float relativeModalityScore(
+            FileEntity result,
+            java.util.Map<String, Float> scores,
+            java.util.Set<String> imagePaths,
+            float maxDocumentScore,
+            float maxImageScore
+    ) {
+        float rawScore = scores.getOrDefault(result.path, 0f);
+        float modalityMaximum = imagePaths.contains(result.path)
+                ? maxImageScore : maxDocumentScore;
+        return modalityMaximum == 0f
+                ? rawScore : rawScore / modalityMaximum;
     }
 
     private List<String> buildQueryPivots(

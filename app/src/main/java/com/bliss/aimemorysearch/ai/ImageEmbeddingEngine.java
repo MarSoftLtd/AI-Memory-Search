@@ -107,17 +107,20 @@ public class ImageEmbeddingEngine {
                 return null;
             }
 
-            Bitmap resized =
-                    Bitmap.createScaledBitmap(
-                            bitmap,
-                            224,
-                            224,
-                            true
-                    );
+            Bitmap resized = resizeShortEdge(bitmap);
+            int left = (resized.getWidth() - 224) / 2;
+            int top = (resized.getHeight() - 224) / 2;
+            Bitmap cropped = Bitmap.createBitmap(
+                    resized,
+                    left,
+                    top,
+                    224,
+                    224
+            );
 
             float[] input =
                     preprocessImage(
-                            resized
+                            cropped
                     );
 
             OnnxTensor tensor =
@@ -166,7 +169,12 @@ public class ImageEmbeddingEngine {
             result.close();
             tensor.close();
 
-            resized.recycle();
+            if (cropped != resized) {
+                cropped.recycle();
+            }
+            if (resized != bitmap) {
+                resized.recycle();
+            }
 
             return embedding;
 
@@ -180,6 +188,28 @@ public class ImageEmbeddingEngine {
         }
 
         return null;
+    }
+
+    private Bitmap resizeShortEdge(Bitmap bitmap) {
+        int width = bitmap.getWidth();
+        int height = bitmap.getHeight();
+        int resizedWidth;
+        int resizedHeight;
+
+        if (width <= height) {
+            resizedWidth = 224;
+            resizedHeight = Math.max(224, 224 * height / width);
+        } else {
+            resizedHeight = 224;
+            resizedWidth = Math.max(224, 224 * width / height);
+        }
+
+        return Bitmap.createScaledBitmap(
+                bitmap,
+                resizedWidth,
+                resizedHeight,
+                true
+        );
     }
 
     private float[] preprocessImage(

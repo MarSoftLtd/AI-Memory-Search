@@ -1,68 +1,101 @@
 <?xml version="1.0" encoding="utf-8"?>
-
-<androidx.constraintlayout.widget.ConstraintLayout
+<FrameLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/searchResultsRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/color_background">
 
-    <View
-        android:layout_width="@dimen/spacing_0"
-        android:layout_height="@dimen/spacing_0"
-        android:background="@color/color_background_scrim"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
     <ImageView
         android:id="@+id/backgroundBlur"
-        android:layout_width="@dimen/spacing_0"
-        android:layout_height="@dimen/spacing_0"
-        android:scaleType="centerCrop"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
         android:alpha="0.22"
+        android:scaleType="centerCrop"
         android:scaleX="1.15"
-        android:scaleY="1.15"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
-    
-    <TextView
-        android:id="@+id/resultsTitle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/results_title"
-        android:textColor="@color/color_text_primary"
-        android:textSize="@dimen/text_screen_title"
-        android:textStyle="bold"
-        android:layout_marginTop="@dimen/component_results_top_margin"
-        android:layout_marginStart="@dimen/component_results_title_inset"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"/>
+        android:scaleY="1.15" />
 
-    <TextView
-        android:id="@+id/resultsCount"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textColor="@color/color_text_secondary"
-        android:textSize="@dimen/text_body"
-        android:layout_marginTop="@dimen/component_field_gap"
-        android:layout_marginStart="@dimen/component_results_title_inset"
-        app:layout_constraintTop_toBottomOf="@id/resultsTitle"
-        app:layout_constraintStart_toStartOf="parent"/>
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/color_background_scrim" />
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/resultsRecycler"
-        android:layout_width="@dimen/spacing_0"
-        android:layout_height="@dimen/spacing_0"
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
         android:clipToPadding="false"
-        android:paddingStart="@dimen/component_results_recycler_padding"
-        android:paddingEnd="@dimen/component_results_recycler_padding"
-        android:overScrollMode="never"
-        app:layout_constraintTop_toBottomOf="@id/resultsCount"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        android:fillViewport="true">
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:paddingTop="@dimen/component_results_top_margin"
+            android:paddingBottom="@dimen/spacing_0">
+
+            <TextView
+                android:id="@+id/resultsTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/component_results_title_inset"
+                android:text="@string/results_title"
+                android:textColor="@color/color_text_primary"
+                android:textSize="@dimen/text_screen_title"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/resultsCount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/component_results_title_inset"
+                android:layout_marginTop="@dimen/component_field_gap"
+                android:textColor="@color/color_text_secondary"
+                android:textSize="@dimen/text_body" />
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/spacing_0"
+                android:layout_weight="1"
+                android:layout_marginBottom="30dp"
+                android:layout_marginTop="35dp">
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/resultsRecycler"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:clipToPadding="false"
+                    android:nestedScrollingEnabled="true"
+                    android:overScrollMode="never" />
+
+                <ImageButton
+                    android:id="@+id/resultPrevious"
+                    android:layout_width="@dimen/component_icon_button_size"
+                    android:layout_height="@dimen/component_icon_button_size"
+                    android:layout_gravity="start|bottom"
+                    android:layout_marginBottom="80dp"
+                    android:alpha="0.82"
+                    android:background="@drawable/bg_technical_report_toggle"
+                    android:contentDescription="@string/result_previous"
+                    android:padding="@dimen/spacing_8"
+                    android:rotation="180"
+                    android:src="@drawable/ic_chevron_right"
+                    android:tint="@color/color_text_primary" />
+
+                <ImageButton
+                    android:id="@+id/resultNext"
+                    android:layout_width="@dimen/component_icon_button_size"
+                    android:layout_height="@dimen/component_icon_button_size"
+                    android:layout_gravity="end|bottom"
+                    android:layout_marginBottom="80dp"
+                    android:layout_marginEnd="@dimen/spacing_8"
+                    android:alpha="0.82"
+                    android:background="@drawable/bg_technical_report_toggle"
+                    android:contentDescription="@string/result_next"
+                    android:padding="@dimen/spacing_8"
+                    android:src="@drawable/ic_chevron_right"
+                    android:tint="@color/color_text_primary" />
+            </FrameLayout>
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+</FrameLayout>

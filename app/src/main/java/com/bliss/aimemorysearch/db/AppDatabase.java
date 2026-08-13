@@ -13,9 +13,10 @@ import com.bliss.aimemorysearch.db.TokenIndexDao;
                 FileEntity.class,
                 FavoriteEntity.class,
                 ChunkEntity.class,
-                TokenIndexEntity.class
+                TokenIndexEntity.class,
+                EmailEntity.class
         },
-        version = 8
+        version = 9
 )
 public abstract class AppDatabase
         extends RoomDatabase {
@@ -26,6 +27,7 @@ public abstract class AppDatabase
     public abstract ChunkDao chunkDao();
     public abstract TokenIndexDao tokenIndexDao();
     public abstract FavoriteDao favoriteDao();
+    public abstract EmailDao emailDao();
 
     public static AppDatabase getInstance(
             Context context
@@ -43,7 +45,7 @@ public abstract class AppDatabase
                                             AppDatabase.class,
                                             "ai_memory_db"
                                     )
-                                    .fallbackToDestructiveMigration()
+                                    .addMigrations(EmailMigrations.MIGRATION_8_9)
                                     .build();
                 }
             }

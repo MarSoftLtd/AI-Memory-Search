@@ -2,6 +2,7 @@ package com.bliss.aimemorysearch.workers;
 
 import android.app.Activity;
 import android.app.Application;
+import android.content.Context;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
@@ -44,6 +45,11 @@ public final class CanonicalEnrichmentLifecycle {
 
     public static boolean isActiveForeground() {
         return ACTIVE_FOREGROUND.get();
+    }
+
+    public static boolean shouldPauseForForeground(Context context) {
+        return ACTIVE_FOREGROUND.get()
+                && !CanonicalBootstrapState.shouldRunWhileForeground(context);
     }
 
     private static void enterForeground(Application application) {

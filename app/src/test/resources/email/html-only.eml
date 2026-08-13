@@ -1,0 +1,8 @@
+Message-ID: <html-1@example.com>
+Subject: HTML update
+From: updates@example.com
+To: reader@example.com
+MIME-Version: 1.0
+Content-Type: text/html; charset=UTF-8
+
+<html><body><h1>Project update</h1><p>The build is <b>ready</b> &amp; verified.</p></body></html>

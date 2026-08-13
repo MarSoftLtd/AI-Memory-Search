@@ -47,6 +47,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/no"
+                android:textColor="@color/color_accent"
                 android:textAllCaps="false" />
 
             <com.google.android.material.button.MaterialButton
@@ -56,6 +57,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="@dimen/spacing_8"
                 android:text="@string/yes"
+                android:textColor="@color/color_accent"
                 android:textAllCaps="false" />
 
         </LinearLayout>
